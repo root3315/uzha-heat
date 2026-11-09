@@ -10,7 +10,7 @@ export interface RecommendationInput {
 
 export interface Reason {
   key: string;
-  /** e.g. "NDVI 0,08 — в 3 раза ниже среднего по городу (0,24)" */
+  /** e.g. "NDVI 0,08, в 3 раза ниже среднего по городу (0,24)" */
   text: string;
   /** °C this factor adds to the place's temperature. */
   contribution: number;
@@ -58,7 +58,7 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
     id: 'shade-trees',
     title: 'Деревья вдоль улиц и теневые навесы',
     actions: [
-      'высадить крупномерные деревья вдоль тротуаров и во дворах — чинара, карагач, тут',
+      'высадить крупномерные деревья вдоль тротуаров и во дворах: чинара, карагач, тут',
       'навесы и перголы над остановками, рынками и детскими площадками',
     ],
     triggers: [
@@ -131,10 +131,10 @@ export function formatRatio(ratio: number): string {
 /** Plain-language comparison of a place's value with the city mean. */
 export function compareWithCity(feature: FeatureMeta, value: number, cityMean: number): string {
   const meanText = formatFactorValue(feature, cityMean);
-  if (!Number.isFinite(cityMean) || cityMean <= 0 || value < 0) return `в среднем по городу — ${meanText}`;
+  if (!Number.isFinite(cityMean) || cityMean <= 0 || value < 0) return `в среднем по городу ${meanText}`;
   const relative = (value - cityMean) / cityMean;
   if (Math.abs(relative) < NEAR_MEAN_SHARE) return `на уровне среднего по городу (${meanText})`;
-  if (value <= cityMean * ALMOST_NONE_SHARE) return `почти нет; в среднем по городу — ${meanText}`;
+  if (value <= cityMean * ALMOST_NONE_SHARE) return `почти нет, в среднем по городу ${meanText}`;
   const direction = relative < 0 ? 'ниже' : 'выше';
   const ratio = relative < 0 ? cityMean / value : value / cityMean;
   const amount = ratio >= 1.5 ? formatRatio(ratio) : `на ${formatNumber(Math.abs(relative) * 100, 0)} %`;
@@ -150,7 +150,7 @@ function reasonFor(feature: FeatureMeta, input: RecommendationInput): Reason {
   const cityMean = input.cityMeans[feature.key] ?? Number.NaN;
   return {
     key: feature.key,
-    text: `${factorName(feature)} ${formatFactorValue(feature, value)} — ${compareWithCity(feature, value, cityMean)}`,
+    text: `${factorName(feature)} ${formatFactorValue(feature, value)}, ${compareWithCity(feature, value, cityMean)}`,
     contribution: input.contributions[feature.key] ?? 0,
   };
 }
@@ -202,8 +202,10 @@ export function recommend(input: RecommendationInput, minContribution = MIN_CONT
   return recommendations.sort((a, b) => b.heating - a.heating);
 }
 
+/** Expected cooling as a plain range of degrees: "1–3°", "0,5–1,5°", "до 0,4°". */
 export function formatEffect(effect: EffectRange): string {
-  const lo = formatNumber(effect.min, 1);
-  const hi = formatNumber(effect.max, 1);
-  return effect.min === effect.max ? `до −${hi} °C` : `−${lo}…−${hi} °C`;
+  const digits = Number.isInteger(effect.min) && Number.isInteger(effect.max) ? 0 : 1;
+  const lo = formatNumber(effect.min, digits);
+  const hi = formatNumber(effect.max, digits);
+  return effect.min === effect.max ? `до ${hi}°` : `${lo}–${hi}°`;
 }

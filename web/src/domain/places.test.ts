@@ -1,44 +1,64 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail } from '../data/contract';
-import { cellsInDistrict } from './places';
+import { cellProfile, districtAt, dominanceShare, dominantFactorPerCell, hotspotProfile, hottestTenth } from './places';
 
-const square = (x0: number, y0: number, x1: number, y1: number): [number, number][][] => [
-  [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]],
-];
-
-function cityWithDistricts(): CityDetail {
+function city(): CityDetail {
   return {
-    city: { id: 't', name: 'T', nameEn: 'T', country: 'X', center: [0.5, 0.5], bbox: [0, 0, 2, 1], lstMean: 40, r2: 0.5 },
+    city: { id: 't', name: 'T', nameEn: 'T', country: 'X', center: [0, 0], bbox: [0, 0, 1, 1], lstMean: 42, r2: 0.5 },
     period: { label: '', lstScenes: 1, s2Scenes: 1 },
     grid: { cellSizeM: 200, halfSizeDeg: [0.001, 0.001], count: 4 },
-    features: [],
-    model: { type: 'm', r2Cv: 0.5, maeCv: 1, cv: 'cv', baseValue: 40 },
-    stats: { lstMean: 40, lstMin: 38, lstMax: 42, lstP10: 39, lstP90: 41 },
-    globalImportance: [],
-    cells: { lon: [0.2, 0.8, 1.2, 1.8], lat: [0.5, 0.5, 0.5, 0.5], lst: [40, 41, 39, 42], values: {}, shap: {} },
-    districts: [
-      { name: 'West', geometry: { type: 'Polygon', coordinates: square(0, 0, 1, 1) }, lstMean: 40, cellCount: 2, shapMean: {} },
-      {
-        name: 'East',
-        geometry: { type: 'MultiPolygon', coordinates: [square(1, 0, 1.5, 1), square(1.7, 0, 2, 1)] },
-        lstMean: 40,
-        cellCount: 2,
-        shapMean: {},
-      },
+    features: [
+      { key: 'a', label: 'A', unit: '', description: '' },
+      { key: 'b', label: 'B', unit: '', description: '' },
     ],
+    model: { type: 'm', r2Cv: 0.5, maeCv: 1, cv: 'cv', baseValue: 42 },
+    stats: { lstMean: 42, lstMin: 38, lstMax: 46, lstP10: 39, lstP90: 45 },
+    globalImportance: [],
+    cells: {
+      lon: [0, 1, 2, 3],
+      lat: [0, 0, 0, 0],
+      lst: [38, 41, 45, 46],
+      values: { a: [1, 2, 3, 4], b: [5, 6, 7, 8] },
+      shap: { a: [-1, 0.5, 2, 0.4], b: [-0.5, -0.2, 1, 1.5] },
+    },
+    districts: [],
   };
 }
 
-describe('cellsInDistrict', () => {
-  it('assigns cells to the polygons that contain them', () => {
-    const detail = cityWithDistricts();
-    expect(cellsInDistrict(detail, 0)).toEqual([0, 1]);
-    expect(cellsInDistrict(detail, 1)).toEqual([2, 3]);
+describe('places', () => {
+  it('reads one cell across every column', () => {
+    expect(cellProfile(city(), 2)).toMatchObject({ kind: 'cell', cell: 2, lst: 45, values: { a: 3, b: 7 }, contributions: { a: 2, b: 1 } });
   });
 
-  it('returns the same membership on repeated calls and nothing for unknown districts', () => {
-    const detail = cityWithDistricts();
-    expect(cellsInDistrict(detail, 0)).toBe(cellsInDistrict(detail, 0));
-    expect(cellsInDistrict(detail, 5)).toEqual([]);
+  it('averages the hottest tenth (cells at or above P90)', () => {
+    const detail = city();
+    expect(hottestTenth(detail)).toEqual([2, 3]);
+    const hot = hotspotProfile(detail);
+    expect(hot.lst).toBe(45.5);
+    expect(hot.contributions.a).toBeCloseTo(1.2);
+  });
+
+  it('finds the top heating factor per cell, null when nothing heats', () => {
+    expect(dominantFactorPerCell(city())).toEqual([null, 'a', 'a', 'b']);
+  });
+
+  it('measures how often a factor is the top one among some cells', () => {
+    expect(dominanceShare(city(), 'a', [1, 2, 3])).toBeCloseTo(2 / 3);
+    expect(dominanceShare(city(), 'a', [])).toBe(0);
+  });
+
+  it('names the district that contains a point, or nothing', () => {
+    const detail = city();
+    detail.districts = [
+      {
+        name: 'Чиланзарский район',
+        geometry: { type: 'Polygon', coordinates: [[[0, 0], [2, 0], [2, 1], [0, 1], [0, 0]]] },
+        lstMean: 42,
+        cellCount: 2,
+        shapMean: {},
+      },
+    ];
+    expect(districtAt(detail, [1, 0.5])).toBe('Чиланзарский район');
+    expect(districtAt(detail, [5, 0.5])).toBeNull();
   });
 });

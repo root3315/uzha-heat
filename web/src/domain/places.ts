@@ -1,15 +1,11 @@
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { geometryBounds, mean, meanAt, pointInGeometry } from './stats';
+import { mean, meanAt, pointInGeometry } from './stats';
 
-export type Selection = { kind: 'cell'; index: number } | { kind: 'district'; index: number };
-export type PlaceKind = Selection['kind'] | 'hotspot';
-
-/** Everything the panel, waterfall and recommendations need to describe one place. */
+/** Everything the panel needs to describe one place: a single cell or the city's hottest tenth. */
 export interface PlaceProfile {
-  kind: PlaceKind;
-  title: string;
-  /** Cell centre, [lon, lat]; only for single cells. */
-  center?: [number, number];
+  kind: 'cell' | 'hotspot';
+  /** Cell index for a single cell. */
+  cell?: number;
   lst: number;
   cellCount: number;
   values: Record<string, number>;
@@ -26,12 +22,15 @@ function columnAt(columns: Record<string, number[]>, features: FeatureMeta[], in
   return Object.fromEntries(features.map((f) => [f.key, columns[f.key]?.[index] ?? 0]));
 }
 
+function averageColumns(columns: Record<string, number[]>, features: FeatureMeta[], members: readonly number[]): Record<string, number> {
+  return Object.fromEntries(features.map((f) => [f.key, meanAt(columns[f.key] ?? [], members)]));
+}
+
 export function cellProfile(detail: CityDetail, index: number): PlaceProfile {
   const { cells, features } = detail;
   return {
     kind: 'cell',
-    title: `Участок ${detail.grid.cellSizeM} × ${detail.grid.cellSizeM} м`,
-    center: [cells.lon[index] ?? 0, cells.lat[index] ?? 0],
+    cell: index,
     lst: cells.lst[index] ?? Number.NaN,
     cellCount: 1,
     values: columnAt(cells.values, features, index),
@@ -39,49 +38,20 @@ export function cellProfile(detail: CityDetail, index: number): PlaceProfile {
   };
 }
 
-const districtMembership = new WeakMap<CityDetail, number[][]>();
-
-function computeDistrictMembership(detail: CityDetail): number[][] {
-  const { lon, lat } = detail.cells;
-  return detail.districts.map((district) => {
-    const [w, s, e, n] = geometryBounds(district.geometry);
-    const members: number[] = [];
-    for (let i = 0; i < lon.length; i++) {
-      const x = lon[i] ?? 0;
-      const y = lat[i] ?? 0;
-      if (x < w || x > e || y < s || y > n) continue;
-      if (pointInGeometry([x, y], district.geometry)) members.push(i);
-    }
-    return members;
-  });
+export function hottestTenth(detail: CityDetail): number[] {
+  return detail.cells.lst.flatMap((t, i) => (t >= detail.stats.lstP90 ? [i] : []));
 }
 
-/** Cell indices inside the district; membership is computed once per city and reused. */
-export function cellsInDistrict(detail: CityDetail, districtIndex: number): number[] {
-  let membership = districtMembership.get(detail);
-  if (!membership) {
-    membership = computeDistrictMembership(detail);
-    districtMembership.set(detail, membership);
-  }
-  return membership[districtIndex] ?? [];
-}
-
-function averageColumns(columns: Record<string, number[]>, features: FeatureMeta[], members: number[]): Record<string, number> {
-  return Object.fromEntries(features.map((f) => [f.key, meanAt(columns[f.key] ?? [], members)]));
-}
-
-export function districtProfile(detail: CityDetail, districtIndex: number, members: number[]): PlaceProfile {
-  const district = detail.districts[districtIndex];
-  if (!district) throw new Error(`Нет района с индексом ${districtIndex}`);
+/** Averages over the hottest tenth of the city: the subject of the city-wide answer. */
+export function hotspotProfile(detail: CityDetail): PlaceProfile {
   const { cells, features } = detail;
-  const computedShap = averageColumns(cells.shap, features, members);
+  const members = hottestTenth(detail);
   return {
-    kind: 'district',
-    title: district.name,
-    lst: district.lstMean,
-    cellCount: district.cellCount,
+    kind: 'hotspot',
+    lst: meanAt(cells.lst, members),
+    cellCount: members.length,
     values: averageColumns(cells.values, features, members),
-    contributions: Object.fromEntries(features.map((f) => [f.key, district.shapMean[f.key] ?? computedShap[f.key] ?? 0])),
+    contributions: averageColumns(cells.shap, features, members),
   };
 }
 
@@ -105,16 +75,16 @@ export function dominantFactorPerCell(detail: CityDetail): (string | null)[] {
   return detail.cells.lst.map((_, i) => dominantHeatingFactor(keys, (key) => shap[key]?.[i] ?? 0));
 }
 
-/** Averages over the hottest tenth of the city: the default subject for city-wide recommendations. */
-export function hotspotProfile(detail: CityDetail): PlaceProfile {
-  const { cells, features, stats } = detail;
-  const members = cells.lst.flatMap((t, i) => (t >= stats.lstP90 ? [i] : []));
-  return {
-    kind: 'hotspot',
-    title: 'Самые горячие 10 % города',
-    lst: meanAt(cells.lst, members),
-    cellCount: members.length,
-    values: averageColumns(cells.values, features, members),
-    contributions: averageColumns(cells.shap, features, members),
-  };
+/** Share of `members` where `key` is the factor that heats most. */
+export function dominanceShare(detail: CityDetail, key: string, members: readonly number[]): number {
+  if (members.length === 0) return 0;
+  const keys = detail.features.map((f) => f.key);
+  const { shap } = detail.cells;
+  const wins = members.filter((i) => dominantHeatingFactor(keys, (k) => shap[k]?.[i] ?? 0) === key).length;
+  return wins / members.length;
+}
+
+/** Name of the district (from the data) that contains the point, if the data has districts. */
+export function districtAt(detail: CityDetail, point: [number, number]): string | null {
+  return detail.districts.find((district) => pointInGeometry(point, district.geometry))?.name ?? null;
 }

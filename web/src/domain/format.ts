@@ -2,7 +2,6 @@ import type { FeatureMeta } from '../data/contract';
 
 const MINUS = '−';
 const NBSP = ' ';
-const THIN_NBSP = ' ';
 
 const formatters = new Map<number, Intl.NumberFormat>();
 
@@ -28,11 +27,21 @@ export function formatSigned(value: number, digits = 1): string {
   return value > 0 ? `+${formatNumber(value, digits)}` : formatNumber(value, digits);
 }
 
-export const formatTemp = (value: number, digits = 1): string => `${formatNumber(value, digits)}${THIN_NBSP}°C`;
-
-export const formatTempDelta = (value: number, digits = 1): string => `${formatSigned(value, digits)}${THIN_NBSP}°C`;
-
+/** Temperature as the app writes it: "47,9°". */
+export const formatDeg = (value: number, digits = 1): string => `${formatNumber(value, digits)}°`;
+/** Temperature difference with its sign: "+4,6°", "−1,2°". */
+export const formatDegSigned = (value: number, digits = 1): string => `${formatSigned(value, digits)}°`;
 export const formatPercent = (share: number): string => `${formatNumber(share * 100, 0)}${NBSP}%`;
+export const formatKm = (metres: number): string => `${formatNumber(metres / 1000, 1)}${NBSP}км`;
+
+/** Russian plural: forms for 1, 2–4 and 5+ ("причина", "причины", "причин"). */
+export function plural(n: number, [one, few, many]: readonly [string, string, string]): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
 
 /** Formats a factor value according to its unit from the contract (unit-driven, not key-driven). */
 export function formatFactorValue(feature: Pick<FeatureMeta, 'unit'>, value: number): string {

@@ -30,7 +30,7 @@ describe('recommend', () => {
   it('turns low vegetation into a tree recommendation explained by the actual numbers', () => {
     const trees = recommend(input()).find((r) => r.id === 'shade-trees');
     expect(trees).toBeDefined();
-    expect(trees?.reasons.map((r) => plain(r.text))).toContain('NDVI 0,08 — в 3 раза ниже среднего по городу (0,24)');
+    expect(trees?.reasons.map((r) => plain(r.text))).toContain('NDVI 0,08, в 3 раза ниже среднего по городу (0,24)');
     expect(trees?.reasons.map((r) => r.key)).toEqual(['ndvi', 'tree']);
   });
 
@@ -75,7 +75,7 @@ describe('recommend', () => {
   it('keeps the literature range when the place heats strongly', () => {
     const [bare] = recommend(input({ values: { bare: 60 }, contributions: { bare: 4.2 } }));
     expect(bare?.effect).toEqual({ min: 1, max: 3 });
-    expect(plain(bare?.reasons[0]?.text)).toBe('Открытый грунт 60 % — в 10 раз выше среднего по городу (6 %)');
+    expect(plain(bare?.reasons[0]?.text)).toBe('Открытый грунт 60 %, в 10 раз выше среднего по городу (6 %)');
   });
 });
 
@@ -91,7 +91,7 @@ describe('compareWithCity', () => {
   });
 
   it('handles an almost absent factor', () => {
-    expect(plain(compareWithCity(pct, 0, 50))).toBe('почти нет; в среднем по городу — 50 %');
+    expect(plain(compareWithCity(pct, 0, 50))).toBe('почти нет, в среднем по городу 50 %');
   });
 });
 
@@ -109,7 +109,15 @@ describe('formatRatio', () => {
 });
 
 describe('formatEffect', () => {
-  it('formats a cooling range', () => {
-    expect(plain(formatEffect({ min: 0.5, max: 2 }))).toBe('−0,5…−2,0 °C');
+  it('formats a whole-degree range', () => {
+    expect(formatEffect({ min: 1, max: 3 })).toBe('1–3°');
+  });
+
+  it('keeps one decimal when needed', () => {
+    expect(formatEffect({ min: 0.5, max: 2 })).toBe('0,5–2,0°');
+  });
+
+  it('collapses an equal range to an upper bound', () => {
+    expect(formatEffect({ min: 0.4, max: 0.4 })).toBe('до 0,4°');
   });
 });
