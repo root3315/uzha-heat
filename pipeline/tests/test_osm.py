@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 
@@ -16,15 +18,24 @@ def test_line_length_split_between_cells():
 
 
 class _Response:
-    def __init__(self, payload=None, error=None):
-        self.payload, self.error = payload, error
+    def __init__(self, payload=None, error=None, chunks=None):
+        self.payload, self.error, self.chunks = payload, error, chunks
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
     def raise_for_status(self):
         if self.error:
             raise self.error
 
-    def json(self):
-        return self.payload
+    def iter_content(self, size):
+        if self.chunks is not None:
+            yield from self.chunks
+        else:
+            yield json.dumps(self.payload).encode()
 
 
 def test_overpass_cycles_mirrors_with_backoff(monkeypatch):
@@ -36,7 +47,7 @@ def test_overpass_cycles_mirrors_with_backoff(monkeypatch):
         _Response({"elements": [{"id": 1}]}),
     ])
 
-    def fake_post(url, data, headers, timeout):
+    def fake_post(url, data, headers, timeout, stream):
         calls.append((url, headers["User-Agent"]))
         return next(responses)
 
@@ -55,3 +66,12 @@ def test_overpass_gives_up_after_all_rounds(monkeypatch):
     assert osm.overpass("node(1);out;", rounds=2, sleep=waits.append) is None
     assert len(waits) == 2 * len(osm.OVERPASS_URLS) - 1
     assert max(waits) <= osm.RETRY_MAX_DELAY_S
+
+
+def test_overpass_request_has_wall_clock_cap(monkeypatch):
+    from pipeline.uzha.sources import osm
+    clock = iter([0.0, 1.0, 500.0])
+    monkeypatch.setattr(osm.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(osm.requests, "post", lambda *a, **k: _Response(chunks=[b"{", b"}"]))
+    with pytest.raises(osm.requests.Timeout):
+        osm._overpass_once("https://example.org", "node(1);out;", timeout_s=180)

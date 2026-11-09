@@ -1,4 +1,5 @@
 """OpenStreetMap layers via the Overpass API: roads, buildings, water, district boundaries."""
+import json
 import logging
 import time
 
@@ -19,8 +20,10 @@ OVERPASS_URLS = (
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 )
 USER_AGENT = "uzha-heat-pipeline/0.1"
-TIMEOUT_S = 300
-RETRY_ROUNDS = 3
+TIMEOUT_S = 180  # hard cap per request: Overpass server timeout and client wall clock
+CONNECT_TIMEOUT_S = 30
+CHUNK_BYTES = 1 << 16
+RETRY_ROUNDS = 2
 RETRY_BASE_DELAY_S = 15
 RETRY_MAX_DELAY_S = 240
 BUILDING_TILES = 3
@@ -50,10 +53,19 @@ def retry_delay(attempt: int) -> float:
     return min(RETRY_BASE_DELAY_S * 2 ** (attempt - 1), RETRY_MAX_DELAY_S)
 
 
-def _overpass_once(url: str, body: str) -> list:
-    response = requests.post(url, data={"data": body}, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_S + 60)
-    response.raise_for_status()
-    payload = response.json()
+def _overpass_once(url: str, body: str, timeout_s: float = TIMEOUT_S) -> list:
+    """One request with a wall-clock cap: `requests` alone only bounds each socket read, so a
+    server trickling bytes could otherwise hold the pipeline indefinitely."""
+    deadline = time.monotonic() + timeout_s
+    with requests.post(url, data={"data": body}, headers={"User-Agent": USER_AGENT},
+                       timeout=(CONNECT_TIMEOUT_S, timeout_s), stream=True) as response:
+        response.raise_for_status()
+        chunks = []
+        for chunk in response.iter_content(CHUNK_BYTES):
+            if time.monotonic() > deadline:
+                raise requests.Timeout(f"no complete response within {timeout_s:g} s")
+            chunks.append(chunk)
+    payload = json.loads(b"".join(chunks))
     remark = payload.get("remark", "")
     if "runtime error" in remark or "timed out" in remark:
         raise ValueError(f"incomplete result: {remark}")
