@@ -47,8 +47,8 @@ function CityWorkspace({ detail }: { detail: CityDetail }) {
     setSelection(null);
   }, []);
 
-  const openReport = () => {
-    setReportImage(mapRef.current?.snapshot() ?? null);
+  const openReport = async () => {
+    setReportImage((await mapRef.current?.snapshot()) ?? null);
     setReportOpen(true);
   };
 

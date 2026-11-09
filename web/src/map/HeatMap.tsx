@@ -8,10 +8,10 @@ import type { Selection } from '../domain/places';
 import { geometryBounds } from '../domain/stats';
 import { cellsToGeoJson, districtsToGeoJson } from './geojson';
 import { fillColorExpression, type Granularity, type MapMode, type MapScales } from './mapMode';
-import { BASEMAP_STYLE, LAYER, SOURCE, addDataLayers, tuneBasemap } from './layers';
+import { BASEMAP_STYLE, FALLBACK_STYLE, LAYER, SOURCE, addDataLayers, tuneBasemap } from './layers';
 
 export interface HeatMapHandle {
-  snapshot(): string | null;
+  snapshot(): Promise<string | null>;
 }
 
 interface HeatMapProps {
@@ -32,12 +32,21 @@ interface HoverReadout {
 
 const NOTHING_SELECTED = -1;
 const CELL_FOCUS_ZOOM = 12.4;
+const BASEMAP_TIMEOUT_MS = 6000;
 
 /** On narrow screens the panel is a bottom sheet over the map; keep in sync with app.css. */
 const SHEET_SHARE = 0.48;
 
 function bottomInset(container: HTMLElement): number {
   return window.matchMedia('(max-width: 720px)').matches ? container.clientHeight * SHEET_SHARE : 0;
+}
+
+/** The drawing buffer is only valid inside the frame that drew it, so read it from the render event. */
+function captureCanvas(map: MapLibreMap): Promise<string> {
+  return new Promise((resolve) => {
+    map.once('render', () => resolve(map.getCanvas().toDataURL('image/png')));
+    map.triggerRepaint();
+  });
 }
 
 export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
@@ -59,7 +68,7 @@ export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
   const districtsGeoJson = useMemo(() => districtsToGeoJson(detail), [detail]);
 
   useImperativeHandle(ref, () => ({
-    snapshot: () => mapRef.current?.getCanvas().toDataURL('image/png') ?? null,
+    snapshot: async () => (mapRef.current ? captureCanvas(mapRef.current) : null),
   }));
 
   useEffect(() => {
@@ -71,7 +80,6 @@ export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
       bounds: detail.city.bbox as LngLatBoundsLike,
       fitBoundsOptions: { padding: { top: 64, left: 16, right: 16, bottom: 16 + bottomInset(container) } },
       attributionControl: { compact: true },
-      canvasContextAttributes: { preserveDrawingBuffer: true },
       dragRotate: false,
       pitchWithRotate: false,
     });
@@ -79,11 +87,21 @@ export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left');
     mapRef.current = map;
 
-    map.on('load', () => {
+    let dataAdded = false;
+    let basemapFailed = false;
+    map.once('style.load', () => {
       tuneBasemap(map);
       addDataLayers(map, cellsGeoJson, districtsGeoJson);
+      dataAdded = true;
       setReady(true);
     });
+    const fallBackToPlainStyle = () => {
+      if (dataAdded || basemapFailed) return;
+      basemapFailed = true;
+      map.setStyle(FALLBACK_STYLE, { diff: false });
+    };
+    const basemapTimeout = window.setTimeout(fallBackToPlainStyle, BASEMAP_TIMEOUT_MS);
+    map.on('error', fallBackToPlainStyle);
 
     const clearHover = () => {
       const hovered = hoveredRef.current;
@@ -128,6 +146,7 @@ export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
     });
 
     return () => {
+      window.clearTimeout(basemapTimeout);
       map.remove();
       mapRef.current = null;
       setReady(false);
@@ -150,9 +169,9 @@ export const HeatMap = forwardRef<HeatMapHandle, HeatMapProps>(function HeatMap(
     map.setLayoutProperty(LAYER.cellsHover, 'visibility', showCells ? 'visible' : 'none');
     if (map.getLayer(LAYER.districtsFill)) {
       map.setLayoutProperty(LAYER.districtsFill, 'visibility', showCells ? 'none' : 'visible');
-      map.setLayoutProperty(LAYER.districtsLabel, 'visibility', showCells ? 'none' : 'visible');
       map.setPaintProperty(LAYER.districtsLine, 'line-opacity', showCells ? 0.32 : 0.7);
     }
+    if (map.getLayer(LAYER.districtsLabel)) map.setLayoutProperty(LAYER.districtsLabel, 'visibility', showCells ? 'none' : 'visible');
   }, [ready, granularity]);
 
   useEffect(() => {

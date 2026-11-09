@@ -1,4 +1,4 @@
-import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { CellProperties } from './geojson';
 
@@ -23,6 +23,13 @@ const KEPT_LABEL_PREFIXES = ['label_city', 'label_town', 'label_village', 'water
 const PAPER = '#f1efe9';
 /** Opaque, because neighbouring cells overlap slightly (see CELL_OVERLAP). */
 const DATA_OPACITY = 1;
+
+/** Used when the basemap cannot be loaded: a plain paper background, no tiles and no glyphs. */
+export const FALLBACK_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [{ id: 'background', type: 'background', paint: { 'background-color': PAPER } }],
+};
 
 /** Pulls the basemap towards the paper tone and quietens it so the data reads first. */
 export function tuneBasemap(map: MapLibreMap): void {
@@ -126,6 +133,7 @@ export function addDataLayers(
     },
     beforeLabels,
   );
+  if (!map.getStyle().glyphs) return;
   map.addLayer({
     id: LAYER.districtsLabel,
     type: 'symbol',
