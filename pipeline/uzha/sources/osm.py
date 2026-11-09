@@ -13,10 +13,16 @@ from ..grid import WGS84, Grid, Raster
 
 log = logging.getLogger(__name__)
 
-OVERPASS_URLS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter")
+OVERPASS_URLS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+)
 USER_AGENT = "uzha-heat-pipeline/0.1"
 TIMEOUT_S = 300
-RETRY_DELAY_S = 30
+RETRY_ROUNDS = 3
+RETRY_BASE_DELAY_S = 15
+RETRY_MAX_DELAY_S = 240
 BUILDING_TILES = 3
 ROAD_TYPES = "motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service"
 SAMPLE_STEP_M = 10.0
@@ -24,20 +30,34 @@ CELL_AREA_KM2_PER_M2 = 1e-6
 CELL_AREA_HA_PER_M2 = 1e-4
 
 
-def overpass(query: str):
-    """Run an Overpass query, retrying once on a mirror; returns the element list or None on failure."""
+def overpass(query: str, rounds: int = RETRY_ROUNDS, sleep=time.sleep):
+    """Run an Overpass query, cycling through the mirrors for `rounds` rounds with exponential
+    backoff between attempts; returns the element list or None if every attempt failed."""
     body = f"[out:json][timeout:{TIMEOUT_S}];{query}"
-    for attempt, url in enumerate(OVERPASS_URLS, start=1):
+    attempts = [url for _ in range(rounds) for url in OVERPASS_URLS]
+    for attempt, url in enumerate(attempts, start=1):
         try:
-            response = requests.post(url, data={"data": body},
-                                     headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_S + 60)
-            response.raise_for_status()
-            return response.json()["elements"]
+            return _overpass_once(url, body)
         except (requests.RequestException, ValueError, KeyError) as error:
-            log.warning("Overpass attempt %d (%s) failed: %s", attempt, url, error)
-            if attempt < len(OVERPASS_URLS):
-                time.sleep(RETRY_DELAY_S)
+            log.warning("Overpass attempt %d/%d (%s) failed: %s", attempt, len(attempts), url, error)
+            if attempt < len(attempts):
+                sleep(retry_delay(attempt))
     return None
+
+
+def retry_delay(attempt: int) -> float:
+    """Seconds to wait after the given (1-based) failed attempt."""
+    return min(RETRY_BASE_DELAY_S * 2 ** (attempt - 1), RETRY_MAX_DELAY_S)
+
+
+def _overpass_once(url: str, body: str) -> list:
+    response = requests.post(url, data={"data": body}, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_S + 60)
+    response.raise_for_status()
+    payload = response.json()
+    remark = payload.get("remark", "")
+    if "runtime error" in remark or "timed out" in remark:
+        raise ValueError(f"incomplete result: {remark}")
+    return payload["elements"]
 
 
 def overpass_bbox(bbox: tuple) -> str:

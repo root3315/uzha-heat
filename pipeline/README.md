@@ -37,8 +37,10 @@ bbox takes about a minute. Delete a layer's `.pkl` to refetch it. A first run of
 | districts | OSM admin boundaries (`admin_level=6` inside the Tashkent city relation) | optional |
 | photo | ru.wikipedia REST page summary | lead image, credit "Wikipedia / Wikimedia Commons" |
 
-OSM is queried through the Overpass API (overpass-api.de, one retry on overpass.kumi.systems);
-buildings are fetched in 3×3 bbox tiles. A factor whose source fails is dropped and the city is
+OSM is queried through the Overpass API with the User-Agent `uzha-heat-pipeline/0.1`, cycling
+overpass-api.de → overpass.kumi.systems → maps.mail.ru for 3 rounds with exponential backoff
+(15 s doubling, capped at 4 min); a response with an Overpass "runtime error" remark counts as a
+failure. Buildings are fetched in 3×3 bbox tiles. A factor whose source fails is dropped and the city is
 still produced; `features` in the JSON lists only what is present. Failed downloads are not cached,
 so rerunning the city retries them.
 
