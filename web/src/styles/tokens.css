@@ -1,0 +1,108 @@
+/*
+ * The same system as the author's portfolio: cool grey paper, ink, one amber lamp, Tektur + Onest + Martian Mono.
+ * UzHa adds only what is its own: the temperature steps and the hatching for causes.
+ */
+:root {
+  --paper: #eceeeb;
+  --paper-2: #e1e4e0;
+  --card: #f7f8f6;
+  --ink: #121417;
+  --ink-2: #565a62;
+  --line: #cdd1cc;
+  --night: #0b0d12;
+  --amber: #e8892b;
+  --amber-ink: #8a4a0c;
+  /* Highlighter band behind a number, and the bar's fade into the page. */
+  --amber-wash: rgba(232, 137, 43, 0.5);
+  --paper-clear: rgba(236, 238, 235, 0);
+  --scrim: rgba(18, 20, 23, 0.55);
+
+  /* Names the map and the charts read. */
+  --ground: var(--paper);
+  /* The map is a panel on the page, like every live thing on the site. */
+  --map-ground: var(--paper-2);
+  /* Inside the city where the satellite has no reading: a flat shade, never a temperature. */
+  --shade: #d5d9d3;
+  --pencil: var(--ink-2);
+  --grid: var(--line);
+  --water: #cbd9db;
+  --noon: var(--amber);
+  /* The printed sheet. */
+  --sheet: #fbfcfb;
+
+  /*
+   * Colour means temperature and nothing else: seven 2° steps, the city mean in the quiet middle one,
+   * which is almost the paper itself. The hot side runs through the site's own amber.
+   */
+  --t0: #36697a;
+  --t1: #9cbcc0;
+  --t2: #d9ddd7;
+  --t3: #f1c27f;
+  --t4: #e8892b;
+  --t5: #b8461d;
+  --t6: #5a1a10;
+  /* How strongly each step is laid down: the neutral middle almost vanishes, only the two hottest are full. */
+  --o0: 0.72;
+  --o1: 0.68;
+  --o2: 0.6;
+  --o3: 0.8;
+  --o4: 0.85;
+  --o5: 0.96;
+  --o6: 1;
+
+  /* Temperature figures in text: warmer or cooler than the city. */
+  --hot: #a83e15;
+  --cool: #2f6372;
+  /* Hatching for causes: ink when a factor heats, the cool ink when it cools. */
+  --hatch-heats: var(--ink);
+  --hatch-cools: var(--cool);
+
+  --font-display: 'Tektur Variable', 'Arial Narrow', sans-serif;
+  --font-body: 'Onest Variable', 'Segoe UI', sans-serif;
+  --font-mono: 'Martian Mono Variable', ui-monospace, monospace;
+  /* Older names used across the tool. */
+  --sans: var(--font-body);
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.3125rem;
+  --text-xl: 1.625rem;
+  --text-figure: 3rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --pad: clamp(16px, 3.2vw, 48px);
+  --bar-h: 64px;
+  /* Vertical rhythm of the landing's sections. */
+  --section-y: clamp(56px, 10vh, 110px);
+  --panel-w: 400px;
+  --radius: 26px;
+  --radius-s: 16px;
+  --hairline: 1px solid var(--line);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --fast: 250ms;
+  --slow: 900ms;
+}
+
+@media (max-width: 860px) {
+  :root {
+    --bar-h: 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 0ms;
+    --slow: 0ms;
+  }
+}

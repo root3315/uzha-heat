@@ -1,0 +1,40 @@
+@page {
+  size: A4;
+  margin: 12mm 13mm;
+}
+
+@media print {
+  body.is-reporting #root,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: var(--sheet);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report {
+    position: static;
+    overflow: visible;
+    background: var(--sheet);
+  }
+
+  .report__sheet {
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  .report__map,
+  .report__section,
+  .cause,
+  .advice {
+    break-inside: avoid;
+  }
+
+  .text-link {
+    text-decoration: none;
+  }
+}
