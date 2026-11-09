@@ -51,7 +51,9 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 ```
 
 ### Rules
-- Columnar arrays: index `i` is the same cell in every array. Floats rounded to 3 decimals.
+- Columnar arrays: index `i` is the same cell in every array. Floats rounded to 3 decimals,
+  except coordinates (`cells.lon`/`lat`, district geometry: 5 decimals, ~1 m) and
+  `grid.halfSizeDeg` (6 decimals) — 3 decimals of a degree (~100 m) is too coarse for 200 m cells.
 - `lst` is mean summer land-surface temperature, °C (median of clear-sky Landsat 8/9 scenes).
 - `shap[key][i]` is in °C: contribution of factor `key` to the cell's temperature relative to
   `model.baseValue`. Positive = this factor heats the cell, negative = cools it.
