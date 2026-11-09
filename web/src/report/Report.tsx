@@ -27,6 +27,8 @@ const today = () => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'l
 
 export function Report({ detail, mapImage, place, cityMeans, onClose }: ReportProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const subject = useMemo(() => place ?? hotspotProfile(detail), [place, detail]);
   const waterfall = useMemo(() => buildWaterfall(subject, detail.features, detail.model.baseValue), [subject, detail]);
   const recommendations = useMemo(
@@ -36,14 +38,14 @@ export function Report({ detail, mapImage, place, cityMeans, onClose }: ReportPr
 
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onCloseRef.current();
     window.addEventListener('keydown', onKey);
     document.body.classList.add('is-reporting');
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.classList.remove('is-reporting');
     };
-  }, [onClose]);
+  }, []);
 
   return createPortal(
     <div className="report" role="dialog" aria-modal="true" aria-labelledby="report-title">
