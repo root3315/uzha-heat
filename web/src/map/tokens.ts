@@ -1,6 +1,9 @@
 /** Map colours come from the same CSS custom properties as the page, so there is one palette. */
 export interface MapTokens {
   ground: string;
+  /** Inside the city, no data. */
+  shade: string;
+  noon: string;
   ink: string;
   pencil: string;
   grid: string;
@@ -15,7 +18,9 @@ export function readTokens(element: Element = document.documentElement): MapToke
   const style = getComputedStyle(element);
   const token = (name: string) => style.getPropertyValue(name).trim();
   return {
-    ground: token('--ground'),
+    ground: token('--map-ground'),
+    shade: token('--shade'),
+    noon: token('--noon'),
     ink: token('--ink'),
     pencil: token('--pencil'),
     grid: token('--grid'),

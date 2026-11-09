@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail } from '../data/contract';
-import { cellProfile, districtAt, dominanceShare, dominantFactorPerCell, hotspotProfile, hottestTenth } from './places';
+import { cellProfile, districtAt, dominantFactorPerCell, hotspotProfile, hottestTenth } from './places';
 
 function city(): CityDetail {
   return {
@@ -40,11 +40,6 @@ describe('places', () => {
 
   it('finds the top heating factor per cell, null when nothing heats', () => {
     expect(dominantFactorPerCell(city())).toEqual([null, 'a', 'a', 'b']);
-  });
-
-  it('measures how often a factor is the top one among some cells', () => {
-    expect(dominanceShare(city(), 'a', [1, 2, 3])).toBeCloseTo(2 / 3);
-    expect(dominanceShare(city(), 'a', [])).toBe(0);
   });
 
   it('names the district that contains a point, or nothing', () => {

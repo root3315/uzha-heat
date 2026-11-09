@@ -1,12 +1,11 @@
 import type { CitySummary } from '../data/contract';
-import { routeHref } from './routing';
 
-/** A plain select dressed as a line of text: the city is context here, not a destination. */
-export function CitySwitcher({ cities, currentId }: { cities: CitySummary[]; currentId: string }) {
+/** A plain select dressed as the city's name: the city is context here, not a destination. */
+export function CitySwitcher({ cities, currentId, onChange }: { cities: CitySummary[]; currentId: string; onChange(id: string): void }) {
   return (
     <label className="city-switcher">
       <span className="visually-hidden">Город</span>
-      <select value={currentId} onChange={(event) => window.location.assign(routeHref(event.target.value))}>
+      <select value={currentId} onChange={(event) => onChange(event.target.value)}>
         {cities.map((city) => (
           <option key={city.id} value={city.id}>
             {city.name}

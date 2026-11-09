@@ -75,15 +75,6 @@ export function dominantFactorPerCell(detail: CityDetail): (string | null)[] {
   return detail.cells.lst.map((_, i) => dominantHeatingFactor(keys, (key) => shap[key]?.[i] ?? 0));
 }
 
-/** Share of `members` where `key` is the factor that heats most. */
-export function dominanceShare(detail: CityDetail, key: string, members: readonly number[]): number {
-  if (members.length === 0) return 0;
-  const keys = detail.features.map((f) => f.key);
-  const { shap } = detail.cells;
-  const wins = members.filter((i) => dominantHeatingFactor(keys, (k) => shap[k]?.[i] ?? 0) === key).length;
-  return wins / members.length;
-}
-
 /** Name of the district (from the data) that contains the point, if the data has districts. */
 export function districtAt(detail: CityDetail, point: [number, number]): string | null {
   return detail.districts.find((district) => pointInGeometry(point, district.geometry))?.name ?? null;

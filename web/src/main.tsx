@@ -1,12 +1,11 @@
-import '@fontsource/commissioner/400.css';
-import '@fontsource/commissioner/500.css';
-import '@fontsource/commissioner/600.css';
-import '@fontsource/literata/400.css';
-import '@fontsource/literata/600.css';
+import '@fontsource-variable/martian-mono';
+import '@fontsource-variable/onest';
+import '@fontsource-variable/tektur/standard.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/page.css';
 import './styles/print.css';
 import { App } from './ui/App';
 

@@ -18,10 +18,10 @@ export interface CauseWords {
   plural?: boolean;
   /** Which way cools: more of it (`up`), less of it (`down`), or not something to change. */
   better: 'up' | 'down' | null;
+  /** For a factor that is not a lever: one plain sentence on what the number really shows. */
+  explain?: string;
   /** The value in plain terms: "NDVI 0,12". */
   measure(value: number): string;
-  /** A group of places on the cooler side of `threshold`: "NDVI выше 0,40". */
-  peers(threshold: number): string;
 }
 
 const pct = (v: number) => `${formatNumber(v, 0)}${NBSP}%`;
@@ -35,7 +35,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'мало зелени',
     better: 'up',
     measure: (v) => `NDVI ${formatNumber(v, 2)}`,
-    peers: (t) => `NDVI выше ${formatNumber(t, 2)}`,
   },
   tree: {
     heats: 'нехватка деревьев',
@@ -45,7 +44,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'нет деревьев',
     better: 'up',
     measure: (v) => `деревья на ${pct(v)} площади`,
-    peers: (t) => `деревья занимают больше ${pct(t)}`,
   },
   built: {
     heats: 'плотная застройка',
@@ -55,7 +53,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'сплошная застройка',
     better: 'down',
     measure: (v) => `застроено ${pct(v)}`,
-    peers: (t) => `застроено меньше ${pct(Math.max(t, 1))}`,
   },
   bare: {
     heats: 'голая земля',
@@ -65,19 +62,19 @@ const WORDS: Record<string, CauseWords> = {
     there: 'голая земля',
     better: 'down',
     measure: (v) => `голой земли ${pct(v)}`,
-    peers: (t) => (t < 0.5 ? 'голой земли нет' : `голой земли меньше ${pct(t)}`),
   },
   albedo: {
-    // In these cities albedo rises with temperature (bright bare soil is hot), so the words stay neutral
-    // and never promise that light surfaces cool.
-    heats: 'отражающая способность поверхности',
-    cools: 'отражающая способность поверхности',
-    heatsShort: 'альбедо',
-    coolsShort: 'альбедо',
-    there: 'яркая открытая поверхность',
-    better: 'up',
+    // In all three cities albedo rises with temperature: the brightest surface is bare dry soil, and it is the hottest.
+    // So albedo is read as a sign of open ground, never as a lever, and never as "light surfaces heat".
+    heats: 'яркая открытая поверхность',
+    cools: 'тёмная поверхность',
+    heatsShort: 'яркий грунт',
+    coolsShort: 'тёмная поверхность',
+    there: 'яркая открытая земля',
+    better: null,
+    explain:
+      'Высокое альбедо здесь значит открытую сухую землю: в этих городах светлее всего голый грунт, он же и горячее всего. Светлые поверхности сами по себе не греют, помогает закрыть грунт зеленью.',
     measure: (v) => `альбедо ${formatNumber(v, 2)}`,
-    peers: (t) => `альбедо выше ${formatNumber(t, 2)}`,
   },
   roads: {
     heats: 'плотная сеть дорог',
@@ -87,7 +84,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'много дорог',
     better: 'down',
     measure: (v) => `${formatNumber(v, 1)}${NBSP}км дорог на км²`,
-    peers: (t) => `дорог меньше ${formatNumber(Math.max(t, 0.5), 1)}${NBSP}км на км²`,
   },
   buildings: {
     heats: 'плотность зданий',
@@ -97,7 +93,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'много зданий',
     better: 'down',
     measure: (v) => `${formatNumber(v, 1)} зданий на га`,
-    peers: (t) => `зданий меньше ${formatNumber(Math.max(t, 0.5), 1)} на га`,
   },
   water_dist: {
     heats: 'удалённость от воды',
@@ -107,7 +102,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'далеко до воды',
     better: 'down',
     measure: (v) => (v >= 1000 ? `до воды ${formatNumber(v / 1000, 1)}${NBSP}км` : `до воды ${formatNumber(Math.round(v / 10) * 10, 0)}${NBSP}м`),
-    peers: (t) => `вода ближе ${formatNumber(Math.max(10, Math.round(t / 10) * 10), 0)}${NBSP}м`,
   },
   elevation: {
     heats: 'рельеф',
@@ -117,7 +111,6 @@ const WORDS: Record<string, CauseWords> = {
     there: 'так сложился рельеф',
     better: null,
     measure: (v) => `высота ${formatNumber(v, 0)}${NBSP}м`,
-    peers: () => '',
   },
 };
 
@@ -134,7 +127,6 @@ export function causeWords(feature: Pick<FeatureMeta, 'key' | 'label' | 'unit'>)
     there: label,
     better: null,
     measure: (v) => `${feature.label} ${formatNumber(v, 2)} ${feature.unit}`.trim(),
-    peers: () => '',
   };
 }
 

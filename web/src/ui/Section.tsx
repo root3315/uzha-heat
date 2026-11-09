@@ -19,11 +19,13 @@ interface SectionProps {
   onModeChange(mode: MapMode): void;
   onProbe(sample: Sample | null): void;
   onPick(sample: Sample): void;
+  /** While the page is still telling the story, the section is shown but not yet operated. */
+  quiet?: boolean;
 }
 
 const CHART_H = 196;
 
-function CauseKey({ model }: { model: CityModel }) {
+export function CauseKey({ model }: { model: CityModel }) {
   const byKey = new Map(model.detail.features.map((f) => [f.key, f]));
   return (
     <ul className="cause-key" aria-label="Что греет сильнее всего, по штриховке">
@@ -40,7 +42,7 @@ function CauseKey({ model }: { model: CityModel }) {
 }
 
 /** The cross-section under the map: one sentence, a few quiet controls and the profile itself. */
-export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, onProbe, onPick }: SectionProps) {
+export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, onProbe, onPick, quiet = false }: SectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>(900);
   const { detail } = model;
   return (
@@ -49,14 +51,14 @@ export function Section({ model, profile, isDefault, drawing, mode, onDraw, onRe
         <p className="section__answer">
           <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features)} />
         </p>
-        <div className="section__tools">
-          <button type="button" className="text-button" aria-pressed={drawing} onClick={onDraw}>
+        <div className="section__tools" hidden={quiet}>
+          <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={onDraw}>
             {drawing ? 'Ведите по карте' : 'Новый разрез'}
           </button>
-          <button type="button" className="text-button" onClick={onReset} disabled={isDefault}>
+          <button type="button" className="pill pill--small" onClick={onReset} disabled={isDefault}>
             Через самое жаркое
           </button>
-          <button type="button" className="text-button" aria-pressed={mode === 'causes'} onClick={() => onModeChange(mode === 'causes' ? 'temperature' : 'causes')}>
+          <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={() => onModeChange(mode === 'causes' ? 'temperature' : 'causes')}>
             Причины на карте
           </button>
         </div>

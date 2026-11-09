@@ -33,7 +33,7 @@ export async function snapshotMap(map: MapLibreMap, labels: PlacedLabel[], trans
     ctx.save();
     ctx.translate(label.x, label.y);
     ctx.rotate((label.angle * Math.PI) / 180);
-    ctx.font = `${label.major ? 600 : 400} 11px Literata`;
+    ctx.font = `${label.major ? 600 : 400} 10px 'Martian Mono Variable'`;
     ctx.lineWidth = 3;
     ctx.strokeStyle = tokens.ground;
     ctx.strokeText(label.text, 0, 0);
@@ -52,7 +52,7 @@ export async function snapshotMap(map: MapLibreMap, labels: PlacedLabel[], trans
     ctx.strokeStyle = tokens.ink;
     ctx.stroke();
     ctx.fillStyle = tokens.ink;
-    ctx.font = '600 12px Commissioner';
+    ctx.font = "500 11px 'Martian Mono Variable'";
     ctx.fillText(i === 0 ? 'А' : 'Б', x, y + 0.5);
   });
   return canvas.toDataURL('image/png');

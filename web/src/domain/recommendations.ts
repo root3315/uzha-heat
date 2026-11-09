@@ -16,10 +16,11 @@ export interface Reason {
   contribution: number;
 }
 
-export interface EffectRange {
-  /** Expected surface cooling, °C, as positive numbers (min ≤ max). */
-  min: number;
-  max: number;
+/** What published reviews say about a measure, with the source to check it. No number we could not verify. */
+export interface Evidence {
+  finding: string;
+  cite: string;
+  url: string;
 }
 
 export interface Recommendation {
@@ -29,7 +30,7 @@ export interface Recommendation {
   reasons: Reason[];
   /** Sum of the positive contributions that triggered this recommendation, °C. */
   heating: number;
-  effect: EffectRange;
+  evidence: Evidence;
 }
 
 /** Which side of the city mean makes a factor a problem that the intervention addresses. */
@@ -38,6 +39,8 @@ type ProblemSide = 'low' | 'high';
 interface Trigger {
   key: string;
   problem: ProblemSide;
+  /** Another factor that must also be on its problem side, e.g. dark roofs only count where there are roofs. */
+  alongWith?: { key: string; problem: ProblemSide };
 }
 
 interface InterventionRule {
@@ -45,9 +48,10 @@ interface InterventionRule {
   title: string;
   actions: string[];
   triggers: Trigger[];
-  /** Typical surface-temperature reduction reported in the literature, °C. */
-  typicalEffect: EffectRange;
+  evidence: Evidence;
 }
+
+const KNIGHT_2021 = { cite: 'Knight и др., 2021, Environmental Evidence', url: 'https://doaj.org/article/a25650e3e71d43f1bf66e2651063233f' };
 
 /**
  * Interventions keyed by the factors that make them relevant. Factors without a rule
@@ -65,7 +69,7 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
       { key: 'ndvi', problem: 'low' },
       { key: 'tree', problem: 'low' },
     ],
-    typicalEffect: { min: 1, max: 3 },
+    evidence: { finding: 'по обзору 308 исследований, под деревьями воздух в среднем на 0,8° прохладнее', ...KNIGHT_2021 },
   },
   {
     id: 'cool-roofs',
@@ -77,16 +81,25 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
     triggers: [
       { key: 'built', problem: 'high' },
       { key: 'buildings', problem: 'high' },
-      { key: 'albedo', problem: 'low' },
+      // Low albedo is a roof problem only where there are roofs; elsewhere dark ground is usually green.
+      { key: 'albedo', problem: 'low', alongWith: { key: 'built', problem: 'high' } },
     ],
-    typicalEffect: { min: 0.5, max: 2 },
+    evidence: {
+      finding: 'по обзору моделей городов, зелёные крыши снижают температуру воздуха на 0,3–3°',
+      cite: 'Santamouris, 2014, Solar Energy',
+      url: 'https://doi.org/10.1016/j.solener.2012.07.003',
+    },
   },
   {
     id: 'cool-pavements',
     title: 'Затенение и светлые покрытия дорог',
     actions: ['светлый или проницаемый асфальт на парковках и тротуарах', 'деревья по разделительным полосам'],
     triggers: [{ key: 'roads', problem: 'high' }],
-    typicalEffect: { min: 0.5, max: 1.5 },
+    evidence: {
+      finding: 'по обзору, светлые и проницаемые покрытия нагреваются меньше обычного асфальта, насколько зависит от материала',
+      cite: 'Santamouris, 2013, Renewable and Sustainable Energy Reviews',
+      url: 'https://doi.org/10.1016/j.rser.2013.05.047',
+    },
   },
   {
     id: 'cover-bare-soil',
@@ -96,7 +109,7 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
       'пылеподавление и озеленение промзон и обочин',
     ],
     triggers: [{ key: 'bare', problem: 'high' }],
-    typicalEffect: { min: 1, max: 3 },
+    evidence: { finding: 'по обзору 308 исследований, участки с травой в среднем на 0,6° прохладнее незелёных', ...KNIGHT_2021 },
   },
   {
     id: 'water',
@@ -106,7 +119,11 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
       'фонтаны и открытые водоёмы в общественных пространствах',
     ],
     triggers: [{ key: 'water_dist', problem: 'high' }],
-    typicalEffect: { min: 0.5, max: 2 },
+    evidence: {
+      finding: 'по обзору, у воды воздух прохладнее, но насколько, сильно зависит от ветра и застройки вокруг',
+      cite: 'Völker и др., 2013, Erdkunde',
+      url: 'https://doi.org/10.3112/erdkunde.2013.04.05',
+    },
   },
 ];
 
@@ -155,24 +172,22 @@ function reasonFor(feature: FeatureMeta, input: RecommendationInput): Reason {
   };
 }
 
-/** The literature range, capped by how much the triggering factors actually heat this place. */
-function expectedEffect(typical: EffectRange, heating: number): EffectRange {
-  const cap = Math.max(0.1, Math.round(heating * 10) / 10);
-  const max = Math.min(typical.max, cap);
-  const min = Math.min(typical.min, Math.round((max / 2) * 10) / 10);
-  return { min, max };
-}
-
 /**
  * A heating contribution is only actionable when the value sits on the problem side of the city mean:
  * if sparse roads "heat" a place, the model is picking up something else (e.g. bare outskirts),
  * and paving advice would be wrong.
  */
-function isProblem(trigger: Trigger, input: RecommendationInput): boolean {
-  const value = input.values[trigger.key];
-  const cityMean = input.cityMeans[trigger.key];
+function onProblemSide(key: string, problem: ProblemSide, input: RecommendationInput): boolean {
+  const value = input.values[key];
+  const cityMean = input.cityMeans[key];
   if (value === undefined || cityMean === undefined || !Number.isFinite(cityMean)) return true;
-  return trigger.problem === 'low' ? value < cityMean : value > cityMean;
+  return problem === 'low' ? value < cityMean : value > cityMean;
+}
+
+function isProblem(trigger: Trigger, input: RecommendationInput): boolean {
+  const { alongWith } = trigger;
+  if (alongWith && !(alongWith.key in input.values && onProblemSide(alongWith.key, alongWith.problem, input))) return false;
+  return onProblemSide(trigger.key, trigger.problem, input);
 }
 
 export function recommend(input: RecommendationInput, minContribution = MIN_CONTRIBUTION): Recommendation[] {
@@ -195,17 +210,9 @@ export function recommend(input: RecommendationInput, minContribution = MIN_CONT
       actions: rule.actions,
       reasons,
       heating,
-      effect: expectedEffect(rule.typicalEffect, heating),
+      evidence: rule.evidence,
     });
   }
 
   return recommendations.sort((a, b) => b.heating - a.heating);
-}
-
-/** Expected cooling as a plain range of degrees: "1–3°", "0,5–1,5°", "до 0,4°". */
-export function formatEffect(effect: EffectRange): string {
-  const digits = Number.isInteger(effect.min) && Number.isInteger(effect.max) ? 0 : 1;
-  const lo = formatNumber(effect.min, digits);
-  const hi = formatNumber(effect.max, digits);
-  return effect.min === effect.max ? `до ${hi}°` : `${lo}–${hi}°`;
 }

@@ -32,6 +32,8 @@ export const formatDeg = (value: number, digits = 1): string => `${formatNumber(
 /** Temperature difference with its sign: "+4,6°", "−1,2°". */
 export const formatDegSigned = (value: number, digits = 1): string => `${formatSigned(value, digits)}°`;
 export const formatPercent = (share: number): string => `${formatNumber(share * 100, 0)}${NBSP}%`;
+/** A difference of two percentages, in percentage points: "+17 п.п.". */
+export const formatPoints = (difference: number): string => `${formatSigned(difference, 0)}${NBSP}п.п.`;
 export const formatKm = (metres: number): string => `${formatNumber(metres / 1000, 1)}${NBSP}км`;
 
 /** Russian plural: forms for 1, 2–4 and 5+ ("причина", "причины", "причин"). */

@@ -82,7 +82,6 @@ export function PatternDefs({ extraKeys = [] }: { extraKeys?: readonly string[] 
             const ink = direction === 'heats' ? 'var(--hatch-heats)' : 'var(--hatch-cools)';
             return (
               <pattern key={patternId(key, direction)} id={patternId(key, direction)} width={size} height={size} patternUnits="userSpaceOnUse">
-                <rect width={size} height={size} style={{ fill: 'var(--ground)' }} />
                 {marks.map((mark) => (
                   <path
                     key={mark.d}

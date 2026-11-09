@@ -14,9 +14,10 @@ export const SOURCE = {
   transect: 'transect',
   probe: 'probe',
   place: 'place',
+  found: 'found',
 } as const;
 
-export const LAYER = { causes: 'causes', bands: 'bands' } as const;
+export const LAYER = { causes: 'causes', bands: 'bands', isolines: 'isolines', transect: 'transect', transectCasing: 'transect-casing' } as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';
@@ -61,6 +62,7 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       [SOURCE.transect]: { type: 'geojson', data: EMPTY },
       [SOURCE.probe]: { type: 'geojson', data: EMPTY },
       [SOURCE.place]: { type: 'geojson', data: EMPTY },
+      [SOURCE.found]: { type: 'geojson', data: EMPTY },
     },
     layers: [
       { id: 'ground', type: 'background', paint: { 'background-color': tokens.ground } },
@@ -78,13 +80,14 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         paint: { 'fill-pattern': ['concat', 'hatch-', ['get', 'key'], '-heats'] },
       },
       {
-        id: 'isolines',
+        id: LAYER.isolines,
         type: 'line',
+        layout: { 'line-join': 'round', visibility: 'none' },
         source: SOURCE.isolines,
-        layout: { 'line-join': 'round' },
         paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
       },
-      { id: 'outside-data', type: 'fill', source: SOURCE.outsideData, paint: { 'fill-color': tokens.ground } },
+      // Inside the city but without a satellite reading: a flat shade, so a gap never reads as a temperature.
+      { id: 'outside-data', type: 'fill', source: SOURCE.outsideData, paint: { 'fill-color': tokens.shade } },
       { id: 'outside-city', type: 'fill', source: SOURCE.outsideCity, paint: { 'fill-color': tokens.ground } },
       { id: 'water', type: 'fill', source: SOURCE.basemap, 'source-layer': 'water', paint: { 'fill-color': tokens.water } },
       {
@@ -107,13 +110,13 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       },
       { id: 'outline', type: 'line', source: SOURCE.outline, paint: { 'line-color': tokens.ink, 'line-width': 1, 'line-opacity': 0.65 } },
       {
-        id: 'transect-casing',
+        id: LAYER.transectCasing,
         type: 'line',
         source: SOURCE.transect,
-        layout: { 'line-cap': 'round' },
+        layout: { 'line-cap': 'round', visibility: 'none' },
         paint: { 'line-color': tokens.ground, 'line-width': 5 },
       },
-      { id: 'transect', type: 'line', source: SOURCE.transect, layout: { 'line-cap': 'round' }, paint: { 'line-color': tokens.ink, 'line-width': 1.8 } },
+      { id: LAYER.transect, type: 'line', source: SOURCE.transect, layout: { 'line-cap': 'round', visibility: 'none' }, paint: { 'line-color': tokens.ink, 'line-width': 1.8 } },
       {
         id: 'probe',
         type: 'circle',
@@ -127,6 +130,12 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         paint: { 'circle-radius': 11, 'circle-opacity': 0, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 1.5 },
       },
       { id: 'place-dot', type: 'circle', source: SOURCE.place, paint: { 'circle-radius': 2.4, 'circle-color': tokens.ink } },
+      {
+        id: 'found',
+        type: 'circle',
+        source: SOURCE.found,
+        paint: { 'circle-radius': 5, 'circle-color': tokens.noon, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 1.5 },
+      },
     ],
   };
 }

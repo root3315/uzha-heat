@@ -2,6 +2,7 @@ import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { CityDetail } from '../data/contract';
 import { cityFacts, type CityFacts } from './answers';
 import { causeAreas, type CauseAreaProperties } from './causeAreas';
+import { heatIslandIntensity, insideMask, type HeatIsland } from './heatIsland';
 import { buildField, fieldAt, fineToSlot, type Field } from './field';
 import { buildCellGrid, cellAt, slotToLonLat, type CellGrid } from './grid';
 import { classShares, isothermGeometry, isothermLevels, type IsothermGeometry, type IsothermLevels } from './isotherms';
@@ -26,6 +27,9 @@ export interface CityModel {
   source: TransectSource;
   hotspot: PlaceProfile;
   facts: CityFacts;
+  /** Per cell: inside the city outline. */
+  inside: boolean[];
+  island: HeatIsland | null;
   cityMeans: FactorMeans;
   defaultTransect: Transect;
 }
@@ -70,6 +74,8 @@ export function buildCityModel(detail: CityDetail, outline: Outline | null): Cit
   const source = transectSource(detail, grid, field, outline);
   const hotspot = hotspotProfile(detail);
   const dominant = dominantFactorPerCell(detail);
+  const inside = insideMask(cells.lon, cells.lat, outline);
+  const island = outline ? heatIslandIntensity(cells.lst, inside) : null;
   const strength = dominant.map((key, i) => (key ? (cells.shap[key]?.[i] ?? 0) : 0));
   return {
     detail,
@@ -82,7 +88,9 @@ export function buildCityModel(detail: CityDetail, outline: Outline | null): Cit
     causeAreas: causeAreas(grid, dominant, strength),
     source,
     hotspot,
-    facts: cityFacts(detail, hotspot),
+    facts: cityFacts(detail, inside, island),
+    inside,
+    island,
     cityMeans: cityFactorMeans(detail),
     defaultTransect: openingTransect(field, source),
   };

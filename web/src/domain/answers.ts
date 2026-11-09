@@ -1,9 +1,10 @@
 import type { CityDetail, FeatureMeta } from '../data/contract';
 import { causeClause, causeWords, type CauseWords } from './causes';
-import { formatDeg, formatDegSigned, formatKm, formatNumber, plural } from './format';
-import { dominanceShare, dominantHeatingFactor, hottestTenth, type FactorMeans, type PlaceProfile } from './places';
-import { formatEffect, recommend } from './recommendations';
-import { meanAt, quantile } from './stats';
+import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, formatPoints, plural } from './format';
+import type { HeatIsland } from './heatIsland';
+import { dominantShares, hotTenthPattern, secondCause, type CauseShare, type HotTenthPattern, type Share } from './hotTenth';
+import { hottestTenth, type FactorMeans, type PlaceProfile } from './places';
+import { recommend, type Evidence } from './recommendations';
 import { insideSamples, type Profile } from './transect';
 
 /** A sentence with some spans marked as hot or cool numbers. */
@@ -18,7 +19,7 @@ export const plainText = (phrase: Phrase): string => phrase.map((span) => (typeo
 
 export const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
-/** Genitive of a city name, for "каждый десятый квартал Ташкента". Covers the usual endings. */
+/** Genitive of a city name, for "в черте Ташкента". Covers the usual endings. */
 export function genitive(name: string): string {
   const last = name.slice(-1);
   const stem = name.slice(0, -1);
@@ -44,29 +45,76 @@ function strongest(contributions: Record<string, number>, sign: 1 | -1 | 0): [st
 }
 
 export interface CityFacts {
-  /** The factor that heats the hottest tenth most, and how often it is the top one there. */
-  topKey: string | null;
-  topShare: number;
+  /** The factor that most often heats a cell of the hottest tenth most, and how often. */
+  top: CauseShare | null;
+  second: CauseShare | null;
+  pattern: HotTenthPattern;
+  island: HeatIsland | null;
 }
 
-export function cityFacts(detail: CityDetail, hotspot: PlaceProfile): CityFacts {
-  const keys = detail.features.map((f) => f.key);
-  const topKey = dominantHeatingFactor(keys, (key) => hotspot.contributions[key] ?? 0);
-  return { topKey, topShare: topKey ? dominanceShare(detail, topKey, hottestTenth(detail)) : 0 };
+export function cityFacts(detail: CityDetail, inside: readonly boolean[], island: HeatIsland | null): CityFacts {
+  const members = hottestTenth(detail);
+  const shares = dominantShares(detail, members);
+  return {
+    top: shares[0] ?? null,
+    second: secondCause(detail, members, shares),
+    pattern: hotTenthPattern(detail, members, inside),
+    island,
+  };
 }
 
-function frequency(share: number): string {
-  if (share >= 0.75) return 'Почти всегда';
-  if (share >= 0.5) return 'Чаще всего';
-  return 'Чаще других';
+/** "В черте Ташкента поверхность на 1,4° горячее, чем вокруг." Says plainly when the city is the cooler one. */
+export function islandAnswer(name: string, island: HeatIsland | null): Phrase {
+  if (!island) return [];
+  const where = `В черте ${genitive(name)} поверхность`;
+  if (Math.abs(island.intensity) < 0.05) return [`${where} такая же, как вокруг.`];
+  if (island.intensity > 0) return [`${where} на `, hot(formatDeg(island.intensity)), ' горячее, чем вокруг.'];
+  return [`${where} на `, cool(formatDeg(-island.intensity)), ' прохладнее, чем вокруг: голая земля за чертой нагревается сильнее города.'];
 }
 
-/** "Каждый десятый квартал Ташкента горячее 47,9°. Почти всегда там мало зелени." */
+/** From this share of the hottest tenth outside the city line, the answer says so. */
+const MANY_OUTSIDE = 0.2;
+
+const gapPoints = (s: Share) => `${formatNumber(Math.abs(s.hot - s.city), 0)} п.п.`;
+
+function patternSentence({ kind, outsideShare, built, bare }: HotTenthPattern): string {
+  if (kind === 'open' && built) {
+    const ground = bare && bare.hot > bare.city ? `, голой земли ${formatPercent(bare.hot / 100)} (${formatPoints(bare.hot - bare.city)})` : '';
+    const edge = outsideShare >= MANY_OUTSIDE ? ` ${capitalize(formatPercent(outsideShare))} из них за городской чертой.` : '';
+    return ` Это в основном открытые, мало застроенные места: застроено ${formatPercent(built.hot / 100)} (${formatPoints(built.hot - built.city)})${ground}.${edge}`;
+  }
+  if (kind === 'dense-bare' && built && bare) {
+    return (
+      ` Там плотная застройка вперемешку с голой землёй: застроено ${formatPercent(built.hot / 100)} (${formatPoints(built.hot - built.city)}), ` +
+      `голой земли ${formatPercent(bare.hot / 100)} (${formatPoints(bare.hot - bare.city)}).`
+    );
+  }
+  if (kind === 'dense' && built) {
+    return ` Это плотная застройка: застроено ${formatPercent(built.hot / 100)}, на ${gapPoints(built)} больше среднего.`;
+  }
+  if (kind === 'bare' && bare) {
+    return ` Там много голой земли: ${formatPercent(bare.hot / 100)}, на ${gapPoints(bare)} больше среднего.`;
+  }
+  return '';
+}
+
+/** The hottest tenth: its threshold, what it is made of and what the model says heats it most often. */
+export function hotTenthAnswer(detail: CityDetail, facts: CityFacts): Phrase {
+  const phrase: Phrase = ['Каждый десятый участок 200 м горячее ', hot(formatDeg(detail.stats.lstP90)), '.'];
+  const pattern = patternSentence(facts.pattern);
+  if (pattern) phrase.push(pattern);
+  if (!facts.top) return phrase;
+  const words = wordsByKey(detail.features);
+  let cause = ` Главная причина по модели: ${words(facts.top.key).there}, так в ${formatPercent(facts.top.share)} из них`;
+  if (facts.second) cause += `; на втором месте ${words(facts.second.key).there} (${formatPercent(facts.second.share)})`;
+  return [...phrase, `${cause}.`];
+}
+
+/** The whole answer for a city: the heat island first, then its hottest tenth. */
 export function cityAnswer(detail: CityDetail, facts: CityFacts): Phrase {
-  const phrase: Phrase = [`Каждый десятый квартал ${genitive(detail.city.name)} горячее `, hot(formatDeg(detail.stats.lstP90)), '.'];
-  if (!facts.topKey) return phrase;
-  const words = wordsByKey(detail.features)(facts.topKey);
-  return [...phrase, ` ${frequency(facts.topShare)} там ${words.there}.`];
+  const island = islandAnswer(detail.city.name, facts.island);
+  const rest = hotTenthAnswer(detail, facts);
+  return island.length ? [...island, ' ', ...rest] : rest;
 }
 
 /** Below this difference from the city mean, a place is "about average". */
@@ -148,26 +196,9 @@ export function dominantFor(place: PlaceProfile, cityMean: number): [string, num
   return strongest(place.contributions, heats ? 1 : -1) ?? strongest(place.contributions, 0);
 }
 
-export interface PeerGroup {
-  threshold: number;
-  share: number;
-  lst: number;
-}
-
-/** The quarter of the city on the cooler side of `key`, and how warm it is. */
-export function peerGroup(detail: CityDetail, key: string, better: 'up' | 'down'): PeerGroup | null {
-  const values = detail.cells.values[key];
-  if (!values || values.length === 0) return null;
-  const threshold = quantile(values, better === 'up' ? 0.75 : 0.25);
-  const members = values.flatMap((v, i) => ((better === 'up' ? v >= threshold : v <= threshold) ? [i] : []));
-  if (members.length === 0) return null;
-  return { threshold, share: members.length / values.length, lst: meanAt(detail.cells.lst, members) };
-}
-
-export type Advice = { kind: 'act'; title: string; actions: string[]; reason: Phrase; effect: string } | { kind: 'none'; text: Phrase };
-
-/** A peer group is only evidence when it is clearly cooler. */
-const MIN_PEER_GAIN = 0.3;
+export type Advice =
+  | { kind: 'act'; title: string; actions: string[]; reason: Phrase; heating: number; evidence: Evidence }
+  | { kind: 'none'; text: Phrase };
 
 /**
  * What to do here, and why, in this place's own numbers. When nothing applies, the text
@@ -180,18 +211,8 @@ export function advise(detail: CityDetail, place: PlaceProfile, cityMeans: Facto
 
   if (first) {
     const key = first.reasons[0]?.key ?? '';
-    const w = words(key);
-    const reason: Phrase = [`${where} ${w.measure(place.values[key] ?? Number.NaN)}.`];
-    const peers = w.better ? peerGroup(detail, key, w.better) : null;
-    const gain = peers ? place.lst - peers.lst : 0;
-    if (peers && w.peers(peers.threshold) && gain >= MIN_PEER_GAIN) {
-      reason.push(
-        ` Где ${w.peers(peers.threshold)} (${formatNumber(peers.share * 100, 0)} % города), поверхность в среднем ${formatDeg(peers.lst)}, на `,
-        cool(formatDeg(gain)),
-        ' прохладнее.',
-      );
-    }
-    return { kind: 'act', title: first.title, actions: first.actions, reason, effect: `Обычно это снимает ${formatEffect(first.effect)}` };
+    const reason: Phrase = [`${where} ${words(key).measure(place.values[key] ?? Number.NaN)}, по модели это даёт `, hot(formatDegSigned(place.contributions[key] ?? 0)), '.'];
+    return { kind: 'act', title: first.title, actions: first.actions, reason, heating: first.heating, evidence: first.evidence };
   }
 
   if (place.lst < detail.stats.lstMean) {
@@ -206,7 +227,8 @@ export function advise(detail: CityDetail, place: PlaceProfile, cityMeans: Facto
   const w = words(top[0]);
   if (!w.better) {
     const verb = w.plural ? 'добавляют' : 'добавляет';
-    return { kind: 'none', text: [`${capitalize(w.heats)} ${verb} здесь `, hot(formatDegSigned(top[1])), ', а это благоустройством не изменить.'] };
+    const tail = w.explain ? `. ${w.explain}` : ', а это благоустройством не изменить.';
+    return { kind: 'none', text: [`${capitalize(w.heats)} ${verb} здесь `, hot(formatDegSigned(top[1])), tail] };
   }
   return { kind: 'none', text: [`Явной меры нет: ${w.heats} здесь не хуже, чем в среднем по городу.`] };
 }
@@ -225,7 +247,7 @@ const SOURCE_BY_KEY: Record<string, string> = {
 
 /** The quiet last line: where the numbers come from and how far to trust them. */
 export function sourcesLine(detail: CityDetail): string {
-  const sources = ['Landsat 8/9', ...new Set(detail.features.map((f) => SOURCE_BY_KEY[f.key]).filter((s): s is string => Boolean(s)))];
+  const sources = ['NASA/USGS Landsat 8/9', ...new Set(detail.features.map((f) => SOURCE_BY_KEY[f.key]).filter((s): s is string => Boolean(s)))];
   if (detail.features.some((f) => f.key === 'water_dist') && !sources.includes('OpenStreetMap')) sources.push('OpenStreetMap');
   const { model } = detail;
   return (
