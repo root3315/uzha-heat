@@ -9,13 +9,17 @@
     "mock": "node scripts/make-mock.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/geologica": "^5.3.0",
-    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/commissioner": "^5.3.0",
+    "@fontsource/literata": "^5.3.0",
+    "d3-array": "^3.2.5",
+    "d3-contour": "^4.0.3",
     "maplibre-gl": "^6.17.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/d3-array": "^3.2.2",
+    "@types/d3-contour": "^3.0.6",
     "@types/geojson": "^7946.0.16",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",

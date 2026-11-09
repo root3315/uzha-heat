@@ -1,4 +1,4 @@
-import type { LonLat, MultiPolygonGeometry, PolygonGeometry } from '../data/contract';
+import type { LonLat } from '../data/contract';
 
 export function mean(values: readonly number[]): number {
   if (values.length === 0) return Number.NaN;
@@ -25,32 +25,39 @@ export function quantile(values: readonly number[], q: number): number {
   return a + (b - a) * (pos - lo);
 }
 
-function pointInRing([x, y]: LonLat, ring: readonly LonLat[]): boolean {
+type Ring = ReadonlyArray<ReadonlyArray<number>>;
+
+/** Polygon or MultiPolygon, from the data contract or from GeoJSON. */
+export type AreaGeometry = { type: 'Polygon'; coordinates: ReadonlyArray<Ring> } | { type: 'MultiPolygon'; coordinates: ReadonlyArray<ReadonlyArray<Ring>> };
+
+function pointInRing([x, y]: LonLat, ring: Ring): boolean {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i] ?? [0, 0];
-    const [xj, yj] = ring[j] ?? [0, 0];
+    const xi = ring[i]?.[0] ?? 0;
+    const yi = ring[i]?.[1] ?? 0;
+    const xj = ring[j]?.[0] ?? 0;
+    const yj = ring[j]?.[1] ?? 0;
     if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
 }
 
-function pointInPolygonRings(point: LonLat, rings: readonly LonLat[][]): boolean {
+function pointInPolygonRings(point: LonLat, rings: ReadonlyArray<Ring>): boolean {
   const [outer, ...holes] = rings;
   if (!outer || !pointInRing(point, outer)) return false;
   return !holes.some((hole) => pointInRing(point, hole));
 }
 
-export function pointInGeometry(point: LonLat, geometry: PolygonGeometry | MultiPolygonGeometry): boolean {
+export function pointInGeometry(point: LonLat, geometry: AreaGeometry): boolean {
   if (geometry.type === 'Polygon') return pointInPolygonRings(point, geometry.coordinates);
   return geometry.coordinates.some((polygon) => pointInPolygonRings(point, polygon));
 }
 
-export function geometryBounds(geometry: PolygonGeometry | MultiPolygonGeometry): [number, number, number, number] {
-  const rings = geometry.type === 'Polygon' ? geometry.coordinates : geometry.coordinates.flat();
+export function geometryBounds(geometry: AreaGeometry): [number, number, number, number] {
+  const rings: Ring[] = geometry.type === 'Polygon' ? [...geometry.coordinates] : geometry.coordinates.flatMap((polygon) => [...polygon]);
   let [w, s, e, n] = [Infinity, Infinity, -Infinity, -Infinity];
   for (const ring of rings) {
-    for (const [x, y] of ring) {
+    for (const [x = 0, y = 0] of ring) {
       w = Math.min(w, x);
       s = Math.min(s, y);
       e = Math.max(e, x);
