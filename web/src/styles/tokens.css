@@ -1,0 +1,75 @@
+:root {
+  /* A survey sheet: cool tracing paper, ink, pencil, a grid. */
+  --ground: #ecefed;
+  --ink: #17212b;
+  --pencil: #5b6770;
+  --grid: #cbd3d6;
+  --water: #cfdbdc;
+  /* The printed sheet. */
+  --paper: #fbfcfb;
+
+  /* Colour encodes temperature and nothing else: seven 2° steps, the city mean in the quiet middle one. */
+  --t0: #3e7c8c;
+  --t1: #9fc2c6;
+  --t2: #dcddd6;
+  --t3: #e8b98a;
+  --t4: #d07a4a;
+  --t5: #a8402b;
+  --t6: #5e1a16;
+  /* How strongly each step is laid down: the neutral middle almost vanishes, only the two hottest are full. */
+  --o0: 0.62;
+  --o1: 0.62;
+  --o2: 0.7;
+  --o3: 0.66;
+  --o4: 0.72;
+  --o5: 0.95;
+  --o6: 1;
+
+  /* Temperature figures in text: warmer or cooler than the city. */
+  --hot: var(--t5);
+  --cool: var(--t0);
+  /* Hatching for causes: ink when a factor heats, the cool ink when it cools. */
+  --hatch-heats: var(--ink);
+  --hatch-cools: var(--t0);
+
+  /*
+   * Literata for what reads as an answer (sentences, place names, isotherm labels): a book serif
+   * with a full Cyrillic and true tabular figures. Commissioner for everything operated and measured.
+   */
+  --serif: 'Literata', Georgia, serif;
+  --sans: 'Commissioner', 'Segoe UI', sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.625rem;
+  --text-figure: 3rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --panel-w: 400px;
+  --section-h: 268px;
+  --radius: 4px;
+  --hairline: 1px solid var(--grid);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --fast: 140ms;
+  --slow: 240ms;
+
+  --focus: 0 0 0 2px var(--ground), 0 0 0 4px var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 0ms;
+    --slow: 0ms;
+  }
+}
