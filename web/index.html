@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" style="background: #eceeeb">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +9,16 @@
     <meta name="description" content="Острова тепла Ташкента, Самарканда и Бухары по снимкам Landsat: где поверхность горячее всего летом и почему." />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Static first paint: the bar and the headline, replaced by the app when it starts. -->
+    <div id="root">
+      <header class="bar" style="position: fixed; inset: 0 0 auto; height: 56px; padding: 0 16px; display: flex; align-items: center; background: #eceeeb">
+        <b style="font: 800 1.3rem/1 'Arial Narrow', sans-serif">UzHa</b>
+      </header>
+      <main style="padding: 88px 16px 0; background: #eceeeb; color: #121417; font-family: 'Segoe UI', sans-serif">
+        <h1 style="margin: 0; max-width: 14ch; font: 800 clamp(40px, 6vw, 104px)/0.9 'Arial Narrow', sans-serif">Где город перегревается летом и&nbsp;почему</h1>
+        <p style="margin-top: 16px; color: #565a62">Считаю изотермы по&nbsp;снимкам Landsat</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

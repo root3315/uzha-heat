@@ -4,7 +4,7 @@ import { formatDeg } from './format';
 import { dominantCause } from './transect';
 
 /**
- * The opening game: find the hot quarters. A quarter is one 200 m cell, and it counts as hot
+ * The opening game: find the hot places. A place is one 200 m cell, and it counts as hot
  * when it is in the city's hottest tenth, the same group the city answer talks about.
  */
 export interface HuntTarget {
@@ -12,9 +12,24 @@ export interface HuntTarget {
   total: number;
 }
 
-export function huntTarget(detail: CityDetail): HuntTarget {
+/** Only cells that can be tapped count: those inside the city outline, when one is given. */
+export function huntTarget(detail: CityDetail, inside?: readonly boolean[]): HuntTarget {
   const threshold = detail.stats.lstP90;
-  return { threshold, total: detail.cells.lst.filter((t) => t >= threshold).length };
+  return { threshold, total: detail.cells.lst.filter((t, i) => t >= threshold && (inside?.[i] ?? true)).length };
+}
+
+export interface HuntCandidate {
+  cell: number;
+  t: number;
+}
+
+/**
+ * A tap within one cell of a hot cell counts, so a finger does not have to land on 200 m exactly.
+ * `candidates` are the tapped cell first, then its neighbours: a new hot one wins, then an already found one.
+ */
+export function huntCell(candidates: readonly HuntCandidate[], found: ReadonlySet<number>, target: HuntTarget): HuntCandidate | null {
+  const hot = candidates.filter((c) => c.t >= target.threshold);
+  return hot.find((c) => !found.has(c.cell)) ?? hot[0] ?? candidates[0] ?? null;
 }
 
 export type FindOutcome = 'new' | 'repeat' | 'cold';
@@ -55,7 +70,7 @@ export function leadingFactor(importance: readonly GlobalImportance[]): { key: s
 /** The line under the counter after a click, in the page's plain voice. */
 export function findMessage(outcome: FindOutcome, t: number, target: HuntTarget, cityMean: number): string {
   if (outcome === 'new') return `Засчитано: ${formatDeg(t)}, горячая десятая часть города.`;
-  if (outcome === 'repeat') return 'Этот квартал уже засчитан.';
+  if (outcome === 'repeat') return 'Этот участок уже засчитан.';
   if (t >= cityMean) return `${formatDeg(t)}: теплее среднего, но горячими считаются от ${formatDeg(target.threshold)}.`;
   return `${formatDeg(t)}: прохладнее среднего по городу, ${formatDeg(cityMean)}.`;
 }
