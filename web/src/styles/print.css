@@ -10,7 +10,7 @@
   }
 
   body {
-    background: var(--paper);
+    background: var(--sheet);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -18,7 +18,7 @@
   .report {
     position: static;
     overflow: visible;
-    background: var(--paper);
+    background: var(--sheet);
   }
 
   .report__sheet {

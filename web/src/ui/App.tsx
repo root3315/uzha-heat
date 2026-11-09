@@ -1,28 +1,137 @@
+import { useEffect, useMemo, useState } from 'react';
+import type { CitySummary } from '../data/contract';
 import { loadCities } from '../data/load';
-import { CityScreen } from './CityScreen';
-import { useAsync } from './hooks';
+import { genitive } from '../domain/answers';
+import { huntTarget } from '../domain/hunt';
+import { Bar } from './Bar';
+import { scrollToId, useAsync } from './hooks';
+import { Landing, REPO } from './landing/Landing';
+import { MethodPage } from './MethodPage';
+import { cityModel } from './models';
 import { PatternDefs } from './patterns';
-import { useRoute } from './routing';
+import { methodHref, navigate, redirect, toolHref, useRoute, type Route } from './routing';
+import { Tool } from './Tool';
 
-/** Opens straight on the map of the first city; the city is switched from the panel. */
-export function App() {
-  const route = useRoute();
-  const cities = useAsync(loadCities, []);
+const HOME = import.meta.env.BASE_URL;
 
-  if (cities.status !== 'ready') {
-    return (
-      <p className="app-status" role="status">
-        {cities.status === 'loading' ? 'Загружаем города' : `Не получилось загрузить список городов: ${cities.message}`}
+/** A loading or error line; with `onRetry`, a button to try again. */
+function Status({ children, onRetry }: { children: string; onRetry?(): void }) {
+  return (
+    <div className="app-status" role="status">
+      <p>{children}</p>
+      {onRetry && (
+        <button type="button" className="pill pill--ink" onClick={onRetry}>
+          Повторить
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="foot">
+      <p>
+        UzHa: острова тепла Ташкента, Самарканда и&nbsp;Бухары по&nbsp;снимкам NASA/USGS Landsat. Код открыт на&nbsp;
+        <a href={REPO} target="_blank" rel="noopener">
+          GitHub
+        </a>
+        .
       </p>
+      <p>© 2026 UzHa</p>
+    </footer>
+  );
+}
+
+function Notice({ text, onClose }: { text: string; onClose(): void }) {
+  return (
+    <p className="notice" role="status">
+      <span>{text}</span>
+      <button type="button" className="notice__close" onClick={onClose} aria-label="Закрыть">
+        ×
+      </button>
+    </p>
+  );
+}
+
+function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
+  const known = cities.find((c) => c.id === route.cityId);
+  const city = known ?? cities[0];
+  const landingCity = cities[0];
+  const subject = route.view === 'story' ? landingCity : city;
+  const [attempt, setAttempt] = useState(0);
+  const state = useAsync(() => (subject ? cityModel(subject.id) : Promise.resolve(null)), [subject?.id, attempt]);
+  const model = state.status === 'ready' ? state.data : null;
+  const [found, setFound] = useState<ReadonlySet<number>>(() => new Set());
+  const [notice, setNotice] = useState<string | null>(null);
+  const target = useMemo(() => (route.view === 'story' && model ? huntTarget(model.detail, model.inside) : null), [route.view, model]);
+
+  // An unknown city in the address: open the first one instead, and say so.
+  useEffect(() => {
+    if (route.view === 'story' || !route.cityId || known || !city) return;
+    setNotice(`Города «${route.cityId}» в данных нет, открыт ${city.name}.`);
+    redirect(route.view === 'tool' ? toolHref(city.id) : methodHref(city.id));
+  }, [route.view, route.cityId, known, city]);
+
+  const ready = state.status === 'ready';
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (ready && id && !id.startsWith('/')) window.requestAnimationFrame(() => scrollToId(id, true));
+    else window.scrollTo(0, 0);
+  }, [route.view, route.cityId, ready]);
+
+  useEffect(() => {
+    const name = subject?.name ?? '';
+    document.title =
+      route.view === 'tool' ? `${name}: карта жары, UzHa` : route.view === 'method' ? `Как посчитано: ${name}, UzHa` : 'UzHa: где город перегревается летом';
+  }, [route.view, subject?.name]);
+
+  const bar = <Bar home={HOME} tool={route.view === 'tool' || !subject ? null : toolHref(subject.id)} onLanding={route.view === 'story'} />;
+  const noticeLine = notice && <Notice text={notice} onClose={() => setNotice(null)} />;
+
+  if (!subject) return <Status>В cities.json нет ни одного города.</Status>;
+  if (state.status !== 'ready' || !model) {
+    // A failed load is dropped from the cache, so a new attempt fetches again.
+    const retry = () => setAttempt((n) => n + 1);
+    return (
+      <>
+        {bar}
+        {state.status === 'loading' && <Status>{`Считаю изотермы ${genitive(subject.name)}`}</Status>}
+        {state.status === 'error' && <Status onRetry={retry}>{`Не получилось загрузить данные ${genitive(subject.name)}. Проверьте связь и попробуйте ещё раз.`}</Status>}
+        {state.status === 'ready' && <Status>{`Для ${genitive(subject.name)} данных пока нет.`}</Status>}
+      </>
     );
   }
-  const city = cities.data.find((c) => c.id === route.cityId) ?? cities.data[0];
-  if (!city) return <p className="app-status">В cities.json нет ни одного города.</p>;
 
   return (
     <>
+      {bar}
+      {noticeLine}
+      {route.view === 'tool' && <Tool key={model.detail.city.id} model={model} cities={cities} onCity={(id) => navigate(toolHref(id))} />}
+      {route.view === 'method' && <MethodPage model={model} />}
+      {route.view === 'story' && target && <Landing cities={cities} model={model} hunt={{ target, found }} onHunt={setFound} />}
+      {route.view === 'method' && <Footer />}
+    </>
+  );
+}
+
+export function App() {
+  const route = useRoute();
+  const [attempt, setAttempt] = useState(0);
+  const cities = useAsync(loadCities, [attempt]);
+
+  useEffect(() => {
+    window.history.scrollRestoration = 'manual';
+  }, []);
+
+  if (cities.status === 'loading') return <Status>Загружаю города</Status>;
+  if (cities.status === 'error') {
+    return <Status onRetry={() => setAttempt((n) => n + 1)}>Не получилось загрузить список городов. Проверьте связь и попробуйте ещё раз.</Status>;
+  }
+  return (
+    <>
       <PatternDefs />
-      <CityScreen key={city.id} cities={cities.data} city={city} page={route.page} />
+      <Page cities={cities.data} route={route} />
     </>
   );
 }

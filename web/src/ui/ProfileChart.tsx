@@ -23,7 +23,8 @@ const M = { top: 22, right: 14, bottom: 22, left: 34 };
 const RIBBON_H = 20;
 const RIBBON_GAP = 6;
 const LABEL_PAD = 4;
-const CHAR_W = 6.1;
+/** Martian Mono at the label size is wide: about 0.7 em per character. */
+const CHAR_W = 7.4;
 const MIN_TICK_GAP_PX = 52;
 
 export function ProfileChart({ profile, levels, cityMean, features, width, height, onProbe, onPick }: ProfileChartProps) {

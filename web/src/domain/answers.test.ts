@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { advise, cityAnswer, cityFacts, dominantFor, genitive, placeAnswer, plainText, restOfCauses, sectionAnswer, sourcesLine } from './answers';
-import { cityFactorMeans, hotspotProfile, type PlaceProfile } from './places';
+import { advise, cityAnswer, cityFacts, islandAnswer, dominantFor, genitive, placeAnswer, plainText, restOfCauses, sectionAnswer, sourcesLine } from './answers';
+import { cityFactorMeans, type PlaceProfile } from './places';
 import type { Profile, Sample } from './transect';
 
 /** Formatting uses non-breaking spaces; compare with plain ones for readability. */
@@ -57,21 +57,63 @@ describe('genitive', () => {
   ])('%s → %s', (name, expected) => expect(genitive(name)).toBe(expected));
 });
 
+describe('islandAnswer', () => {
+  const island = (intensity: number) => ({ inside: 44 + intensity, outside: 44, intensity, insideCount: 100, outsideCount: 100 });
+
+  it('says how much hotter the city is than its surroundings', () => {
+    expect(say(islandAnswer('Бухара', island(3.01)))).toBe('В черте Бухары поверхность на 3,0° горячее, чем вокруг.');
+  });
+
+  it('says plainly when the city is the cooler one', () => {
+    const phrase = islandAnswer('Самарканд', island(-0.8));
+    expect(say(phrase)).toMatch(/^В черте Самарканда поверхность на 0,8° прохладнее, чем вокруг: /);
+    expect(phrase[1]).toMatchObject({ tone: 'cool' });
+  });
+
+  it('says nothing without a comparison', () => {
+    expect(islandAnswer('Ташкент', null)).toEqual([]);
+  });
+});
+
 describe('cityAnswer', () => {
-  it('names the hottest tenth and its usual cause, in two short sentences', () => {
+  /** Cells 0–4 inside the city line, 5–9 outside. */
+  const inside = [true, true, true, true, true, false, false, false, false, false];
+
+  it('opens with the heat island, then the hottest tenth and its usual cause', () => {
     const detail = city();
-    const facts = cityFacts(detail, hotspotProfile(detail));
-    expect(facts.topKey).toBe('ndvi');
-    expect(say(cityAnswer(detail, facts))).toBe('Каждый десятый квартал Ташкента горячее 50,2°. Почти всегда там мало зелени.');
+    const island = { inside: 45, outside: 43.6, intensity: 1.4, insideCount: 5, outsideCount: 5 };
+    expect(say(cityAnswer(detail, cityFacts(detail, inside, island)))).toBe(
+      'В черте Ташкента поверхность на 1,4° горячее, чем вокруг. Каждый десятый участок 200 м горячее 50,2°. Главная причина по модели: мало зелени, так в 100 % из них.',
+    );
   });
 
-  it('stops after the first sentence when nothing heats the hottest tenth', () => {
-    expect(say(cityAnswer(city(), { topKey: null, topShare: 0 }))).toBe('Каждый десятый квартал Ташкента горячее 50,2°.');
+  it('describes open, barely built land from the land cover, in percentage points', () => {
+    const detail = city();
+    // The hottest cells are barely built and lie outside the city line.
+    detail.cells.values.built = [80, 80, 80, 80, 80, 60, 60, 60, 5, 5];
+    const text = say(cityAnswer(detail, cityFacts(detail, inside, null)));
+    expect(text).toContain('Это в основном открытые, мало застроенные места: застроено 5 % (−54 п.п.). 100 % из них за городской чертой.');
   });
 
-  it('never uses an em-dash', () => {
+  it('calls dense building dense, with the gap in points', () => {
     const detail = city();
-    expect(plainText(cityAnswer(detail, cityFacts(detail, hotspotProfile(detail))))).not.toContain('—');
+    detail.cells.values.built = [40, 40, 40, 40, 40, 40, 40, 40, 90, 90];
+    const facts = cityFacts(detail, inside.map(() => true), null);
+    expect(facts.pattern.kind).toBe('dense');
+    expect(say(cityAnswer(detail, facts))).toContain('Это плотная застройка: застроено 90 %, на 40 п.п. больше среднего.');
+  });
+
+  it('stops after the threshold when nothing heats the hottest tenth', () => {
+    const detail = city();
+    const facts = { ...cityFacts(detail, inside, null), top: null, second: null };
+    expect(say(cityAnswer(detail, facts))).toMatch(/^Каждый десятый участок 200 м горячее 50,2°\./);
+  });
+
+  it('never uses an em-dash or the word "квартал"', () => {
+    const detail = city();
+    const text = plainText(cityAnswer(detail, cityFacts(detail, inside, null)));
+    expect(text).not.toContain('—');
+    expect(text).not.toMatch(/квартал/i);
   });
 });
 
@@ -119,14 +161,14 @@ describe('dominantFor and restOfCauses', () => {
 });
 
 describe('advise', () => {
-  it('ties the measure to the cause and backs it with a cooler peer group', () => {
+  it('ties the measure to the cause with one number for the place and a source for the effect', () => {
     const detail = city();
     const advice = advise(detail, place(52, { ndvi: 3, built: 0.2, elevation: 0.1 }, { ndvi: 0.05, built: 52, elevation: 450 }), cityFactorMeans(detail));
     expect(advice.kind).toBe('act');
     if (advice.kind !== 'act') return;
     expect(advice.title).toBe('Деревья вдоль улиц и теневые навесы');
-    expect(say(advice.reason)).toMatch(/^Здесь NDVI 0,05\. Где NDVI выше 0,\d\d \(\d+ % города\), поверхность в среднем \d+,\d°, на \d+,\d° прохладнее\.$/);
-    expect(plain(advice.effect)).toMatch(/^Обычно это снимает /);
+    expect(say(advice.reason)).toBe('Здесь NDVI 0,05, по модели это даёт +3,0°.');
+    expect(advice.evidence.url).toMatch(/^https:/);
   });
 
   it('does not claim that green cools a cool place unless green is what cools it', () => {
@@ -180,7 +222,7 @@ describe('sectionAnswer', () => {
 describe('sourcesLine', () => {
   it('lists only the sources behind the factors present, and the model quality from the data', () => {
     expect(plain(sourcesLine(city()))).toBe(
-      'Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, июнь–август 2023–2025. R² 0,74 на пространственной проверке, ошибка ~1,3°. Вклад факторов показывает связь, а не эксперимент.',
+      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, июнь–август 2023–2025. R² 0,74 на пространственной проверке, ошибка ~1,3°. Вклад факторов показывает связь, а не эксперимент.',
     );
   });
 });

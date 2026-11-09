@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { Advice } from '../../domain/answers';
+import { capitalize, type Advice } from '../../domain/answers';
+import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned } from '../../domain/format';
 import type { CauseRow, PanelContent } from '../panelContent';
@@ -54,6 +55,18 @@ function RestRows({ rows }: { rows: CauseRow[] }) {
   );
 }
 
+/** What reviews report for the measure, with the link to check it. */
+export function Evidence({ evidence }: { evidence: EvidenceData }) {
+  return (
+    <p className="evidence">
+      {capitalize(evidence.finding)}.{' '}
+      <a className="text-link" href={evidence.url} target="_blank" rel="noopener">
+        {evidence.cite}&nbsp;↗
+      </a>
+    </p>
+  );
+}
+
 function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }) {
   if (advice.kind === 'none') {
     return (
@@ -75,8 +88,9 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
         </ul>
       )}
       <p className="advice__reason">
-        <Phrase spans={advice.reason} /> {advice.effect}.
+        <Phrase spans={advice.reason} />
       </p>
+      <Evidence evidence={advice.evidence} />
     </div>
   );
 }
