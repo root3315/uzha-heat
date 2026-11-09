@@ -1,0 +1,98 @@
+import { describe, expect, it } from 'vitest';
+import { DataContractError, parseCities, parseCityDetail } from './parse';
+
+const city = {
+  id: 'test',
+  name: 'Тест',
+  nameEn: 'Test',
+  country: 'Узбекистан',
+  center: [69.2, 41.3],
+  bbox: [69.1, 41.2, 69.4, 41.4],
+  lstMean: 44,
+  r2: 0.7,
+};
+
+function validDetail() {
+  return {
+    city,
+    period: { label: 'лето', lstScenes: 9, s2Scenes: 6 },
+    grid: { cellSizeM: 200, halfSizeDeg: [0.0012, 0.0009], count: 2 },
+    features: [{ key: 'ndvi', label: 'Растительность', unit: 'NDVI', description: '' }],
+    model: { type: 'XGBoost', r2Cv: 0.7, maeCv: 1.1, cv: 'spatial', baseValue: 44 },
+    stats: { lstMean: 44, lstMin: 40, lstMax: 48, lstP10: 41, lstP90: 47 },
+    globalImportance: [{ key: 'ndvi', meanAbsShap: 1.2, correlation: -0.6 }],
+    cells: {
+      lon: [69.2, 69.21],
+      lat: [41.3, 41.31],
+      lst: [43, 45],
+      values: { ndvi: [0.4, 0.1] },
+      shap: { ndvi: [-1, 1] },
+    },
+    districts: [
+      {
+        name: 'Район',
+        geometry: { type: 'Polygon', coordinates: [[[69.1, 41.2], [69.3, 41.2], [69.3, 41.4], [69.1, 41.2]]] },
+        lstMean: 44,
+        cellCount: 2,
+      },
+    ],
+  };
+}
+
+function errorOf(parse: () => unknown): DataContractError {
+  try {
+    parse();
+  } catch (error) {
+    if (error instanceof DataContractError) return error;
+    throw error;
+  }
+  throw new Error('expected a DataContractError');
+}
+
+describe('parseCityDetail', () => {
+  it('accepts a valid dataset and defaults a missing shapMean to an empty object', () => {
+    const detail = parseCityDetail(validDetail());
+    expect(detail.cells.lst).toEqual([43, 45]);
+    expect(detail.districts[0]?.shapMean).toEqual({});
+  });
+
+  it('treats absent districts as an empty list', () => {
+    const { districts: _, ...withoutDistricts } = validDetail();
+    expect(parseCityDetail(withoutDistricts).districts).toEqual([]);
+  });
+
+  it('names the offending feature field', () => {
+    const raw = { ...validDetail(), features: [{ key: 'ndvi', label: 'Растительность', unit: 'NDVI' }] };
+    expect(errorOf(() => parseCityDetail(raw)).message).toContain('features[0].description');
+  });
+
+  it('rejects a non-numeric grid size', () => {
+    const raw = { ...validDetail(), grid: { cellSizeM: '200', halfSizeDeg: [0.0012, 0.0009], count: 2 } };
+    expect(errorOf(() => parseCityDetail(raw)).message).toContain('grid.cellSizeM');
+  });
+
+  it('rejects an unsupported district geometry type', () => {
+    const raw = validDetail();
+    const district = { ...raw.districts[0], geometry: { type: 'Point', coordinates: [69.2, 41.3] } };
+    expect(errorOf(() => parseCityDetail({ ...raw, districts: [district] })).message).toContain('districts[0].geometry.type');
+  });
+
+  it('rejects a shapMean that is not a number map', () => {
+    const raw = validDetail();
+    const district = { ...raw.districts[0], shapMean: { ndvi: 'high' } };
+    expect(errorOf(() => parseCityDetail({ ...raw, districts: [district] })).message).toContain('districts[0].shapMean.ndvi');
+  });
+
+  it('rejects cell columns of the wrong length', () => {
+    const raw = validDetail();
+    raw.cells.shap = { ndvi: [1] };
+    expect(errorOf(() => parseCityDetail(raw)).message).toContain('cells.shap.ndvi');
+  });
+});
+
+describe('parseCities', () => {
+  it('validates every entry', () => {
+    expect(parseCities([city])).toHaveLength(1);
+    expect(errorOf(() => parseCities([city, { ...city, bbox: [1, 2, 3] }])).message).toContain('cities[1].bbox');
+  });
+});
