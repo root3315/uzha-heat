@@ -1,5 +1,5 @@
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { mean, meanAt, pointInGeometry } from './stats';
+import { geometryBounds, mean, meanAt, pointInGeometry } from './stats';
 
 export type Selection = { kind: 'cell'; index: number } | { kind: 'district'; index: number };
 export type PlaceKind = Selection['kind'] | 'hotspot';
@@ -39,15 +39,31 @@ export function cellProfile(detail: CityDetail, index: number): PlaceProfile {
   };
 }
 
-export function cellsInDistrict(detail: CityDetail, districtIndex: number): number[] {
-  const district = detail.districts[districtIndex];
-  if (!district) return [];
+const districtMembership = new WeakMap<CityDetail, number[][]>();
+
+function computeDistrictMembership(detail: CityDetail): number[][] {
   const { lon, lat } = detail.cells;
-  const members: number[] = [];
-  for (let i = 0; i < lon.length; i++) {
-    if (pointInGeometry([lon[i] ?? 0, lat[i] ?? 0], district.geometry)) members.push(i);
+  return detail.districts.map((district) => {
+    const [w, s, e, n] = geometryBounds(district.geometry);
+    const members: number[] = [];
+    for (let i = 0; i < lon.length; i++) {
+      const x = lon[i] ?? 0;
+      const y = lat[i] ?? 0;
+      if (x < w || x > e || y < s || y > n) continue;
+      if (pointInGeometry([x, y], district.geometry)) members.push(i);
+    }
+    return members;
+  });
+}
+
+/** Cell indices inside the district; membership is computed once per city and reused. */
+export function cellsInDistrict(detail: CityDetail, districtIndex: number): number[] {
+  let membership = districtMembership.get(detail);
+  if (!membership) {
+    membership = computeDistrictMembership(detail);
+    districtMembership.set(detail, membership);
   }
-  return members;
+  return membership[districtIndex] ?? [];
 }
 
 function averageColumns(columns: Record<string, number[]>, features: FeatureMeta[], members: number[]): Record<string, number> {
