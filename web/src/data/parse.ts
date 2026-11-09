@@ -86,18 +86,6 @@ function requireColumns(value: unknown, keys: string[], length: number, path: st
   );
 }
 
-/** Area-share factors are documented as "% площади"; accept 0–1 fractions too and rescale them. */
-function normalizePercentColumns(features: FeatureMeta[], values: ColumnsByFeature): ColumnsByFeature {
-  const result: ColumnsByFeature = { ...values };
-  for (const feature of features) {
-    const column = values[feature.key];
-    if (!feature.unit.includes('%') || !column) continue;
-    const max = column.reduce((m, v) => Math.max(m, v), -Infinity);
-    if (max <= 1) result[feature.key] = column.map((v) => v * 100);
-  }
-  return result;
-}
-
 function parsePhoto(value: unknown, path: string): CitySummary['photo'] {
   if (value === undefined) return undefined;
   const photo = requireObject(value, path);
@@ -239,7 +227,7 @@ export function parseCityDetail(raw: unknown): CityDetail {
       lon,
       lat,
       lst,
-      values: normalizePercentColumns(features, requireColumns(cellsRaw.values, keys, lon.length, 'cells.values')),
+      values: requireColumns(cellsRaw.values, keys, lon.length, 'cells.values'),
       shap: requireColumns(cellsRaw.shap, keys, lon.length, 'cells.shap'),
     },
     districts: districts.map((d, i) => parseDistrict(d, `districts[${i}]`)),
