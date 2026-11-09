@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/page.css';
+import './styles/report.css';
 import './styles/print.css';
 import { App } from './ui/App';
 

@@ -1015,59 +1015,6 @@ summary.rest__summary:hover,
   margin-top: 8px;
 }
 
-/* ---------- Report preview ---------- */
-.report {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  overflow: auto;
-  background: var(--paper-2);
-}
-.report__bar {
-  position: sticky;
-  top: 0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 14px var(--pad);
-  background: var(--paper);
-}
-.report__sheet {
-  width: min(210mm, 100%);
-  margin: 24px auto;
-  padding: 14mm 13mm;
-  background: var(--sheet);
-  --card: var(--sheet);
-}
-.report__sheet .panel {
-  min-height: 0;
-  padding: 0;
-}
-.report__sheet .panel__header {
-  margin-bottom: 16px;
-}
-.report__meta {
-  color: var(--ink-2);
-  font: 400 0.7rem/1.4 var(--font-mono);
-}
-.report__sheet .panel__sources {
-  margin-top: 24px;
-}
-.report__map {
-  margin: 32px 0 0;
-}
-.report__map img {
-  display: block;
-  width: 100%;
-  border-radius: var(--radius-s);
-}
-.report__section {
-  margin-top: 24px;
-}
-.report__section .section__answer {
-  margin-bottom: 12px;
-}
-
 /* ---------- Narrow screens: map, then the answer, then the section ---------- */
 @media (max-width: 860px) {
   /* The sections become a row of chips that scrolls sideways. */
@@ -1160,8 +1107,7 @@ summary.rest__summary:hover,
   .cause__note,
   .rest__summary,
   .panel__sources,
-  .hunt-chip,
-  .report__meta {
+  .hunt-chip {
     font-size: 12px;
   }
   .maplibregl-ctrl.maplibregl-ctrl-scale {
