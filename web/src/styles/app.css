@@ -613,6 +613,12 @@ select {
   align-items: center;
   gap: 6px;
 }
+.cause-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  vertical-align: middle;
+}
 .swatch rect {
   stroke: var(--ink);
   stroke-width: 0.6;
@@ -655,6 +661,12 @@ select {
 .profile .profile__label {
   fill: var(--ink);
   font-weight: 500;
+}
+.profile__icon {
+  color: var(--ink);
+}
+.profile__icon.is-cool {
+  color: var(--cool);
 }
 .profile .profile__label.is-cool {
   fill: var(--cool);
@@ -803,8 +815,14 @@ select {
   margin-bottom: 8px;
 }
 .cause__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font: 700 1.25rem/1.05 var(--font-display);
   font-stretch: 85%;
+}
+.cause__name .cause-icon {
+  color: var(--ink);
 }
 .cause__value {
   font: 800 1.9rem/1 var(--font-display);
@@ -866,6 +884,12 @@ summary.rest__summary:hover,
   grid-template-columns: 18px 1fr auto;
   align-items: center;
   gap: 12px;
+}
+.rest__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 .rest__list .num {
   text-align: right;

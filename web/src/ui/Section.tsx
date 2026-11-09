@@ -4,6 +4,7 @@ import type { CityModel } from '../domain/cityModel';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
+import { CauseIcon } from './icons';
 import { patternFill } from './patterns';
 import { Phrase } from './Phrase';
 import { ProfileChart } from './ProfileChart';
@@ -34,6 +35,7 @@ export function CauseKey({ model }: { model: CityModel }) {
           <svg className="swatch" width="18" height="12" aria-hidden="true">
             <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: patternFill(key, 'heats') }} />
           </svg>
+          <CauseIcon cause={key} size={16} />
           {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort}
         </li>
       ))}

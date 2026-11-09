@@ -4,6 +4,7 @@ import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned } from '../../domain/format';
 import type { CauseRow, PanelContent } from '../panelContent';
+import { CauseIcon } from '../icons';
 import { directionOf, patternFill } from '../patterns';
 import { Phrase } from '../Phrase';
 import { Ramp } from './Ramp';
@@ -27,7 +28,10 @@ function CauseBar({ row, scale }: { row: CauseRow & { note: string }; scale: num
   return (
     <div className="cause">
       <p className="cause__head">
-        <span className="cause__name">{row.label}</span>
+        <span className="cause__name">
+          <CauseIcon cause={row.key} size={22} />
+          {row.label}
+        </span>
         <span className={`cause__value num num--${direction === 'heats' ? 'hot' : 'cool'}`}>{formatDegSigned(row.value)}</span>
       </p>
       <svg className="cause__bar" width="100%" height="16" role="img" aria-label={`${row.label}: ${formatDegSigned(row.value)}`}>
@@ -47,7 +51,10 @@ function RestRows({ rows }: { rows: CauseRow[] }) {
           <svg className="swatch" width="18" height="12" aria-hidden="true">
             <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: patternFill(row.key, directionOf(row.value)) }} />
           </svg>
-          <span>{row.label}</span>
+          <span className="rest__label">
+            <CauseIcon cause={row.key} size={18} />
+            {row.label}
+          </span>
           <span className={`num num--${row.value >= 0 ? 'hot' : 'cool'}`}>{formatDegSigned(row.value)}</span>
         </li>
       ))}
