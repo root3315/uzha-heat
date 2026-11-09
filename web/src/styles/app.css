@@ -309,13 +309,14 @@ select {
   left: 10px;
   right: 10px;
   z-index: 4;
+  /* On the narrowest phones the last button drops to a second row, at the left, clear of the zoom buttons. */
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  pointer-events: none;
 }
-.map-bar::-webkit-scrollbar {
-  display: none;
+.map-bar > * {
+  pointer-events: auto;
 }
 .map-bar .pill,
 .map-bar select {
@@ -1076,21 +1077,35 @@ summary.rest__summary:hover,
   .bar__id {
     margin-right: 0;
   }
+  .bar__id,
+  .bar__open {
+    flex: 0 0 auto;
+  }
+  /* The chips keep their size and the row scrolls; a fade at the right edge says there is more. */
   .bar__nav {
     flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
     background: transparent;
-    padding: 0;
+    padding: 0 20px 0 0;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 24px), transparent 100%);
   }
   .bar__nav::-webkit-scrollbar {
     display: none;
   }
   .bar__nav a {
+    flex: 0 0 auto;
     min-height: 44px;
     padding: 0 12px;
     background: var(--paper-2);
+    scroll-snap-align: start;
+  }
+  .bar__nav a:first-child {
+    margin-left: 8px;
   }
   .bar__open {
     padding: 0 14px;
