@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FeatureMeta } from '../data/contract';
-import { compareWithCity, formatEffect, formatRatio, recommend, type RecommendationInput } from './recommendations';
+import { INTERVENTIONS, compareWithCity, formatRatio, recommend, type RecommendationInput } from './recommendations';
 
 /** Formatting uses non-breaking spaces; compare with plain ones for readability. */
 const plain = (text: string | undefined) => text?.replace(/[  ]/g, ' ');
@@ -66,16 +66,36 @@ describe('recommend', () => {
     expect(result).toEqual([]);
   });
 
-  it('caps the expected effect by the heating it is meant to remove', () => {
-    const [water] = recommend(input({ contributions: { water_dist: 0.6 } }));
-    expect(water?.effect.max).toBeCloseTo(0.6);
-    expect(water?.effect.min).toBeLessThanOrEqual(water?.effect.max ?? 0);
+  it('reports how much its own factors heat the place', () => {
+    const [bare] = recommend(input({ values: { bare: 60 }, contributions: { bare: 4.2 } }));
+    expect(bare?.heating).toBeCloseTo(4.2);
+    expect(plain(bare?.reasons[0]?.text)).toBe('Открытый грунт 60 %, в 10 раз выше среднего по городу (6 %)');
   });
 
-  it('keeps the literature range when the place heats strongly', () => {
-    const [bare] = recommend(input({ values: { bare: 60 }, contributions: { bare: 4.2 } }));
-    expect(bare?.effect).toEqual({ min: 1, max: 3 });
-    expect(plain(bare?.reasons[0]?.text)).toBe('Открытый грунт 60 %, в 10 раз выше среднего по городу (6 %)');
+  it('cites a checkable source for every measure', () => {
+    for (const rule of INTERVENTIONS) {
+      expect(rule.evidence.url).toMatch(/^https:\/\//);
+      expect(rule.evidence.cite).toMatch(/\d{4}/);
+    }
+  });
+});
+
+describe('recommend and albedo', () => {
+  const albedo = feature('albedo', 'Отражающая способность', 'albedo 0–1');
+  const built = feature('built', 'Застройка', '% площади');
+  const base = { features: [albedo, built], cityMeans: { albedo: 0.22, built: 50 } };
+
+  it('never suggests light roofs because of bright bare ground', () => {
+    expect(recommend({ ...base, values: { albedo: 0.3, built: 20 }, contributions: { albedo: 0.8, built: 0 } })).toEqual([]);
+  });
+
+  it('does not suggest roofs for dark ground where little is built', () => {
+    expect(recommend({ ...base, values: { albedo: 0.15, built: 20 }, contributions: { albedo: 0.8, built: 0 } })).toEqual([]);
+  });
+
+  it('suggests roofs for a dark, densely built place where low albedo heats', () => {
+    const [roofs] = recommend({ ...base, values: { albedo: 0.15, built: 80 }, contributions: { albedo: 0.8, built: 0 } });
+    expect(roofs?.id).toBe('cool-roofs');
   });
 });
 
@@ -105,19 +125,5 @@ describe('formatRatio', () => {
     [22, 'в 22 раза'],
   ])('%s → %s', (ratio, text) => {
     expect(formatRatio(ratio)).toBe(text);
-  });
-});
-
-describe('formatEffect', () => {
-  it('formats a whole-degree range', () => {
-    expect(formatEffect({ min: 1, max: 3 })).toBe('1–3°');
-  });
-
-  it('keeps one decimal when needed', () => {
-    expect(formatEffect({ min: 0.5, max: 2 })).toBe('0,5–2,0°');
-  });
-
-  it('collapses an equal range to an upper bound', () => {
-    expect(formatEffect({ min: 0.4, max: 0.4 })).toBe('до 0,4°');
   });
 });
