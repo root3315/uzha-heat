@@ -80,7 +80,9 @@
   --space-7: 3rem;
 
   --pad: clamp(16px, 3.2vw, 48px);
-  --bar-h: 76px;
+  --bar-h: 64px;
+  /* Vertical rhythm of the landing's sections. */
+  --section-y: clamp(56px, 10vh, 110px);
   --panel-w: 400px;
   --radius: 26px;
   --radius-s: 16px;
@@ -90,6 +92,12 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --fast: 250ms;
   --slow: 900ms;
+}
+
+@media (max-width: 860px) {
+  :root {
+    --bar-h: 56px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

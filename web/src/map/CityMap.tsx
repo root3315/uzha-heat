@@ -12,14 +12,15 @@ import {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './worker';
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import type { CityModel } from '../domain/cityModel';
 import type { FoundName } from '../domain/placeName';
+import type { Site } from '../domain/sites';
 import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
 import { patternImage } from '../ui/patterns';
 import { IsothermLabelLayer } from './isothermLabels';
-import { nameFromBasemap } from './placeNames';
+import { nameFromBasemap, siteFromBasemap } from './placeNames';
 import { snapshotMap } from './snapshot';
 import { LAYER, SOURCE, bandOpacity, buildStyle } from './style';
 import { readTokens, type MapTokens } from './tokens';
@@ -37,6 +38,8 @@ export interface MapView {
 export interface CityMapHandle {
   snapshot(): Promise<string | null>;
   nameAt(point: LonLat, district: string | null): FoundName | null;
+  /** An airfield or a rail yard under the point, from the basemap. */
+  siteAt(point: LonLat): Site | null;
 }
 
 interface CityMapProps {
@@ -59,6 +62,8 @@ interface CityMapProps {
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
   onIdle(): void;
+  /** Overlays drawn over the map: chips, toolbars, hints. */
+  children?: ReactNode;
 }
 
 /** Below this pointer travel, px, a press is a click, not a drag. */
@@ -131,6 +136,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
   const tipRef = useRef<HTMLParagraphElement>(null);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const labelLayerRef = useRef<IsothermLabelLayer | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -147,6 +153,9 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     },
     nameAt(point, district) {
       return mapRef.current ? nameFromBasemap(mapRef.current, point, district) : null;
+    },
+    siteAt(point) {
+      return mapRef.current ? siteFromBasemap(mapRef.current, point) : null;
     },
   }));
 
@@ -186,6 +195,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     map.addControl(new ScaleControl({ maxWidth: 96, unit: 'metric' }), 'bottom-left');
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
     mapRef.current = map;
+    // A failed basemap tile is not worth an error screen: the isotherms are local data and stay.
+    map.on('error', () => noticeRef.current?.classList.add('is-on'));
 
     const addPatterns = () => {
       for (const { properties } of model.causeAreas.features) {
@@ -389,6 +400,10 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       <div ref={containerRef} className="map__canvas" />
       <svg ref={labelsRef} className="map__labels" aria-hidden="true" />
       <p ref={tipRef} className="map__tip" aria-hidden="true" />
+      <p ref={noticeRef} className="map__notice" role="status">
+        Подложка карты загрузилась не вся, изотермы на месте.
+      </p>
+      {props.children}
     </div>
   );
 });

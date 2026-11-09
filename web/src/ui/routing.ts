@@ -39,6 +39,12 @@ export function navigate(href: string): void {
   window.dispatchEvent(new Event(NAVIGATE));
 }
 
+/** Correct the address in place: no new history entry, the route updated. */
+export function redirect(href: string): void {
+  window.history.replaceState(null, '', href);
+  window.dispatchEvent(new Event(NAVIGATE));
+}
+
 export function useRoute(): Route {
   const [route, setRoute] = useState(current);
   useEffect(() => {
