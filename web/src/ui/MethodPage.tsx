@@ -1,6 +1,7 @@
 import type { CityModel } from '../domain/cityModel';
 import { formatDeg, formatNumber, plural } from '../domain/format';
-import { routeHref } from './routing';
+import { Link } from './Link';
+import { toolHref } from './routing';
 
 const SOURCE_OF: Record<string, string> = {
   ndvi: 'Sentinel-2 L2A, летняя медиана',
@@ -22,12 +23,10 @@ export function MethodPage({ model }: { model: CityModel }) {
   const step = (levels.thresholds[1] ?? 0) - (levels.thresholds[0] ?? 0);
   return (
     <main className="method">
-      <p className="method__back">
-        <a className="text-link" href={routeHref(city.id)}>
-          Вернуться к карте
-        </a>
-      </p>
       <h1 className="method__title">Как это посчитано</h1>
+      <p className="method__lead">
+        {city.name}. <Link className="text-link" href={toolHref(city.id)}>Вернуться к карте</Link>
+      </p>
 
       <p>
         {city.name} разбит на квадраты {grid.cellSizeM} × {grid.cellSizeM} м, их {formatNumber(grid.count, 0)}. Для каждого есть температура
