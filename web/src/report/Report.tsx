@@ -47,10 +47,10 @@ export function Report({ model, content, profile, mapImage, placeTitle, onClose 
   return createPortal(
     <div className="report" role="dialog" aria-modal="true" aria-label={`Отчёт: ${detail.city.name}`}>
       <div className="report__bar no-print">
-        <button type="button" className="text-button" onClick={() => window.print()}>
+        <button type="button" className="pill pill--ink" onClick={() => window.print()}>
           Распечатать или сохранить в PDF
         </button>
-        <button type="button" className="text-button" ref={closeRef} onClick={onClose}>
+        <button type="button" className="pill" ref={closeRef} onClick={onClose}>
           Закрыть
         </button>
       </div>
