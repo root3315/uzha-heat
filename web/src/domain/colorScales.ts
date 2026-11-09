@@ -5,10 +5,7 @@ export type Ramp = ReadonlyArray<readonly [number, string]>;
 /** [data value, hex] */
 export type ColorStops = Array<[number, string]>;
 
-/**
- * Surface temperature: cool sage at the bottom (parks, water) through straw and ochre to
- * brick and a deep oxblood — lightness falls monotonically from the ochre stop onward.
- */
+/** Surface temperature, cool to hot: pale green-grey, yellows, oranges, dark red. Lightness falls from the 0.16 stop on. */
 export const HEAT_RAMP: Ramp = [
   [0, '#cfdfd9'],
   [0.16, '#ebe3bd'],
