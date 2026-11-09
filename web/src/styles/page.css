@@ -1,79 +1,60 @@
-/* The landing: one statement, the live map under it, why, three cities, what to do, how, who. */
+/* The landing: one statement and the heat island, the live map, the problem, why, three cities, what to do, how and who. */
 
 /* ---------- Hero ---------- */
 .hero {
   display: grid;
-  gap: clamp(36px, 6vh, 72px);
-  padding: clamp(110px, 17vh, 190px) var(--pad) clamp(28px, 5vh, 56px);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 20px clamp(28px, 4vw, 72px);
+  align-items: end;
+  padding: calc(var(--bar-h) + clamp(16px, 4vh, 48px)) var(--pad) clamp(18px, 3vh, 32px);
 }
 .hero__title {
   min-width: 0;
   overflow-wrap: anywhere;
-  max-width: 15ch;
-  font: 800 clamp(56px, 9.6vw, 184px)/0.86 var(--font-display);
+  font: 800 clamp(40px, 5.6vw, 104px)/0.88 var(--font-display);
   font-stretch: 76%;
   letter-spacing: -0.03em;
   text-wrap: balance;
 }
-.hero__foot {
+.hero__island {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 25rem);
-  gap: 24px 64px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
   align-items: end;
 }
-.hero__data {
-  font: 400 0.76rem/1.6 var(--font-mono);
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
+.hero__figure {
+  font: 900 clamp(64px, 7.4vw, 136px)/0.8 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: linear-gradient(180deg, transparent 56%, var(--amber-wash) 56%, var(--amber-wash) 92%, transparent 92%);
 }
-.hero__data b {
-  font-weight: 500;
+.hero__caption {
+  max-width: 24rem;
   color: var(--ink);
-  background: linear-gradient(180deg, transparent 52%, var(--amber-wash) 52%, var(--amber-wash) 94%, transparent 94%);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
-.hero__side {
+.hero__note {
+  display: block;
+  margin-top: 6px;
   color: var(--ink-2);
-  font-size: 1.02rem;
+  font-size: 0.85rem;
 }
 
 /* ---------- Live map: the hero's instrument ---------- */
 .live {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 25rem);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 22rem);
   gap: 14px;
-  padding: 0 var(--pad) clamp(90px, 16vh, 180px);
-}
-.live__map,
-.gauge {
-  border-radius: var(--radius);
-  background: var(--card);
-}
-.live__map {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 18px;
-  padding: 22px 22px 24px;
-}
-.live__head {
-  display: grid;
-  gap: 6px;
-}
-.live__name {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font: 800 clamp(26px, 2.1vw, 36px)/0.95 var(--font-display);
-  font-stretch: 80%;
-  letter-spacing: -0.015em;
-}
-.live__path {
-  font: 400 0.64rem/1.3 var(--font-mono);
-  color: var(--ink-2);
+  padding: 0 var(--pad) var(--section-y);
 }
 .live__face {
   position: relative;
-  height: clamp(420px, 68vh, 760px);
+  height: clamp(380px, 64vh, 720px);
   overflow: hidden;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius);
   background: var(--paper-2);
 }
 .live__side {
@@ -86,30 +67,13 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  padding: 22px 22px 24px;
+  padding: 20px 20px 22px;
+  border-radius: var(--radius);
+  background: var(--card);
 }
 .gauge__label {
-  font: 400 0.64rem/1.3 var(--font-mono);
+  font: 400 0.68rem/1.3 var(--font-mono);
   color: var(--ink-2);
-}
-.gauge__num {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font: 900 clamp(72px, 6.4vw, 112px)/0.84 var(--font-display);
-  font-stretch: 75%;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.gauge__num small {
-  font: 400 0.8rem/1 var(--font-mono);
-  letter-spacing: 0;
-  color: var(--ink-2);
-}
-.gauge__log {
-  min-height: 3em;
-  font: 400 0.68rem/1.5 var(--font-mono);
-  color: var(--amber-ink);
 }
 .gauge__hint {
   font-size: 0.88rem;
@@ -119,20 +83,57 @@
   width: 100%;
 }
 
+/* ---------- Problem: one strip of sourced facts ---------- */
+.problem {
+  padding: 0 var(--pad) var(--section-y);
+}
+.problem__title {
+  margin-bottom: 14px;
+  font: 400 0.72rem/1.3 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.problem__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--ink);
+}
+.fact {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px 18px 4px 0;
+}
+.fact + .fact {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+.fact__figure {
+  font: 900 clamp(36px, 3.4vw, 60px)/0.86 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.fact__text {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 /* ---------- Why ---------- */
 .why {
-  padding: 0 var(--pad) clamp(90px, 16vh, 180px);
+  padding: 0 var(--pad) var(--section-y);
 }
 .why__top {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: clamp(28px, 4vw, 72px);
+  gap: clamp(24px, 4vw, 72px);
   align-items: end;
-  margin-bottom: clamp(40px, 6vw, 80px);
+  margin-bottom: clamp(28px, 4vw, 56px);
 }
 .why__count {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 .why__count h2 {
   display: flex;
@@ -142,7 +143,7 @@
 .why__num {
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 800 clamp(120px, 15vw, 250px)/0.78 var(--font-display);
+  font: 800 clamp(96px, 12vw, 210px)/0.78 var(--font-display);
   font-stretch: 75%;
   letter-spacing: -0.04em;
 }
@@ -153,14 +154,14 @@
   font-stretch: 85%;
 }
 .why__count p {
-  max-width: 30rem;
+  max-width: 32rem;
   color: var(--ink-2);
 }
 .why__answer {
-  font: 700 clamp(28px, 3vw, 52px)/1.02 var(--font-display);
+  font: 700 clamp(24px, 2.4vw, 42px)/1.06 var(--font-display);
   font-stretch: 82%;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
 }
 .why__answer .num--hot {
   color: var(--ink);
@@ -168,7 +169,7 @@
 }
 .why__panel {
   display: grid;
-  gap: 18px;
+  gap: 16px;
   padding: 22px 22px 24px;
   border-radius: var(--radius);
   background: var(--card);
@@ -182,7 +183,7 @@
 .why__head h3 {
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 800 clamp(26px, 2.1vw, 36px)/0.95 var(--font-display);
+  font: 800 clamp(24px, 2vw, 34px)/0.95 var(--font-display);
   font-stretch: 80%;
   letter-spacing: -0.015em;
 }
@@ -214,20 +215,20 @@
   color: var(--ink-2);
 }
 
-/* ---------- Three cities ---------- */
+/* ---------- Three cities: three columns, a swipeable row on a phone ---------- */
 .towns {
-  padding: clamp(40px, 8vh, 100px) var(--pad) clamp(60px, 10vh, 120px);
+  padding: 0 var(--pad) var(--section-y);
 }
 .towns__head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 22rem);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 24rem);
   align-items: end;
   gap: 24px;
-  margin-bottom: clamp(32px, 5vw, 72px);
+  margin-bottom: clamp(24px, 3vw, 44px);
 }
 .towns__head h2 {
   min-width: 0;
-  font: 800 clamp(64px, 12vw, 210px)/0.82 var(--font-display);
+  font: 800 clamp(48px, 7vw, 120px)/0.84 var(--font-display);
   font-stretch: 78%;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
@@ -237,40 +238,57 @@
 }
 .towns__list {
   display: grid;
-  gap: clamp(72px, 11vw, 160px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
 }
 .town {
   display: grid;
-  gap: clamp(16px, 2vw, 24px);
+  gap: 16px;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--card);
 }
 .town__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 20px;
+  display: grid;
+  gap: 12px;
 }
 .town__head h3 {
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 800 clamp(40px, 5vw, 84px)/0.9 var(--font-display);
+  font: 800 clamp(32px, 3vw, 52px)/0.9 var(--font-display);
   font-stretch: 78%;
   letter-spacing: -0.02em;
 }
-.town__line {
-  max-width: 40rem;
-  font-weight: 600;
-  font-size: 1.05rem;
+.town__island {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
 }
-.town__meta {
-  flex-basis: 100%;
+.town__figure {
+  font: 900 clamp(48px, 4.4vw, 80px)/0.8 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.town__caption {
+  max-width: 12em;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+.town__line {
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 .town__face {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 440px;
-  padding: 12px;
-  border-radius: var(--radius);
+  min-height: 200px;
+  padding: 10px;
+  border-radius: var(--radius-s);
   background: var(--paper-2);
   text-decoration: none;
   cursor: zoom-in;
@@ -279,28 +297,24 @@
   font: 400 0.72rem/1 var(--font-mono);
   color: var(--ink-2);
 }
-.town__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px 40px;
+.town__open {
+  justify-self: start;
 }
 .nums {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px clamp(28px, 4vw, 64px);
+  gap: 12px 28px;
 }
 .nums div {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 .nums dt {
-  font: 400 0.64rem/1.3 var(--font-mono);
+  font: 400 0.68rem/1.3 var(--font-mono);
   color: var(--ink-2);
 }
 .nums dd {
-  font: 800 clamp(34px, 3.2vw, 56px)/0.86 var(--font-display);
+  font: 800 clamp(26px, 2.2vw, 38px)/0.86 var(--font-display);
   font-stretch: 78%;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -319,19 +333,19 @@
 
 /* ---------- What to do ---------- */
 .acts {
-  padding: clamp(60px, 10vh, 120px) var(--pad) clamp(70px, 12vh, 140px);
+  padding: 0 var(--pad) var(--section-y);
 }
 .acts__head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 26rem);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 28rem);
   align-items: end;
   gap: 24px;
-  margin-bottom: clamp(28px, 4vw, 56px);
+  margin-bottom: clamp(24px, 3vw, 44px);
 }
 .acts__head h2 {
   min-width: 0;
   overflow-wrap: anywhere;
-  font: 800 clamp(48px, 7vw, 120px)/0.86 var(--font-display);
+  font: 800 clamp(44px, 6vw, 104px)/0.86 var(--font-display);
   font-stretch: 78%;
   letter-spacing: -0.03em;
 }
@@ -343,12 +357,12 @@
 }
 .act {
   display: grid;
-  grid-template-columns: minmax(0, 13rem) minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-columns: minmax(0, 11rem) minmax(0, 5fr) minmax(0, 6fr);
   grid-template-areas:
     'effect title todo'
     'effect why todo';
   gap: 8px 32px;
-  padding: 24px 6px;
+  padding: 22px 6px;
   border-bottom: 1px solid var(--line);
 }
 .act__effect {
@@ -358,13 +372,13 @@
   align-content: start;
 }
 .act__effect span {
-  font: 900 clamp(44px, 4vw, 68px)/0.84 var(--font-display);
+  font: 900 clamp(40px, 3.6vw, 60px)/0.84 var(--font-display);
   font-stretch: 75%;
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
 .act__effect small {
-  font: 400 0.62rem/1.3 var(--font-mono);
+  font: 400 0.68rem/1.3 var(--font-mono);
   color: var(--ink-2);
 }
 .act__title {
@@ -374,71 +388,61 @@
 }
 .act__why {
   grid-area: why;
-  font: 400 0.7rem/1.55 var(--font-mono);
   color: var(--ink-2);
+  font-size: 0.9rem;
 }
 .act__todo {
   grid-area: todo;
   color: var(--ink-2);
 }
-.act__todo::first-letter {
+.act__todo > p:first-child::first-letter {
   text-transform: uppercase;
 }
 
-/* ---------- How it was computed ---------- */
-.how {
+/* ---------- Closing band: how, who, credits ---------- */
+.close {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: clamp(24px, 3vw, 48px);
-  padding: clamp(40px, 8vh, 100px) var(--pad);
-  align-items: start;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(32px, 5vw, 96px);
+  padding: var(--section-y) var(--pad) clamp(28px, 5vh, 48px);
+  border-top: 1px solid var(--line);
+  background: var(--paper-2);
 }
-.how h2 {
+.close h2 {
   min-width: 0;
   overflow-wrap: anywhere;
-  grid-column: 1 / span 5;
-  font: 800 clamp(48px, 6vw, 104px)/0.86 var(--font-display);
+  font: 800 clamp(40px, 4.6vw, 80px)/0.86 var(--font-display);
   font-stretch: 78%;
   letter-spacing: -0.03em;
 }
-.how__text {
-  grid-column: 7 / span 6;
+.close__how,
+.close__team {
   display: grid;
+  align-content: start;
   gap: 16px;
 }
-.how__text p {
+.close__how p {
   color: var(--ink-2);
-  max-width: 36rem;
+  max-width: 40rem;
 }
-.how__text .how__data {
-  padding: 14px 16px;
+.close__how .close__data {
+  padding: 12px 14px;
   border-radius: var(--radius-s);
   background: var(--card);
   color: var(--ink);
-  font: 400 0.7rem/1.7 var(--font-mono);
+  font: 400 0.72rem/1.7 var(--font-mono);
 }
-.how__text .pill {
+.close__how .pill {
   justify-self: start;
 }
-
-/* ---------- Team ---------- */
-.team {
-  display: grid;
-  gap: clamp(28px, 4vw, 48px);
-  padding: clamp(60px, 12vh, 140px) var(--pad) clamp(40px, 8vh, 90px);
+.close .close__label {
+  font-size: clamp(28px, 2.4vw, 40px);
 }
-.team h2 {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font: 800 clamp(48px, 8.5vw, 150px)/0.88 var(--font-display);
-  font-stretch: 78%;
-  letter-spacing: -0.03em;
-}
-.team__names {
+.close__names {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px clamp(24px, 3vw, 48px);
-  font: 700 clamp(30px, 3.6vw, 60px)/1 var(--font-display);
+  gap: 4px 24px;
+  font: 700 clamp(26px, 2.6vw, 44px)/1 var(--font-display);
   font-stretch: 85%;
   letter-spacing: -0.015em;
 }
@@ -446,6 +450,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+.close__credit {
+  color: var(--ink-2);
+  font-size: 0.82rem;
 }
 
 .foot {
@@ -470,56 +478,138 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .live__side {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .problem__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .live__open {
-    grid-column: 1 / -1;
+  .fact:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
   }
 }
 @media (max-width: 860px) {
-  .hero__foot,
+  .hero,
   .why__top,
   .why__head,
   .towns__head,
-  .acts__head {
+  .acts__head,
+  .close {
     grid-template-columns: minmax(0, 1fr);
   }
+  .hero {
+    gap: 14px;
+    padding-top: calc(var(--bar-h) + 14px);
+  }
   .hero__title {
-    font-size: 15.5vw;
+    font-size: 11.5vw;
+  }
+  .hero__figure {
+    font-size: 17vw;
+  }
+  .hero__caption {
+    font-size: 0.88rem;
+  }
+  .hero__note {
+    font-size: 0.8rem;
   }
   .live__side {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* On a phone the map is the instrument; the legend waits under it. */
   .live__face {
-    height: 56vh;
-    height: 56svh;
+    height: 52vh;
+    height: 52svh;
+  }
+  .gauge__hint {
+    display: none;
   }
   .act {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'effect' 'title' 'why' 'todo';
+    gap: 8px;
   }
-  .how h2,
-  .how__text {
-    grid-column: 1 / -1;
+  .act__effect {
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    gap: 12px;
   }
-  .town__face {
-    min-height: 300px;
+  /* The cities become a row of cards to swipe. */
+  .towns__list {
+    display: flex;
+    gap: 10px;
+    margin: 0 calc(-1 * var(--pad));
+    padding: 0 var(--pad) 4px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 var(--pad);
+    scrollbar-width: none;
+  }
+  .towns__list::-webkit-scrollbar {
+    display: none;
+  }
+  .town {
+    flex: 0 0 min(84vw, 380px);
+    scroll-snap-align: start;
+    padding: 18px;
   }
 }
 @media (max-width: 640px) {
   .live,
-  .why {
+  .why,
+  .problem {
     padding-left: 10px;
     padding-right: 10px;
   }
-  .live__map,
   .gauge,
   .why__panel {
     padding: 16px;
   }
+  .problem__list {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .fact {
+    padding: 14px 10px 4px 0;
+  }
+  .fact + .fact {
+    padding-left: 10px;
+  }
+  .fact:nth-child(3) {
+    padding-left: 0;
+  }
+  .fact__text {
+    font-size: 0.82rem;
+  }
+  .why__num {
+    font-size: 26vw;
+  }
+  /* Phones get the essentials: the long legend lines and the raw data line stay on larger screens and on /method. */
+  .why__foot,
+  .close__how .close__data,
+  .act__todo > p:first-child {
+    display: none;
+  }
+  .why__top {
+    margin-bottom: 20px;
+  }
+  .why__count p {
+    font-size: 0.9rem;
+  }
+  .gauge__label,
+  .nums dt,
+  .act__effect small,
+  .close__how .close__data,
+  .problem__title {
+    font-size: 12px;
+  }
 }
 @media (pointer: coarse) {
-  .foot a {
-    padding: 10px 0;
+  .foot a,
+  .fact .text-link,
+  .evidence .text-link {
+    display: inline-block;
+    padding: 12px 0;
+    line-height: 20px;
   }
 }

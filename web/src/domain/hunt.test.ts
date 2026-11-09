@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { cellReadout, findMessage, huntTarget, leadingFactor, registerFind } from './hunt';
+import { cellReadout, findMessage, huntCell, huntTarget, leadingFactor, registerFind } from './hunt';
 
 const feature = (key: string, label: string, unit: string): FeatureMeta => ({ key, label, unit, description: '' });
 
@@ -28,6 +28,28 @@ function city(): CityDetail {
 describe('huntTarget', () => {
   it('counts the cells at or above the 90th percentile', () => {
     expect(huntTarget(city())).toEqual({ threshold: 50, total: 2 });
+  });
+
+  it('counts only the cells that can be tapped, inside the city', () => {
+    expect(huntTarget(city(), [true, true, true, true, true, false])).toEqual({ threshold: 50, total: 1 });
+  });
+});
+
+describe('huntCell', () => {
+  const target = { threshold: 50, total: 2 };
+  const tapped = { cell: 3, t: 47 };
+
+  it('counts a hot neighbour when the tap lands one cell off', () => {
+    expect(huntCell([tapped, { cell: 4, t: 50 }, { cell: 2, t: 44 }], new Set(), target)).toEqual({ cell: 4, t: 50 });
+  });
+
+  it('prefers a hot neighbour not yet found', () => {
+    expect(huntCell([tapped, { cell: 4, t: 50 }, { cell: 5, t: 52 }], new Set([4]), target)).toEqual({ cell: 5, t: 52 });
+  });
+
+  it('falls back to the tapped cell when nothing near is hot', () => {
+    expect(huntCell([tapped, { cell: 2, t: 44 }], new Set(), target)).toEqual(tapped);
+    expect(huntCell([], new Set(), target)).toBeNull();
   });
 });
 
@@ -87,7 +109,7 @@ describe('findMessage', () => {
 
   it('confirms a find and refuses a repeat', () => {
     expect(plain(findMessage('new', 49.24, target, 43.8))).toBe('Засчитано: 49,2°, горячая десятая часть города.');
-    expect(findMessage('repeat', 49.24, target, 43.8)).toBe('Этот квартал уже засчитан.');
+    expect(findMessage('repeat', 49.24, target, 43.8)).toBe('Этот участок уже засчитан.');
   });
 
   it('says how far a miss was from hot', () => {

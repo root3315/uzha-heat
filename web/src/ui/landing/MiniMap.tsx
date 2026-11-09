@@ -8,8 +8,17 @@ import { useReadout } from '../readout';
 
 interface MiniMapProps {
   model: CityModel;
-  height: number;
   label: string;
+}
+
+/** Tall cities are not allowed to push the card past this height-to-width ratio. */
+const MAX_ASPECT = 1.15;
+
+/** Height over width of a lon/lat box on the ground, so the frame takes the city's own shape. */
+function groundAspect([w, s, e, n]: [number, number, number, number]): number {
+  const k = Math.cos((((s + n) / 2) * Math.PI) / 180);
+  const wide = (e - w) * k;
+  return wide > 0 ? Math.min(MAX_ASPECT, (n - s) / wide) : 1;
 }
 
 function tracePolygons(ctx: CanvasRenderingContext2D, projection: MiniProjection, polygons: Position[][][]): void {
@@ -29,13 +38,14 @@ function tracePolygons(ctx: CanvasRenderingContext2D, projection: MiniProjection
  * The city's isotherms drawn flat on a canvas: no tiles, no WebGL, so three of them cost almost nothing.
  * Under the pointer it reads out the temperature and the main cause, like the big map.
  */
-export function MiniMap({ model, height, label }: MiniMapProps) {
+export function MiniMap({ model, label }: MiniMapProps) {
   const [frameRef, width] = useWidth<HTMLDivElement>(640);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
   const { describe } = useReadout(model);
   const area = model.outline ?? model.isotherms.coverage;
-  const projection = miniProjection(geometryBounds(area), width, Math.min(height, Math.round(width * 0.85)));
+  const bounds = geometryBounds(area);
+  const projection = miniProjection(bounds, width, Math.round(width * groundAspect(bounds)));
 
   useEffect(() => {
     const canvas = canvasRef.current;
