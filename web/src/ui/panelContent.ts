@@ -3,6 +3,7 @@ import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { formatDeg, formatFactorValue } from '../domain/format';
 import type { PlaceProfile } from '../domain/places';
+import { siteNote, siteTitle, type Site } from '../domain/sites';
 
 export interface CauseRow {
   key: string;
@@ -24,8 +25,11 @@ export interface PanelContent {
   advice: Advice;
 }
 
-/** Everything the panel says, for the whole city (`place` null) or one picked place. */
-export function panelContent(model: CityModel, place: PlaceProfile | null, placeTitle: string): PanelContent {
+/**
+ * Everything the panel says, for the whole city (`place` null) or one picked place.
+ * On an airfield or a rail yard the place is named for what it is, and no street measure is offered.
+ */
+export function panelContent(model: CityModel, place: PlaceProfile | null, placeTitle: string, site: Site | null = null): PanelContent {
   const { detail } = model;
   const { stats, features } = detail;
   const subject = place ?? model.hotspot;
@@ -52,7 +56,7 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
   }
 
   return {
-    title: place ? placeTitle : detail.city.name,
+    title: place ? (site ? siteTitle(site) : placeTitle) : detail.city.name,
     isCity: place === null,
     answer: place ? placeAnswer(place, stats.lstMean, features) : cityAnswer(detail, model.facts),
     figure: place ? place.lst : stats.lstMean,
@@ -60,6 +64,6 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     meanMark: place ? stats.lstMean : null,
     cause,
     rest,
-    advice: advise(detail, subject, model.cityMeans),
+    advice: place && site ? { kind: 'none', text: [siteNote(site)] } : advise(detail, subject, model.cityMeans),
   };
 }

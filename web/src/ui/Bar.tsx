@@ -1,5 +1,4 @@
-import { useEffect, useRef, type MouseEvent } from 'react';
-import { formatNumber } from '../domain/format';
+import type { MouseEvent } from 'react';
 import { scrollToId } from './hooks';
 import { Link } from './Link';
 
@@ -9,32 +8,17 @@ interface BarProps {
   tool: string | null;
   /** On the landing the section links scroll; elsewhere they lead back to it. */
   onLanding: boolean;
-  found: number;
-  total: number | null;
 }
 
 const SECTIONS = [
+  ['problem', 'Проблема'],
   ['why', 'Почему жарко'],
   ['cities', 'Города'],
   ['method', 'Как считали'],
-  ['team', 'Команда'],
 ] as const;
 
-/** Fixed bar: the name, the landing's sections, the live counter of the opening game and the way to the map. */
-export function Bar({ home, tool, onLanding, found, total }: BarProps) {
-  const countRef = useRef<HTMLSpanElement>(null);
-  const last = useRef(found);
-
-  useEffect(() => {
-    const element = countRef.current;
-    const grew = found > last.current;
-    last.current = found;
-    if (!element || !grew) return;
-    element.classList.remove('is-bump');
-    void element.offsetWidth;
-    element.classList.add('is-bump');
-  }, [found]);
-
+/** Fixed bar: the name, the landing's sections (a scrollable row of chips on a phone) and the way to the map. */
+export function Bar({ home, tool, onLanding }: BarProps) {
   const jump = (id: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     scrollToId(id);
@@ -64,14 +48,12 @@ export function Bar({ home, tool, onLanding, found, total }: BarProps) {
           ),
         )}
       </nav>
-      {total !== null && (
-        <span ref={countRef} className="pill bar__count" aria-live="polite">
-          найдено горячих <b>{formatNumber(found, 0)}</b>&nbsp;/ {formatNumber(total, 0)}
-        </span>
-      )}
       {tool && (
-        <Link className="pill pill--ink" href={tool}>
-          Открыть карту
+        <Link className="pill pill--ink bar__open" href={tool}>
+          <span className="bar__open-long">Открыть карту</span>
+          <span className="bar__open-short" aria-hidden="true">
+            Карта
+          </span>
         </Link>
       )}
     </header>

@@ -5,21 +5,26 @@ import { genitive } from '../domain/answers';
 import { huntTarget } from '../domain/hunt';
 import { Bar } from './Bar';
 import { scrollToId, useAsync } from './hooks';
-import { Landing } from './landing/Landing';
+import { Landing, REPO } from './landing/Landing';
 import { MethodPage } from './MethodPage';
 import { cityModel } from './models';
 import { PatternDefs } from './patterns';
-import { navigate, toolHref, useRoute, type Route } from './routing';
+import { methodHref, navigate, redirect, toolHref, useRoute, type Route } from './routing';
 import { Tool } from './Tool';
 
-const REPO = 'https://github.com/root3315/uzha-heat';
 const HOME = import.meta.env.BASE_URL;
 
-function Status({ children }: { children: string }) {
+/** A loading or error line; with `onRetry`, a button to try again. */
+function Status({ children, onRetry }: { children: string; onRetry?(): void }) {
   return (
-    <p className="app-status" role="status">
-      {children}
-    </p>
+    <div className="app-status" role="status">
+      <p>{children}</p>
+      {onRetry && (
+        <button type="button" className="pill pill--ink" onClick={onRetry}>
+          Повторить
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -27,7 +32,7 @@ function Footer() {
   return (
     <footer className="foot">
       <p>
-        UzHa: острова тепла Ташкента, Самарканда и&nbsp;Бухары по&nbsp;снимкам Landsat. Код открыт на&nbsp;
+        UzHa: острова тепла Ташкента, Самарканда и&nbsp;Бухары по&nbsp;снимкам NASA/USGS Landsat. Код открыт на&nbsp;
         <a href={REPO} target="_blank" rel="noopener">
           GitHub
         </a>
@@ -38,14 +43,35 @@ function Footer() {
   );
 }
 
+function Notice({ text, onClose }: { text: string; onClose(): void }) {
+  return (
+    <p className="notice" role="status">
+      <span>{text}</span>
+      <button type="button" className="notice__close" onClick={onClose} aria-label="Закрыть">
+        ×
+      </button>
+    </p>
+  );
+}
+
 function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
-  const city = cities.find((c) => c.id === route.cityId) ?? cities[0];
+  const known = cities.find((c) => c.id === route.cityId);
+  const city = known ?? cities[0];
   const landingCity = cities[0];
   const subject = route.view === 'story' ? landingCity : city;
-  const state = useAsync(() => (subject ? cityModel(subject.id) : Promise.resolve(null)), [subject?.id]);
+  const [attempt, setAttempt] = useState(0);
+  const state = useAsync(() => (subject ? cityModel(subject.id) : Promise.resolve(null)), [subject?.id, attempt]);
   const model = state.status === 'ready' ? state.data : null;
   const [found, setFound] = useState<ReadonlySet<number>>(() => new Set());
-  const target = useMemo(() => (route.view === 'story' && model ? huntTarget(model.detail) : null), [route.view, model]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const target = useMemo(() => (route.view === 'story' && model ? huntTarget(model.detail, model.inside) : null), [route.view, model]);
+
+  // An unknown city in the address: open the first one instead, and say so.
+  useEffect(() => {
+    if (route.view === 'story' || !route.cityId || known || !city) return;
+    setNotice(`Города «${route.cityId}» в данных нет, открыт ${city.name}.`);
+    redirect(route.view === 'tool' ? toolHref(city.id) : methodHref(city.id));
+  }, [route.view, route.cityId, known, city]);
 
   const ready = state.status === 'ready';
   useEffect(() => {
@@ -60,28 +86,19 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
       route.view === 'tool' ? `${name}: карта жары, UzHa` : route.view === 'method' ? `Как посчитано: ${name}, UzHa` : 'UzHa: где город перегревается летом';
   }, [route.view, subject?.name]);
 
-  const bar = (
-    <Bar
-      home={HOME}
-      tool={route.view === 'tool' || !subject ? null : toolHref(subject.id)}
-      onLanding={route.view === 'story'}
-      found={found.size}
-      total={target?.total ?? null}
-    />
-  );
+  const bar = <Bar home={HOME} tool={route.view === 'tool' || !subject ? null : toolHref(subject.id)} onLanding={route.view === 'story'} />;
+  const noticeLine = notice && <Notice text={notice} onClose={() => setNotice(null)} />;
 
   if (!subject) return <Status>В cities.json нет ни одного города.</Status>;
   if (state.status !== 'ready' || !model) {
-    const message =
-      state.status === 'loading'
-        ? `Считаю изотермы ${genitive(subject.name)}`
-        : state.status === 'error'
-          ? `Не получилось открыть данные: ${state.message}`
-          : `Для ${genitive(subject.name)} данных пока нет.`;
+    // A failed load is dropped from the cache, so a new attempt fetches again.
+    const retry = () => setAttempt((n) => n + 1);
     return (
       <>
         {bar}
-        <Status>{message}</Status>
+        {state.status === 'loading' && <Status>{`Считаю изотермы ${genitive(subject.name)}`}</Status>}
+        {state.status === 'error' && <Status onRetry={retry}>{`Не получилось загрузить данные ${genitive(subject.name)}. Проверьте связь и попробуйте ещё раз.`}</Status>}
+        {state.status === 'ready' && <Status>{`Для ${genitive(subject.name)} данных пока нет.`}</Status>}
       </>
     );
   }
@@ -89,24 +106,27 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
   return (
     <>
       {bar}
+      {noticeLine}
       {route.view === 'tool' && <Tool key={model.detail.city.id} model={model} cities={cities} onCity={(id) => navigate(toolHref(id))} />}
       {route.view === 'method' && <MethodPage model={model} />}
       {route.view === 'story' && target && <Landing cities={cities} model={model} hunt={{ target, found }} onHunt={setFound} />}
-      {route.view !== 'tool' && <Footer />}
+      {route.view === 'method' && <Footer />}
     </>
   );
 }
 
 export function App() {
   const route = useRoute();
-  const cities = useAsync(loadCities, []);
+  const [attempt, setAttempt] = useState(0);
+  const cities = useAsync(loadCities, [attempt]);
 
   useEffect(() => {
     window.history.scrollRestoration = 'manual';
   }, []);
 
-  if (cities.status !== 'ready') {
-    return <Status>{cities.status === 'loading' ? 'Загружаю города' : `Не получилось загрузить список городов: ${cities.message}`}</Status>;
+  if (cities.status === 'loading') return <Status>Загружаю города</Status>;
+  if (cities.status === 'error') {
+    return <Status onRetry={() => setAttempt((n) => n + 1)}>Не получилось загрузить список городов. Проверьте связь и попробуйте ещё раз.</Status>;
   }
   return (
     <>

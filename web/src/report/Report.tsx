@@ -8,6 +8,7 @@ import { Panel } from '../ui/panel/Panel';
 import type { PanelContent } from '../ui/panelContent';
 import { Phrase } from '../ui/Phrase';
 import { ProfileChart } from '../ui/ProfileChart';
+import { useWidth } from '../ui/hooks';
 
 interface ReportProps {
   model: CityModel;
@@ -18,7 +19,7 @@ interface ReportProps {
   onClose(): void;
 }
 
-/** Printable width of an A4 sheet at the report's margins, px. */
+/** Printable width of an A4 sheet at the report's margins, px: the width before the sheet is measured. */
 const SHEET_W = 694;
 const PROFILE_H = 200;
 
@@ -30,6 +31,7 @@ export function Report({ model, content, profile, mapImage, placeTitle, onClose 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const { detail } = model;
+  const [sectionRef, width] = useWidth<HTMLElement>(SHEET_W);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -64,14 +66,14 @@ export function Report({ model, content, profile, mapImage, placeTitle, onClose 
           </figure>
         )}
 
-        <section className="report__section">
+        <section className="report__section" ref={sectionRef}>
           <p className="section__answer">
             <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features)} /> Разрез от А до Б, {formatKm(profile.length)}.
           </p>
-          <ProfileChart profile={profile} levels={model.levels} cityMean={detail.stats.lstMean} features={detail.features} width={SHEET_W} height={PROFILE_H} />
+          <ProfileChart profile={profile} levels={model.levels} cityMean={detail.stats.lstMean} features={detail.features} width={width} height={PROFILE_H} />
         </section>
 
-        <p className="panel__sources">{sourcesLine(detail)} Карта: © OpenStreetMap, OpenFreeMap.</p>
+        <p className="panel__sources">{sourcesLine(detail)} Подложка: © OpenStreetMap, OpenFreeMap.</p>
       </article>
     </div>,
     document.body,
