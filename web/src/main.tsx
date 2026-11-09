@@ -1,6 +1,8 @@
-import '@fontsource-variable/geologica/full.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/commissioner/400.css';
+import '@fontsource/commissioner/500.css';
+import '@fontsource/commissioner/600.css';
+import '@fontsource/literata/400.css';
+import '@fontsource/literata/600.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
