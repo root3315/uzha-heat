@@ -5,7 +5,7 @@ import { classOf, type IsothermLevels } from '../domain/isotherms';
 import { sampleAt, type Profile, type Sample } from '../domain/transect';
 import type { FeatureMeta } from '../data/contract';
 import { CauseGlyph } from './icons';
-import { patternFill } from './patterns';
+import { usePatternFill } from './patterns';
 
 interface ProfileChartProps {
   profile: Profile;
@@ -32,6 +32,7 @@ const CHAR_W = 7.4;
 const MIN_TICK_GAP_PX = 52;
 
 export function ProfileChart({ profile, levels, cityMean, features, width, height, onProbe, onPick }: ProfileChartProps) {
+  const fill = usePatternFill();
   const [probe, setProbe] = useState<Sample | null>(null);
   const clipId = `profile-area-${useId().replace(/:/g, '')}`;
   const wordsOf = useMemo(() => {
@@ -102,7 +103,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   const probeAnchor = probe && x(probe.d) > width - 260 ? 'end' : 'start';
 
   return (
-    <svg className="profile" width={width} height={height} role="img" aria-label="Температура и причины вдоль разреза">
+    <svg className="profile" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Температура и причины вдоль разреза">
       <defs>
         <clipPath id={clipId}>
           <path d={curve(true)} />
@@ -148,7 +149,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
                 y={ribbonY}
                 width={Math.max(1, x1 - x0 - 1)}
                 height={RIBBON_H}
-                style={{ fill: patternFill(segment.key, segment.heats ? 'heats' : 'cools') }}
+                style={{ fill: fill(segment.key, segment.heats ? 'heats' : 'cools') }}
               />
               {x1 - x0 > labelW + 6 && (
                 <g>

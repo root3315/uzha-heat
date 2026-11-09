@@ -5,7 +5,7 @@ import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
 import { CauseIcon } from './icons';
-import { patternFill } from './patterns';
+import { usePatternFill } from './patterns';
 import { Phrase } from './Phrase';
 import { ProfileChart } from './ProfileChart';
 
@@ -27,13 +27,14 @@ interface SectionProps {
 const CHART_H = 196;
 
 export function CauseKey({ model }: { model: CityModel }) {
+  const fill = usePatternFill();
   const byKey = new Map(model.detail.features.map((f) => [f.key, f]));
   return (
     <ul className="cause-key" aria-label="Что греет сильнее всего, по штриховке">
       {model.causeAreas.features.map(({ properties: { key } }) => (
         <li key={key}>
           <svg className="swatch" width="18" height="12" aria-hidden="true">
-            <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: patternFill(key, 'heats') }} />
+            <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: fill(key, 'heats') }} />
           </svg>
           <CauseIcon cause={key} size={16} />
           {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort}
