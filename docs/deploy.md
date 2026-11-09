@@ -10,7 +10,25 @@ npm run build
 
 Serve `web/dist` as static files. Data is in `web/dist/data/` (copied from `web/public/data/`).
 
-Target host: TV box, self-hosted. Setup to be documented.
+## Как сейчас развёрнуто
+
+https://uzha.mydevbox.xyz отдаёт домашний ТВ-бокс (Android, Termux):
+
+- nginx слушает `127.0.0.1:8081`, корень `~/www/uzha`. На `8080` рядом крутится портфолио, его не трогаем.
+- Cloudflare Tunnel (`~/.cloudflared/config.yml`) ведёт `uzha.mydevbox.xyz` на `127.0.0.1:8081`.
+  DNS-запись заводится один раз: `cloudflared tunnel route dns <tunnel-id> uzha.mydevbox.xyz`.
+- Любой путь без файла отдаёт `index.html` (`try_files $uri $uri/ /index.html`), иначе не откроются ссылки вида `/map/tashkent`.
+- В `mime.types` у `application/javascript` должен быть `mjs`. Без этого воркер MapLibre приходит как
+  `application/octet-stream` и карта не рисуется.
+
+Выкладка новой версии с ПК (на ПК в `~/.ssh/config` должен быть хост `tvbox`):
+
+```bash
+cd web && npm ci && npm run build
+tar cf - -C dist . | ssh tvbox 'rm -rf ~/www/uzha.new && mkdir ~/www/uzha.new && tar xf - -C ~/www/uzha.new   && rm -rf ~/www/uzha.old && mv ~/www/uzha ~/www/uzha.old && mv ~/www/uzha.new ~/www/uzha'
+```
+
+Старая версия остаётся в `~/www/uzha.old`, откат: поменять папки местами обратно.
 
 ## nginx example
 
