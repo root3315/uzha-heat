@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import distance_transform_edt
 
+from . import boundary
 from .cache import Cache
 from .cities import City
 from .grid import Grid, aggregate
@@ -44,7 +45,8 @@ class FeatureTable:
     dropped: list = field(default_factory=list)
 
 
-def build(city: City, grid: Grid, cache: Cache) -> FeatureTable:
+def build(city: City, grid: Grid, cache: Cache, area=None) -> FeatureTable:
+    """`area` (lon/lat geometry, optional) limits kept cells to those centred inside it."""
     bbox = grid.bbox_lonlat()
     fine = grid.raster(FINE_FACTOR)
     landcover_raster = grid.raster(LANDCOVER_FACTOR)
@@ -92,7 +94,7 @@ def build(city: City, grid: Grid, cache: Cache) -> FeatureTable:
     if elevation is not None:
         layers["elevation"], valid["elevation"] = aggregate(elevation, FINE_FACTOR)
 
-    table = _to_table(grid, layers, valid, water_fraction)
+    table = _to_table(grid, layers, valid, water_fraction, area)
     factors = [key for key in FACTORS if key in layers]
     log.info("%s: %d of %d cells kept; factors: %s", city.id, len(table), grid.rows * grid.cols, factors)
     return FeatureTable(table, factors, lst.scenes, surface.scenes if surface else 0, lst.period.label, dropped)
@@ -111,13 +113,14 @@ def _distance_to(mask: np.ndarray, pixel_size: float) -> np.ndarray:
     return (distance_transform_edt(~mask) * pixel_size).astype(np.float32)
 
 
-def _to_table(grid: Grid, layers: dict, valid: dict, water_fraction: np.ndarray) -> pd.DataFrame:
+def _to_table(grid: Grid, layers: dict, valid: dict, water_fraction: np.ndarray, area=None) -> pd.DataFrame:
     x, y = grid.cell_centers()
     lon, lat = grid.cell_centers_lonlat()
     table = pd.DataFrame({"x": x.ravel(), "y": y.ravel(), "lon": np.ravel(lon), "lat": np.ravel(lat)})
     for key, layer in layers.items():
         table[key] = layer.ravel()
     keep = water_fraction.ravel() <= MAX_WATER_FRACTION
+    keep &= boundary.inside(area, table["lon"].to_numpy(), table["lat"].to_numpy())
     for fraction in valid.values():
         keep &= fraction.ravel() >= MIN_VALID_FRACTION
     keep &= table[list(layers)].notna().all(axis=1).to_numpy()

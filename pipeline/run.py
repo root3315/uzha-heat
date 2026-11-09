@@ -10,7 +10,7 @@ from pathlib import Path
 
 import shapely
 
-from .uzha import export, features, model
+from .uzha import boundary, export, features, model
 from .uzha.cache import Cache
 from .uzha.cities import CITIES, City, get_city
 from .uzha.grid import Grid, half_size_deg
@@ -25,11 +25,13 @@ log = logging.getLogger("uzha")
 
 
 def process_city(city: City, out_dir: Path) -> dict:
-    grid = Grid.from_bbox(city.bbox, CELL_SIZE_M)
+    bbox, area = boundary.city_extent(city)
+    grid = Grid.from_bbox(bbox, CELL_SIZE_M)
     cache = Cache(CACHE_ROOT / f"{city.id}_{grid.key()}")
-    log.info("%s: grid %dx%d cells in %s", city.id, grid.rows, grid.cols, grid.crs)
+    log.info("%s: bbox %s, grid %dx%d cells in %s", city.id, tuple(round(v, 4) for v in bbox), grid.rows, grid.cols,
+             grid.crs)
 
-    table = features.build(city, grid, cache)
+    table = features.build(city, grid, cache, area)
     cells = table.cells
     factors = cells[table.factors]
     lst = cells["lst"].to_numpy()

@@ -9,7 +9,7 @@ class City:
     name_en: str
     country: str
     center: tuple  # (lon, lat)
-    bbox: tuple  # (west, south, east, north), degrees
+    bbox: tuple  # (west, south, east, north), degrees; fallback when boundaries/<id>.geojson is missing
     wiki_title: str
     osm_relation_id: Optional[int] = None
     district_admin_level: Optional[int] = None

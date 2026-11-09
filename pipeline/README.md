@@ -44,17 +44,20 @@ so rerunning the city retries them.
 
 ## Method
 
-1. **Grid.** The city bbox is projected to its UTM zone and snapped to 200 m cells. Rasters are
+1. **Extent.** The bbox is the city's OSM boundary (`pipeline/boundaries/<city>.geojson`) grown
+   by 1.5 km; cells whose centre lies farther than that outside the boundary are dropped. If the
+   boundary file is missing, the bbox from `uzha/cities.py` is used and no cells are dropped.
+2. **Grid.** The bbox is projected to its UTM zone and snapped to 200 m cells. Rasters are
    resampled with windowed COG reads + `rasterio.warp.reproject` onto a sub-grid of 7×7 pixels per
    cell (≈ 28.6 m, close to Landsat's 30 m; 30 m does not divide 200 m) — WorldCover onto
    20×20 (10 m) — and averaged back to cells.
-2. **Cell filter.** A cell is kept if ≥ 50 % of its pixels have valid LST and every raster factor,
+3. **Cell filter.** A cell is kept if ≥ 50 % of its pixels have valid LST and every raster factor,
    water covers ≤ 50 % of it, and no factor is missing.
-3. **Model.** `XGBRegressor` (400 trees, depth 5, lr 0.05, subsample/colsample 0.8,
+4. **Model.** `XGBRegressor` (400 trees, depth 5, lr 0.05, subsample/colsample 0.8,
    min_child_weight 10) predicts LST from the factors. Accuracy (`r2Cv`, `maeCv`) is
    out-of-fold over **spatial block CV**: cells are grouped into 2×2 km blocks and `GroupKFold(5)`
    holds whole blocks out, so neighbouring cells never leak between train and test.
-4. **Explanation.** The final model is fit on all cells; per-cell SHAP values come from
+5. **Explanation.** The final model is fit on all cells; per-cell SHAP values come from
    `booster.predict(..., pred_contribs=True)` (TreeSHAP, exact for trees). The bias column is
    `baseValue`; the pipeline asserts `sum(shap) + baseValue == prediction`. `globalImportance`
    is mean |SHAP| per factor, plus the Pearson correlation of the raw factor with LST.
@@ -79,7 +82,9 @@ so rerunning the city retries them.
 
 ```
 run.py              CLI: one city → <id>.json + update cities.json
-uzha/cities.py      city registry (bbox, names, Wikipedia title, OSM relation for districts)
+boundaries/         OSM city boundaries (GeoJSON) that set each city's extent
+uzha/cities.py      city registry (fallback bbox, names, Wikipedia title, OSM relation for districts)
+uzha/boundary.py    bbox and cell mask from the boundary + margin
 uzha/grid.py        UTM grid, sub-grid rasters, block aggregation
 uzha/stac.py        Planetary Computer search, COG window read + reproject
 uzha/cache.py       per-layer pickle cache
