@@ -56,6 +56,7 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 - `shap[key][i]` is in °C: contribution of factor `key` to the cell's temperature relative to
   `model.baseValue`. Positive = this factor heats the cell, negative = cools it.
 - `globalImportance` is sorted by `meanAbsShap` desc. `correlation` = Pearson(feature, lst).
+- Area-share factors (`tree`, `built`, `bare`) are percent of the cell area, 0–100 (not 0–1 fractions).
 - `districts` is optional (may be absent or empty).
 - `features` lists only the factors actually present; the web app must iterate it and never hardcode
   which keys exist.
