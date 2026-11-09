@@ -83,3 +83,11 @@ def _kwargs_from(doc):
     return {"entry": doc["city"], "period": doc["period"], "grid": doc["grid"], "features": doc["features"],
             "model": doc["model"], "stats": doc["stats"], "importance": doc["globalImportance"],
             "cells": doc["cells"], "districts": doc.get("districts", [])}
+
+
+def test_city_entry_uses_analysed_bbox():
+    from pipeline.uzha.cities import get_city
+    city = get_city("tashkent")
+    entry = export.city_entry(city, None, 44.0, 0.7, bbox=(69.1039123456, 41.1, 69.54, 41.44))
+    assert entry["bbox"] == [69.10391, 41.1, 69.54, 41.44]
+    assert export.city_entry(city, None, 44.0, 0.7)["bbox"] == list(city.bbox)

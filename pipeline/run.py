@@ -40,7 +40,7 @@ def process_city(city: City, out_dir: Path) -> dict:
 
     photo = cache.get_or_compute("wiki_photo", lambda: wiki.city_photo(city.wiki_title))
     stats = export.lst_stats(lst)
-    entry = export.city_entry(city, photo, stats["lstMean"], fitted.r2_cv)
+    entry = export.city_entry(city, photo, stats["lstMean"], fitted.r2_cv, bbox)
     document = export.city_document(
         entry=entry,
         period={"label": table.period_label, "lstScenes": table.lst_scenes, "s2Scenes": table.s2_scenes},

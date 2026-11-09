@@ -24,14 +24,15 @@ def r3(value: float) -> float:
     return round(float(value), DECIMALS)
 
 
-def city_entry(city: City, photo, lst_mean: float, r2: float) -> dict:
+def city_entry(city: City, photo, lst_mean: float, r2: float, bbox: tuple = None) -> dict:
+    """`bbox` is the analysed extent (defaults to the configured one)."""
     return {
         "id": city.id,
         "name": city.name,
         "nameEn": city.name_en,
         "country": city.country,
         "center": list(city.center),
-        "bbox": list(city.bbox),
+        "bbox": [round(v, 5) for v in (bbox or city.bbox)],
         "photo": photo,
         "lstMean": r3(lst_mean),
         "r2": r3(r2),
