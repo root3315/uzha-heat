@@ -50,7 +50,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [mode, setMode] = useState<MapMode>('temperature');
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   const [probe, setProbe] = useState<Sample | null>(null);
-  const [report, setReport] = useState<string | null | undefined>(undefined);
+  const [reporting, setReporting] = useState(false);
   const { width } = useViewport();
   const narrow = width < NARROW_PX;
   const { detail } = model;
@@ -99,7 +99,6 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     if (next && narrow) mapFrameRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
   };
   const toggleMode = () => setMode((current) => (current === 'causes' ? 'temperature' : 'causes'));
-  const openReport = async () => setReport((await mapRef.current?.snapshot()) ?? null);
 
   const exportAs = (format: 'csv' | 'geojson') => {
     const name = `uzha-${detail.city.id}-cells`;
@@ -109,7 +108,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
 
   const switcher = <CitySwitcher cities={cities} currentId={detail.city.id} onChange={onCity} />;
   const reportButton = (
-    <button type="button" className="pill pill--small" onClick={openReport}>
+    <button type="button" className="pill pill--small" onClick={() => setReporting(true)}>
       Отчёт
     </button>
   );
@@ -200,9 +199,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       <aside className="tool__panel" aria-label="Что здесь происходит">
         <Panel model={model} content={content} header={header} footer={footer} />
       </aside>
-      {report !== undefined && (
-        <Report model={model} content={content} profile={profile} mapImage={report} placeTitle={picked ? content.title : null} onClose={() => setReport(undefined)} />
-      )}
+      {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={() => setReporting(false)} />}
     </main>
   );
 }

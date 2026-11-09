@@ -62,8 +62,4 @@ export class IsothermLabelLayer {
     });
     while (this.svg.children.length > labels.length) this.svg.lastChild?.remove();
   }
-
-  current(): PlacedLabel[] {
-    return placeLabels(this.map, this.anchors);
-  }
 }

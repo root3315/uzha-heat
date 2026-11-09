@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+  The link preview, 1200 × 630. render.mjs opens this file, draws the real isotherms of the city into #map
+  and the numbers into the [data-fill] slots, and saves the screenshot as public/og.jpg.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @font-face {
+        font-family: 'Tektur';
+        font-weight: 400 900;
+        font-stretch: 75% 100%;
+        src: url('../../node_modules/@fontsource-variable/tektur/files/tektur-cyrillic-standard-normal.woff2') format('woff2-variations');
+        unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+      }
+      @font-face {
+        font-family: 'Tektur';
+        font-weight: 400 900;
+        font-stretch: 75% 100%;
+        src: url('../../node_modules/@fontsource-variable/tektur/files/tektur-latin-standard-normal.woff2') format('woff2-variations');
+        unicode-range: U+0000-00FF, U+2000-206F, U+2212;
+      }
+      @font-face {
+        font-family: 'Onest';
+        font-weight: 100 900;
+        src: url('../../node_modules/@fontsource-variable/onest/files/onest-cyrillic-wght-normal.woff2') format('woff2-variations');
+        unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+      }
+      @font-face {
+        font-family: 'Onest';
+        font-weight: 100 900;
+        src: url('../../node_modules/@fontsource-variable/onest/files/onest-latin-wght-normal.woff2') format('woff2-variations');
+        unicode-range: U+0000-00FF, U+2000-206F;
+      }
+      @font-face {
+        font-family: 'Martian Mono';
+        font-weight: 100 800;
+        src: url('../../node_modules/@fontsource-variable/martian-mono/files/martian-mono-latin-standard-normal.woff2') format('woff2-variations');
+        unicode-range: U+0000-00FF, U+2000-206F;
+      }
+      @font-face {
+        font-family: 'Martian Mono';
+        font-weight: 100 800;
+        src: url('../../node_modules/@fontsource-variable/martian-mono/files/martian-mono-cyrillic-standard-normal.woff2') format('woff2-variations');
+        unicode-range: U+0400-045F;
+      }
+
+      :root {
+        --paper: #eceeeb;
+        --ink: #121417;
+        --ink-2: #565a62;
+        --line: #cdd1cc;
+        --hot: #a83e15;
+        --amber: #e8892b;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 600px 600px;
+        width: 1200px;
+        height: 630px;
+      }
+      .text {
+        display: flex;
+        flex-direction: column;
+        padding: 56px 36px 52px 64px;
+      }
+      .kicker {
+        display: flex;
+        gap: 18px;
+        color: var(--ink-2);
+        font: 500 19px/1 'Martian Mono', monospace;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .kicker b {
+        color: var(--ink);
+        font-weight: 700;
+      }
+      h1 {
+        margin-top: 34px;
+        font: 900 104px/0.84 'Tektur', sans-serif;
+        font-stretch: 75%;
+        letter-spacing: -0.025em;
+      }
+      .figure {
+        display: flex;
+        align-items: flex-end;
+        gap: 18px;
+        margin-top: auto;
+      }
+      .figure__value {
+        color: var(--hot);
+        font: 900 132px/0.8 'Tektur', sans-serif;
+        font-stretch: 75%;
+        letter-spacing: -0.03em;
+      }
+      .figure__caption {
+        max-width: 10em;
+        padding-bottom: 4px;
+        font: 500 23px/1.2 'Onest', sans-serif;
+      }
+      .site {
+        margin-top: 30px;
+        padding-top: 18px;
+        border-top: 2px solid var(--ink);
+        font: 600 22px/1 'Martian Mono', monospace;
+      }
+      .map {
+        position: relative;
+        margin: 28px 28px 28px 0;
+        border-radius: 26px;
+        background: #e1e4e0;
+        overflow: hidden;
+      }
+      .map svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .legend {
+        position: absolute;
+        left: 22px;
+        bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: rgba(247, 248, 246, 0.92);
+        font: 500 15px/1 'Martian Mono', monospace;
+      }
+      .legend i {
+        display: block;
+        width: 150px;
+        height: 10px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #36697a, #9cbcc0, #d9ddd7, #f1c27f, #e8892b, #b8461d, #5a1a10);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="text">
+        <p class="kicker"><b>UzHa</b><span data-fill="period">Landsat</span></p>
+        <h1>Где <span data-fill="city">город</span> перегревается</h1>
+        <p class="figure">
+          <span class="figure__value" data-fill="island">+0°</span>
+          <span class="figure__caption">поверхность в&nbsp;черте города летом горячее, чем вокруг</span>
+        </p>
+        <p class="site">uzha.mydevbox.xyz</p>
+      </div>
+      <div class="map">
+        <svg id="map" aria-hidden="true"></svg>
+        <p class="legend"><span data-fill="lo">40°</span><i></i><span data-fill="hi">50°</span></p>
+      </div>
+    </div>
+  </body>
+</html>

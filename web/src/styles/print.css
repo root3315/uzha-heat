@@ -1,16 +1,25 @@
 @page {
   size: A4;
-  margin: 12mm 13mm;
+  margin: 14mm 14mm 14mm;
 }
 
 @media print {
+  /* The report carries its own hatch patterns: those of the hidden page under it would paint nothing. */
   body.is-reporting #root,
   .no-print {
     display: none !important;
   }
 
+  /* index.html paints the page grey inline for the first frame; paper is white. */
+  html,
   body {
-    background: var(--sheet);
+    background: #fff !important;
+  }
+
+  /* Hatches, temperature colours and the map print as they are, not as the browser's economy grey. */
+  *,
+  *::before,
+  *::after {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -18,19 +27,53 @@
   .report {
     position: static;
     overflow: visible;
-    background: var(--sheet);
+    background: #fff;
   }
 
   .report__sheet {
+    --sheet: #fff;
+    background: #fff;
     width: auto;
     margin: 0;
     padding: 0;
+    font-size: 10.5pt;
   }
 
-  .report__map,
-  .report__section,
-  .cause,
-  .advice {
+  .rp-title {
+    font-size: 64pt;
+  }
+
+  .rp-part {
+    padding-top: 18px;
+  }
+  .rp-part + .rp-part {
+    margin-top: 18px;
+  }
+
+  /* Small enough that the map and its section share one page. */
+  .rp-map img {
+    width: auto;
+    max-width: 100%;
+    max-height: 118mm;
+    margin: 0 auto;
+  }
+
+  /* The section was drawn at the screen's width; on paper it spans the sheet. */
+  .rp-section .profile {
+    width: 100%;
+    height: auto;
+  }
+
+  .rp-island,
+  .rp-figs,
+  .rp-ramp,
+  .rp-place,
+  .rp-cause,
+  .rp-measure,
+  .rp-map,
+  .rp-section,
+  .rp-table,
+  .evidence {
     break-inside: avoid;
   }
 

@@ -4,7 +4,8 @@ import { formatDeg, formatDegSigned, formatNumber } from '../domain/format';
 import { classOf, type IsothermLevels } from '../domain/isotherms';
 import { sampleAt, type Profile, type Sample } from '../domain/transect';
 import type { FeatureMeta } from '../data/contract';
-import { patternFill } from './patterns';
+import { CauseGlyph } from './icons';
+import { usePatternFill } from './patterns';
 
 interface ProfileChartProps {
   profile: Profile;
@@ -23,11 +24,15 @@ const M = { top: 22, right: 14, bottom: 22, left: 34 };
 const RIBBON_H = 20;
 const RIBBON_GAP = 6;
 const LABEL_PAD = 4;
+/** The cause icon in a ribbon label, px, and the gap after it. */
+const ICON = 12;
+const ICON_GAP = 3;
 /** Martian Mono at the label size is wide: about 0.7 em per character. */
 const CHAR_W = 7.4;
 const MIN_TICK_GAP_PX = 52;
 
 export function ProfileChart({ profile, levels, cityMean, features, width, height, onProbe, onPick }: ProfileChartProps) {
+  const fill = usePatternFill();
   const [probe, setProbe] = useState<Sample | null>(null);
   const clipId = `profile-area-${useId().replace(/:/g, '')}`;
   const wordsOf = useMemo(() => {
@@ -98,7 +103,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   const probeAnchor = probe && x(probe.d) > width - 260 ? 'end' : 'start';
 
   return (
-    <svg className="profile" width={width} height={height} role="img" aria-label="Температура и причины вдоль разреза">
+    <svg className="profile" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Температура и причины вдоль разреза">
       <defs>
         <clipPath id={clipId}>
           <path d={curve(true)} />
@@ -136,7 +141,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
           const x1 = x(segment.d1);
           const words = wordsOf(segment.key);
           const label = segment.heats ? words.heatsShort : words.coolsShort;
-          const labelW = label.length * CHAR_W + LABEL_PAD * 2;
+          const labelW = ICON + ICON_GAP + label.length * CHAR_W + LABEL_PAD * 2;
           return (
             <g key={`${segment.key}-${segment.d0}`}>
               <rect
@@ -144,12 +149,23 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
                 y={ribbonY}
                 width={Math.max(1, x1 - x0 - 1)}
                 height={RIBBON_H}
-                style={{ fill: patternFill(segment.key, segment.heats ? 'heats' : 'cools') }}
+                style={{ fill: fill(segment.key, segment.heats ? 'heats' : 'cools') }}
               />
               {x1 - x0 > labelW + 6 && (
                 <g>
                   <rect className="profile__label-bg" x={x0 + 3} y={ribbonY + 3} width={labelW} height={RIBBON_H - 6} />
-                  <text className={segment.heats ? 'profile__label' : 'profile__label is-cool'} x={x0 + 3 + LABEL_PAD} y={ribbonY + RIBBON_H / 2 + 4}>
+                  <svg
+                    className={segment.heats ? 'profile__icon' : 'profile__icon is-cool'}
+                    x={x0 + 3 + LABEL_PAD - 1}
+                    y={ribbonY + (RIBBON_H - ICON) / 2}
+                    width={ICON}
+                    height={ICON}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <CauseGlyph cause={segment.key} />
+                  </svg>
+                  <text className={segment.heats ? 'profile__label' : 'profile__label is-cool'} x={x0 + 3 + LABEL_PAD + ICON + ICON_GAP} y={ribbonY + RIBBON_H / 2 + 4}>
                     {label}
                   </text>
                 </g>

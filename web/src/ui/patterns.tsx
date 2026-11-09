@@ -1,3 +1,5 @@
+import { createContext, useCallback, useContext, type ReactNode } from 'react';
+
 /**
  * Causes are drawn as cartographic hatching, never as colour: colour is reserved for temperature.
  * One vocabulary serves the profile ribbon, the panel bar, the map and the report.
@@ -65,13 +67,33 @@ export function patternTile(key: string, direction: Direction): { size: number; 
   return { size, marks: spec.marks(size) };
 }
 
-export const patternId = (key: string, direction: Direction): string => `hatch-${key}-${direction}`;
-export const patternFill = (key: string, direction: Direction): string => `url(#${patternId(key, direction)})`;
+export const patternId = (key: string, direction: Direction, scope = ''): string => `${scope}hatch-${key}-${direction}`;
 
 const PATTERN_KEYS = [...Object.keys(SPECS)];
 
+/**
+ * Which set of pattern definitions the fills below point at. The report brings its own set,
+ * so its hatches still print when the page under it is hidden.
+ */
+const PatternScope = createContext('');
+
+export function PatternScopeProvider({ scope, children }: { scope: string; children: ReactNode }) {
+  return (
+    <PatternScope.Provider value={scope}>
+      <PatternDefs scope={scope} />
+      {children}
+    </PatternScope.Provider>
+  );
+}
+
+/** `fill` for a cause's hatch, as url(#…) to the nearest set of definitions. */
+export function usePatternFill(): (key: string, direction: Direction) => string {
+  const scope = useContext(PatternScope);
+  return useCallback((key, direction) => `url(#${patternId(key, direction, scope)})`, [scope]);
+}
+
 /** One hidden SVG with every pattern, so any inline SVG in the document can use url(#hatch-…). */
-export function PatternDefs({ extraKeys = [] }: { extraKeys?: readonly string[] }) {
+export function PatternDefs({ extraKeys = [], scope = '' }: { extraKeys?: readonly string[]; scope?: string }) {
   const keys = [...new Set([...PATTERN_KEYS, ...extraKeys])];
   return (
     <svg className="pattern-defs" aria-hidden="true" focusable="false" width="0" height="0">
@@ -81,7 +103,7 @@ export function PatternDefs({ extraKeys = [] }: { extraKeys?: readonly string[] 
             const { size, marks } = patternTile(key, direction);
             const ink = direction === 'heats' ? 'var(--hatch-heats)' : 'var(--hatch-cools)';
             return (
-              <pattern key={patternId(key, direction)} id={patternId(key, direction)} width={size} height={size} patternUnits="userSpaceOnUse">
+              <pattern key={patternId(key, direction)} id={patternId(key, direction, scope)} width={size} height={size} patternUnits="userSpaceOnUse">
                 {marks.map((mark) => (
                   <path
                     key={mark.d}

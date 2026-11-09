@@ -21,7 +21,6 @@ import type { LonLat, Transect } from '../domain/transect';
 import { patternImage } from '../ui/patterns';
 import { IsothermLabelLayer } from './isothermLabels';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
-import { snapshotMap } from './snapshot';
 import { LAYER, SOURCE, bandOpacity, buildStyle } from './style';
 import { readTokens, type MapTokens } from './tokens';
 
@@ -36,7 +35,6 @@ export interface MapView {
 }
 
 export interface CityMapHandle {
-  snapshot(): Promise<string | null>;
   nameAt(point: LonLat, district: string | null): FoundName | null;
   /** An airfield or a rail yard under the point, from the basemap. */
   siteAt(point: LonLat): Site | null;
@@ -138,19 +136,12 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   const tipRef = useRef<HTMLParagraphElement>(null);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const labelLayerRef = useRef<IsothermLabelLayer | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const tokensRef = useRef<MapTokens | null>(null);
   const latest = useRef(props);
   latest.current = props;
 
   useImperativeHandle(ref, () => ({
-    async snapshot() {
-      const map = mapRef.current;
-      const tokens = tokensRef.current;
-      if (!map || !tokens) return null;
-      return snapshotMap(map, labelLayerRef.current?.current() ?? [], latest.current.transect, tokens);
-    },
     nameAt(point, district) {
       return mapRef.current ? nameFromBasemap(mapRef.current, point, district) : null;
     },
@@ -209,7 +200,6 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const { source } = model;
     const anchors = model.isotherms.anchors.filter((a) => source.cellAt(a.at as LonLat) >= 0 && source.inside(a.at as LonLat));
     const labels = new IsothermLabelLayer(map, labelSvg, anchors);
-    labelLayerRef.current = labels;
     const updateLabels = () => labels.update();
     map.on('move', updateLabels);
     map.on('resize', updateLabels);
@@ -316,7 +306,6 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       handles.forEach((marker) => marker.remove());
       map.remove();
       mapRef.current = null;
-      labelLayerRef.current = null;
       labelSvg.replaceChildren();
     };
   }, [model]);
