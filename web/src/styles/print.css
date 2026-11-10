@@ -43,6 +43,10 @@
     font-size: 64pt;
   }
 
+  .rp-photo {
+    break-inside: avoid;
+  }
+
   .rp-part {
     padding-top: 18px;
   }
