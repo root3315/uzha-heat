@@ -13,6 +13,7 @@ import type { Transect } from '../domain/transect';
 import { renderReportMap, type ReportMap } from '../map/snapshot';
 import { readTokens } from '../map/tokens';
 import { useAsync, useWidth } from '../ui/hooks';
+import { CityPhoto } from '../ui/CityPhoto';
 import { CauseIcon, FacilityIcon } from '../ui/icons';
 import { cityModel } from '../ui/models';
 import { Evidence } from '../ui/panel/Panel';
@@ -238,6 +239,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           <p className="rp-meta">
             Снимки Landsat, {detail.period.label} · участки {detail.grid.cellSizeM}&nbsp;×&nbsp;{detail.grid.cellSizeM}&nbsp;м · {SITE}
           </p>
+          <CityPhoto city={detail.city} className="rp-photo" eager />
         </header>
 
         <Part n={++n} title="Главное">

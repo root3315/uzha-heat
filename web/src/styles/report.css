@@ -546,3 +546,10 @@
 .rp-place__t--people span {
   color: var(--ink);
 }
+.rp-photo {
+  margin-top: 18px;
+}
+.rp-photo .photo__img {
+  aspect-ratio: 21 / 8;
+  border-radius: 0;
+}
