@@ -35,7 +35,7 @@ interface LandingProps {
 }
 
 export const REPO = 'https://github.com/root3315/uzha-heat';
-const TEAM = ['Амира', 'Олия', 'Макс', 'Степан'];
+const TEAM = ['Амира', 'Олия', 'Макс', 'rabenvater', 'Степан'];
 const HERO_VIEW = { isolines: true, transect: false, interactive: false };
 const HERO_PADDING = { top: 64, right: 20, bottom: 20, left: 20 };
 const NO_TRANSECT: [LonLat, LonLat] = [
@@ -198,7 +198,7 @@ function Why({ model }: { model: CityModel }) {
 }
 
 /** One city as a card: its heat island first, then what its hottest tenth is, and its own small map. */
-function CityCard({ city, isLanding }: { city: CitySummary; isLanding: boolean }) {
+function CityCard({ city }: { city: CitySummary }) {
   const [ref, near] = useNear<HTMLElement>();
   const state = useAsync(() => (near ? cityModel(city.id) : new Promise<null>(() => undefined)), [near, city.id]);
   const model = state.status === 'ready' ? state.data : null;
@@ -214,16 +214,10 @@ function CityCard({ city, isLanding }: { city: CitySummary; isLanding: boolean }
           <span className="town__caption">поверхность в&nbsp;черте против кольца вокруг</span>
         </p>
       </header>
-      {isLanding ? (
-        <p className="town__line">Карта и&nbsp;разрез этого города выше, на&nbsp;первом экране.</p>
-      ) : (
-        <>
-          <p className="town__line">{model ? plainText(hotTenthAnswer(model.detail, model.facts)) : failed ? 'Данные не загрузились.' : 'Считаю изотермы.'}</p>
-          <Link className="town__face" href={toolHref(city.id)} aria-label={`Открыть карту: ${city.name}`}>
-            {model ? <MiniMap model={model} label={`Изотермы поверхности: ${city.name}`} /> : <span className="town__wait">{failed ? 'Нет данных' : 'Считаю изотермы'}</span>}
-          </Link>
-        </>
-      )}
+      <p className="town__line">{model ? plainText(hotTenthAnswer(model.detail, model.facts)) : failed ? 'Данные не загрузились.' : 'Считаю изотермы.'}</p>
+      <Link className="town__face" href={toolHref(city.id)} aria-label={`Открыть карту: ${city.name}`}>
+        {model ? <MiniMap model={model} label={`Изотермы поверхности: ${city.name}`} /> : <span className="town__wait">{failed ? 'Нет данных' : 'Считаю изотермы'}</span>}
+      </Link>
       <dl className="nums">
         <div>
           <dt>средняя поверхность</dt>
@@ -361,7 +355,7 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
         </div>
         <div className="towns__list">
           {cities.map((city) => (
-            <CityCard key={city.id} city={city} isLanding={city.id === detail.city.id} />
+            <CityCard key={city.id} city={city} />
           ))}
         </div>
       </section>
