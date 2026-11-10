@@ -24,7 +24,14 @@ adds `cells.pop`, `population` and `facilities`, and writes it back (no satellit
 PYTHONUTF8=1 python -m pipeline.run --city tashkent --only population
 ```
 
-A full run does this step too, at the end.
+Summer weather at the city centre is another light step: it adds `city.weather` to `<id>.json`
+and to the city's entry in `cities.json`:
+
+```bash
+PYTHONUTF8=1 python -m pipeline.run --city tashkent --only weather
+```
+
+A full run does both steps too, at the end.
 
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
@@ -46,6 +53,7 @@ bbox takes about a minute. Delete a layer's `.pkl` to refetch it. A first run of
 | districts | OSM admin boundaries (`admin_level=6` inside the Tashkent city relation) | optional |
 | `cells.pop` | WorldPop 2025, 100 m, constrained, UN-adjusted (R2025A), `uzb_pop_2025_CN_100m_R2025A_v1.tif` | downloaded once to `pipeline/cache/worldpop/`; windowed read over the grid; each pixel's count goes to the cell under its centre (sum), whole people |
 | `facilities` | OSM `amenity=school/kindergarten/clinic/hospital` (nodes, way and relation centres) | only those inside a cell; `name:ru`, else `name`, else `name:uz` |
+| `city.weather` | ERA5 hourly reanalysis (Copernicus) via the Open-Meteo historical API (`archive-api.open-meteo.com`, `models=era5`), no key | one grid point nearest the city centre, June–August 2023–2025, local time UTC+5; relative humidity from 2 m temperature and dew point (Magnus, Alduchov & Eskridge 1996); conditions at overpasses use the acquisition times of the Landsat candidates from the same STAC search as LST, rounded to the hour; cached in `pipeline/cache/weather/` |
 | photo | ru.wikipedia REST page summary | lead image, credit "Wikipedia / Wikimedia Commons" |
 
 OSM is queried through the Overpass API with the User-Agent `uzha-heat-pipeline/0.1`, cycling
@@ -91,6 +99,9 @@ so rerunning the city retries them.
 - WorldPop is a modelled estimate: census totals spread over buildings by a model, not counted
   residents. It says where people sleep, not where they are at 11 am. A pixel on a cell edge goes
   wholly to one cell.
+- Weather is one ERA5 point (~25 km) per city: it says how the cities' summers differ, not how
+  wind or humidity vary between streets. The overpass values use the up-to-30 lowest-cloud Landsat
+  candidates; a few of them were later dropped from the LST median as too cloudy over the city.
 - The UTM-aligned cells are exported as centers plus a fixed half-size in degrees, so drawn squares
   are very slightly rotated/overlapping relative to the true cells.
 
@@ -104,10 +115,11 @@ uzha/boundary.py    bbox and cell mask from the boundary + margin
 uzha/grid.py        UTM grid, sub-grid rasters, block aggregation
 uzha/stac.py        Planetary Computer search, COG window read + reproject
 uzha/cache.py       per-layer pickle cache
-uzha/sources/       landsat, sentinel, worldcover, dem, osm, wiki, worldpop
+uzha/sources/       landsat, sentinel, worldcover, dem, osm, wiki, worldpop, era5
 uzha/features.py    assemble the cell table, factor catalogue (labels/units)
 uzha/model.py       XGBoost, spatial CV, SHAP, global importance
 uzha/population.py  light step: people per cell and facilities into an existing city JSON
+uzha/weather.py     light step: summer weather (ERA5) into an existing city JSON and cities.json
 uzha/export.py      contract JSON (3-decimal values, 5-decimal coordinates)
 tests/              pytest
 ```

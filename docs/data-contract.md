@@ -16,7 +16,14 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
     "bbox": [69.12, 41.20, 69.43, 41.42],
     "photo": { "url": "https://upload.wikimedia.org/...", "credit": "Wikimedia Commons" },
     "lstMean": 44.2,
-    "r2": 0.74
+    "r2": 0.74,
+    "weather": {
+      "source": "ERA5 (Copernicus) via Open-Meteo",
+      "period": "июнь–август 2023–2025",
+      "point": [69.25, 41.25],
+      "summer": { "windMs": 1.9, "humidityPct": 42.5, "solarKwhM2": 7.3, "cloudPct": 15.3, "airMeanC": 27.1, "airMaxC": 34.3 },
+      "overpass": { "days": 20, "localHour": 11, "windMs": 1.5, "humidityPct": 31.0, "solarWm2": 799, "cloudPct": 0.3, "airC": 32.0 }
+    }
   }
 ]
 ```
@@ -71,6 +78,15 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 - `facilities` is optional: schools, kindergartens, clinics and hospitals from OpenStreetMap
   (`amenity` = `school` | `kindergarten` | `clinic` | `hospital`) that fall into one of the cells.
   `name` may be an empty string. Coordinates have 5 decimals.
+- `city.weather` is optional, and when present it is the same object in `cities.json` and in `<id>.json`.
+  It is summer weather at one ERA5 grid point (`point`, lon/lat, ~25 km cell) nearest the city centre,
+  so it compares cities and is not a model factor. `summer`: means over every hour of June–August
+  2023–2025: 10 m wind speed (m/s), relative humidity at 2 m from temperature and dew point (%, Magnus formula),
+  cloud cover (%), 2 m air temperature (°C); `airMaxC` is the mean of daily maxima (local days, UTC+5);
+  `solarKwhM2` is the mean daily total of surface solar radiation downwards (kWh/m²).
+  `overpass` is optional: the same values at the hours of the Landsat scenes the LST median was drawn
+  from (`days` distinct overpasses, `localHour` their mean local hour), with `solarWm2` the hourly mean in W/m².
+  Values have 1 decimal (`solarWm2` is whole).
 - `features` lists only the factors actually present; the web app must iterate it and never hardcode
   which keys exist.
 

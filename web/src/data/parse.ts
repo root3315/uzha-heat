@@ -14,6 +14,7 @@ import type {
   ModelInfo,
   Period,
   Population,
+  Weather,
 } from './contract';
 
 export class DataContractError extends Error {
@@ -95,6 +96,26 @@ function parsePhoto(value: unknown, path: string): CitySummary['photo'] {
   return { url: requireString(photo.url, `${path}.url`), credit: requireString(photo.credit, `${path}.credit`) };
 }
 
+function requireNumbers<K extends string>(value: unknown, keys: readonly K[], path: string): Record<K, number> {
+  const obj = requireObject(value, path);
+  return Object.fromEntries(keys.map((key) => [key, requireNumber(obj[key], `${path}.${key}`)])) as Record<K, number>;
+}
+
+const SUMMER_KEYS = ['windMs', 'humidityPct', 'solarKwhM2', 'cloudPct', 'airMeanC', 'airMaxC'] as const;
+const OVERPASS_KEYS = ['days', 'localHour', 'windMs', 'humidityPct', 'solarWm2', 'cloudPct', 'airC'] as const;
+
+function parseWeather(value: unknown, path: string): Weather | undefined {
+  if (value === undefined) return undefined;
+  const weather = requireObject(value, path);
+  return {
+    source: requireString(weather.source, `${path}.source`),
+    period: requireString(weather.period, `${path}.period`),
+    point: requireLonLat(weather.point, `${path}.point`),
+    summer: requireNumbers(weather.summer, SUMMER_KEYS, `${path}.summer`),
+    overpass: weather.overpass === undefined ? undefined : requireNumbers(weather.overpass, OVERPASS_KEYS, `${path}.overpass`),
+  };
+}
+
 function parseCitySummary(value: unknown, path: string): CitySummary {
   const city = requireObject(value, path);
   return {
@@ -107,6 +128,7 @@ function parseCitySummary(value: unknown, path: string): CitySummary {
     photo: parsePhoto(city.photo, `${path}.photo`),
     lstMean: requireNumber(city.lstMean, `${path}.lstMean`),
     r2: requireNumber(city.r2, `${path}.r2`),
+    weather: parseWeather(city.weather, `${path}.weather`),
   };
 }
 

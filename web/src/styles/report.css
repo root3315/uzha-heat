@@ -415,6 +415,44 @@
   vertical-align: middle;
 }
 
+.rp-weather {
+  margin-top: 22px;
+  break-inside: avoid;
+}
+.rp-sub {
+  margin-bottom: 8px;
+  font: 700 1.05rem/1.1 var(--font-display);
+  font-stretch: 85%;
+}
+.rp-weather .wx-compare {
+  display: grid;
+  gap: 8px;
+}
+.rp-weather .wx-compare__lead {
+  max-width: 66ch;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.rp-weather .wx__source {
+  color: var(--ink-2);
+  font: 400 0.62rem/1.5 var(--font-mono);
+}
+.rp-table--wx tbody th {
+  color: var(--ink-2);
+  font: 400 0.7rem/1.3 var(--font-mono);
+}
+.rp-table--wx thead th {
+  color: var(--ink);
+  font: 700 0.95rem/1.1 var(--font-display);
+  font-stretch: 85%;
+}
+.rp-table--wx thead th.is-current::after {
+  content: ' ●';
+  color: var(--amber);
+  font-size: 0.6em;
+  vertical-align: middle;
+}
+
 /* ---------- Method ---------- */
 .rp-limits {
   margin-top: 12px;

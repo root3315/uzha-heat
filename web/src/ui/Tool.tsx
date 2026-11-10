@@ -15,6 +15,7 @@ import { prefersReducedMotion, useViewport } from './hooks';
 import { Link } from './Link';
 import { MapHint } from './MapHint';
 import { Panel } from './panel/Panel';
+import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
 import { useReadout } from './readout';
 import { methodHref } from './routing';
@@ -129,6 +130,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   );
   const footer = (
     <div className="panel__foot">
+      {!picked && detail.city.weather && <WeatherSummary weather={detail.city.weather} />}
       <p className="panel__export">
         <span>Все участки {genitive(detail.city.name)}: температура, факторы, вклады</span>
         <span className="panel__export-buttons">

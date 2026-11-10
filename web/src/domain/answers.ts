@@ -29,6 +29,13 @@ export function genitive(name: string): string {
   return name;
 }
 
+/** Prepositional of a city name, for "в Бухаре", "в Ташкенте". Covers the usual endings. */
+export function locative(name: string): string {
+  if (/[ая]$/.test(name)) return `${name.slice(0, -1)}е`;
+  if (/[бвгджзклмнпрстфхцчшщ]$/.test(name)) return `${name}е`;
+  return name;
+}
+
 function wordsByKey(features: readonly FeatureMeta[]): (key: string) => CauseWords {
   const byKey = new Map(features.map((f) => [f.key, causeWords(f)]));
   return (key) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' });

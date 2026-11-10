@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { advise, cityAnswer, cityFacts, islandAnswer, dominantFor, genitive, placeAnswer, plainText, restOfCauses, sectionAnswer, sourcesLine } from './answers';
+import { advise, cityAnswer, cityFacts, islandAnswer, dominantFor, genitive, locative, placeAnswer, plainText, restOfCauses, sectionAnswer, sourcesLine } from './answers';
 import { cityFactorMeans, type PlaceProfile } from './places';
 import type { Profile, Sample } from './transect';
 
@@ -57,6 +57,15 @@ describe('genitive', () => {
     ['Фергана', 'Ферганы'],
     ['Карши', 'Карши'],
   ])('%s → %s', (name, expected) => expect(genitive(name)).toBe(expected));
+});
+
+describe('locative', () => {
+  it.each([
+    ['Ташкент', 'Ташкенте'],
+    ['Самарканд', 'Самарканде'],
+    ['Бухара', 'Бухаре'],
+    ['Карши', 'Карши'],
+  ])('%s → %s', (name, expected) => expect(locative(name)).toBe(expected));
 });
 
 describe('islandAnswer', () => {

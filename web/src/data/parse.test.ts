@@ -121,3 +121,27 @@ describe('parseCities', () => {
     expect(errorOf(() => parseCities([city, { ...city, bbox: [1, 2, 3] }])).message).toContain('cities[1].bbox');
   });
 });
+
+describe('city weather', () => {
+  const weather = {
+    source: 'ERA5 (Copernicus) via Open-Meteo',
+    period: 'июнь–август 2023–2025',
+    point: [69.25, 41.25],
+    summer: { windMs: 1.9, humidityPct: 42.5, solarKwhM2: 7.3, cloudPct: 15.3, airMeanC: 27.1, airMaxC: 34.3 },
+    overpass: { days: 20, localHour: 11, windMs: 1.5, humidityPct: 31, solarWm2: 799, cloudPct: 0.3, airC: 32 },
+  };
+
+  it('reads it when present and leaves it out when absent', () => {
+    const [parsed] = parseCities([{ ...city, weather }]);
+    expect(parsed?.weather?.summer.windMs).toBe(1.9);
+    expect(parsed?.weather?.overpass?.days).toBe(20);
+    expect(parseCities([city])[0]?.weather).toBeUndefined();
+    const { overpass: _, ...withoutOverpass } = weather;
+    expect(parseCities([{ ...city, weather: withoutOverpass }])[0]?.weather?.overpass).toBeUndefined();
+  });
+
+  it('names a missing summer value', () => {
+    const broken = { ...weather, summer: { ...weather.summer, airMaxC: 'жарко' } };
+    expect(errorOf(() => parseCities([{ ...city, weather: broken }])).message).toContain('cities[0].weather.summer.airMaxC');
+  });
+});

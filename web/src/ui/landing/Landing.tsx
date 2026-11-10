@@ -22,6 +22,7 @@ import { methodHref, toolHref } from '../routing';
 import { CauseKey } from '../Section';
 import { MiniMap } from './MiniMap';
 import { PROBLEM_FACTS } from './problem';
+import { WeatherCompare } from '../Weather';
 
 export interface Hunt {
   target: HuntTarget;
@@ -250,6 +251,17 @@ function CityCard({ city }: { city: CitySummary }) {
   );
 }
 
+/** The three summers side by side, under the cards: the weather the surface heats in. */
+function TownsWeather({ cities }: { cities: CitySummary[] }) {
+  if (cities.filter((c) => c.weather).length < 2) return null;
+  return (
+    <div className="towns__weather" aria-labelledby="towns-weather-title">
+      <h3 id="towns-weather-title">Погода этим летом</h3>
+      <WeatherCompare cities={cities} currentId={null} />
+    </div>
+  );
+}
+
 function Actions({ model }: { model: CityModel }) {
   const { detail } = model;
   const items = recommend({ features: detail.features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }).slice(0, 3);
@@ -334,7 +346,7 @@ function Closing({ model }: { model: CityModel }) {
           </li>
         </ul>
         <p className="close__credit">
-          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, население WorldPop, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
+          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, население WorldPop, погода ERA5 (Copernicus) via Open-Meteo, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
         </p>
       </div>
     </footer>
@@ -381,6 +393,7 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
             <CityCard key={city.id} city={city} />
           ))}
         </div>
+        <TownsWeather cities={cities} />
       </section>
 
       <Actions model={model} />
