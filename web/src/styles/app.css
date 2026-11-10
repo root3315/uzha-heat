@@ -923,6 +923,8 @@ summary.rest__summary:hover,
 }
 .energy__bar {
   display: block;
+  width: 100%;
+  max-width: 100%;
   overflow: visible;
 }
 .energy__part {
@@ -975,6 +977,7 @@ summary.rest__summary:hover,
 }
 .energy-summary__rows {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 .energy-summary__head {
@@ -987,6 +990,8 @@ summary.rest__summary:hover,
   font-weight: 600;
 }
 .energy-summary__head .num {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--ink-2);
   font: 400 0.72rem/1.4 var(--font-mono);
 }
