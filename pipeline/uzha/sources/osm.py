@@ -116,6 +116,29 @@ def fetch_districts(relation_id: int, admin_level: int, bbox: tuple):
     )
 
 
+FACILITY_TYPES = ("school", "kindergarten", "clinic", "hospital")
+
+
+def fetch_facilities(bbox: tuple):
+    """Schools, kindergartens, clinics and hospitals: nodes, and the centres of ways and relations."""
+    types = "|".join(FACILITY_TYPES)
+    return overpass(f'nwr["amenity"~"^({types})$"]{overpass_bbox(bbox)};out center;')
+
+
+def facility_points(elements: list) -> list:
+    """(name, type, lon, lat) per facility; Russian name first, then the local one, else empty."""
+    points = []
+    for el in elements:
+        tags = el.get("tags", {})
+        kind = tags.get("amenity")
+        where = el.get("center") or ({"lon": el["lon"], "lat": el["lat"]} if "lon" in el else None)
+        if kind not in FACILITY_TYPES or where is None:
+            continue
+        name = tags.get("name:ru") or tags.get("name") or tags.get("name:uz") or ""
+        points.append((name.strip(), kind, float(where["lon"]), float(where["lat"])))
+    return points
+
+
 def road_density(elements: list, grid: Grid) -> np.ndarray:
     """Road length per cell, km/km²."""
     to_utm = Transformer.from_crs(WGS84, grid.crs, always_xy=True)
