@@ -38,7 +38,7 @@ interface LandingProps {
 }
 
 export const REPO = 'https://github.com/root3315/uzha-heat';
-const TEAM = ['Амира', 'Олия', 'Макс', 'rabenvater', 'Степан'];
+const TEAM = ['Амира', 'Олия', 'Максим', 'Шахина', 'Степан'];
 const HERO_VIEW = { isolines: true, transect: false, interactive: false };
 const HERO_PADDING = { top: 64, right: 20, bottom: 20, left: 20 };
 const NO_TRANSECT: [LonLat, LonLat] = [
