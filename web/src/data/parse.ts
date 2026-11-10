@@ -4,9 +4,11 @@ import type {
   CitySummary,
   ColumnsByFeature,
   District,
+  EnergyMethod,
   Facility,
   FacilityType,
   FeatureMeta,
+  FluxKey,
   GlobalImportance,
   GridInfo,
   LonLat,
@@ -14,8 +16,10 @@ import type {
   ModelInfo,
   Period,
   Population,
+  SurfaceMaterial,
   Weather,
 } from './contract';
+import { FLUX_KEYS } from './contract';
 
 export class DataContractError extends Error {
   constructor(message: string) {
@@ -252,6 +256,32 @@ function parsePop(value: unknown, length: number): number[] | undefined {
   return pop;
 }
 
+function parseSurface(value: unknown, path: string): SurfaceMaterial {
+  const surface = requireObject(value, path);
+  return {
+    key: requireString(surface.key, `${path}.key`),
+    label: requireString(surface.label, `${path}.label`),
+    ...requireNumbers(surface, ['heatCapacity', 'conductivity', 'admittance'] as const, path),
+  };
+}
+
+const ENERGY_KEYS = ['localHour', 'solarWm2', 'airC', 'humidityPct', 'longwaveDownWm2', 'hotAnchorC', 'coldAnchorC'] as const;
+
+function parseEnergy(cellsEnergy: unknown, method: unknown, length: number): { columns?: Record<FluxKey, number[]>; method: EnergyMethod | null } {
+  if (cellsEnergy === undefined && method === undefined) return { method: null };
+  if (cellsEnergy === undefined || method === undefined) throw new DataContractError('cells.energy и energy должны быть вместе');
+  const columns = requireColumns(cellsEnergy, [...FLUX_KEYS], length, 'cells.energy') as Record<FluxKey, number[]>;
+  const meta = requireObject(method, 'energy');
+  return {
+    columns,
+    method: {
+      ...requireNumbers(meta, ENERGY_KEYS, 'energy'),
+      mean: requireNumbers(meta.mean, FLUX_KEYS, 'energy.mean'),
+      surfaces: requireArray(meta.surfaces, 'energy.surfaces').map((s, i) => parseSurface(s, `energy.surfaces[${i}]`)),
+    },
+  };
+}
+
 export function parseCities(raw: unknown): CitySummary[] {
   return requireArray(raw, 'cities').map((entry, i) => parseCitySummary(entry, `cities[${i}]`));
 }
@@ -268,6 +298,7 @@ export function parseCityDetail(raw: unknown): CityDetail {
     throw new DataContractError('cells.lon, cells.lat и cells.lst разной длины');
   }
   const districts = root.districts === undefined ? [] : requireArray(root.districts, 'districts');
+  const energy = parseEnergy(cellsRaw.energy, root.energy, lon.length);
 
   return {
     city: parseCitySummary(root.city, 'city'),
@@ -286,9 +317,11 @@ export function parseCityDetail(raw: unknown): CityDetail {
       values: requireColumns(cellsRaw.values, keys, lon.length, 'cells.values'),
       shap: requireColumns(cellsRaw.shap, keys, lon.length, 'cells.shap'),
       pop: parsePop(cellsRaw.pop, lon.length),
+      energy: energy.columns,
     },
     districts: districts.map((d, i) => parseDistrict(d, `districts[${i}]`)),
     population: parsePopulation(root.population),
     facilities: root.facilities === undefined ? [] : requireArray(root.facilities, 'facilities').map((f, i) => parseFacility(f, `facilities[${i}]`)),
+    energy: energy.method,
   };
 }

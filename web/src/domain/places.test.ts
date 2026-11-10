@@ -24,6 +24,7 @@ function city(): CityDetail {
     districts: [],
     population: null,
     facilities: [],
+    energy: null,
   };
 }
 
