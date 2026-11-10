@@ -9,6 +9,7 @@ import { recommend } from '../../domain/recommendations';
 import { sampleTransect, type LonLat } from '../../domain/transect';
 import { CityMap } from '../../map/CityMap';
 import { useAsync, useNear, useWidth } from '../hooks';
+import { CityPhoto } from '../CityPhoto';
 import { Link } from '../Link';
 import { cityModel } from '../models';
 import { Evidence } from '../panel/Panel';
@@ -207,6 +208,7 @@ function CityCard({ city }: { city: CitySummary }) {
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
+      <CityPhoto city={city} className="town__photo" />
       <header className="town__head">
         <h3 id={`town-${city.id}`}>{city.name}</h3>
         <p className="town__island">
