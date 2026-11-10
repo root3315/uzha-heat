@@ -4,6 +4,7 @@ import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned } from '../../domain/format';
 import type { CauseRow, PanelContent } from '../panelContent';
+import { EnergyBlock } from '../Energy';
 import { CauseIcon } from '../icons';
 import { directionOf, usePatternFill } from '../patterns';
 import { Phrase } from '../Phrase';
@@ -137,6 +138,7 @@ export function Panel({ model, content, header, footer, expanded = false }: Pane
           </details>
         ))}
 
+      {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
       <AdviceBlock advice={content.advice} expanded={expanded} />
       {footer}
     </div>

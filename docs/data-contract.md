@@ -49,7 +49,16 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
     "lst": [45.1],
     "values": { "ndvi": [0.12] },
     "shap":   { "ndvi": [1.3] },
-    "pop": [412]
+    "pop": [412],
+    "energy": { "sAbs": [640], "rn": [430], "g": [105], "h": [250], "le": [75] }
+  },
+  "energy": {
+    "localHour": 11, "solarWm2": 799, "airC": 32.0, "humidityPct": 31.0, "longwaveDownWm2": 395,
+    "hotAnchorC": 52.5, "coldAnchorC": 32.4,
+    "mean": { "sAbs": 627, "rn": 455, "g": 103, "h": 189, "le": 162 },
+    "surfaces": [
+      { "key": "asphalt", "label": "Асфальт", "heatCapacity": 1.94, "conductivity": 0.75, "admittance": 1205 }
+    ]
   },
   "population": { "source": "WorldPop 2025, 100 м, constrained, R2025A", "year": 2025, "total": 2633011 },
   "facilities": [
@@ -88,6 +97,16 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
   `overpass` is optional: the same values at the hours of the Landsat scenes the LST median was drawn
   from (`days` distinct overpasses, `localHour` their mean local hour), with `solarWm2` the hourly mean in W/m².
   Values have 1 decimal (`solarWm2` is whole).
+- `cells.energy` is optional: the surface energy balance of each cell at the Landsat overpass
+  (about 11:00 local), whole W/m². `sAbs` absorbed sunlight, `rn` net radiation, `g` heat flux into
+  the ground and the built fabric, `h` sensible heat (heating the air), `le` latent heat (evaporation).
+  `rn` = `g` + `h` + `le` exactly. All five arrays are present together, and then the top-level
+  `energy` is present too, with the inputs of the method: `solarWm2`, `airC`, `humidityPct` and
+  `localHour` copied from `city.weather.overpass`, clear-sky `longwaveDownWm2`, the hot and cold
+  anchor surface temperatures (°C, 1 decimal) that set the evaporative fraction, the city `mean` of
+  each flux, and `surfaces`: reference thermal properties (`heatCapacity` MJ m⁻³ K⁻¹, `conductivity`
+  W m⁻¹ K⁻¹, `admittance` J m⁻² s⁻½ K⁻¹) of `asphalt`, `concrete`, `dry_soil`, `wet_soil`, which are
+  for explanation only and are not per-cell values. Formulas and sources: `pipeline/README.md`.
 - `features` lists only the factors actually present; the web app must iterate it and never hardcode
   which keys exist.
 

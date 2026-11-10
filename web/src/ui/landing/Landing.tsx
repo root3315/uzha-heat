@@ -3,6 +3,7 @@ import type { CitySummary } from '../../data/contract';
 import { genitive, hotTenthAnswer, plainText, sectionAnswer } from '../../domain/answers';
 import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned, formatNumber, plural } from '../../domain/format';
+import { cityEnergy, cityEnergyLine, energyCaveat } from '../../domain/energy';
 import type { HeatIsland } from '../../domain/heatIsland';
 import { formatPeople, peopleFigure, peopleInHeat } from '../../domain/people';
 import { findMessage, huntCell, leadingFactor, registerFind, type HuntCandidate, type HuntTarget } from '../../domain/hunt';
@@ -11,6 +12,7 @@ import { sampleTransect, type LonLat } from '../../domain/transect';
 import { CityMap } from '../../map/CityMap';
 import { useAsync, useNear, useWidth } from '../hooks';
 import { CityPhoto } from '../CityPhoto';
+import { EnergySummary } from '../Energy';
 import { Link } from '../Link';
 import { cityModel } from '../models';
 import { Evidence } from '../panel/Panel';
@@ -159,6 +161,7 @@ function Why({ model }: { model: CityModel }) {
   const profile = useMemo(() => sampleTransect(model.source, model.defaultTransect), [model]);
   const leading = leadingFactor(detail.globalImportance);
   const leadingFeature = detail.features.find((f) => f.key === leading?.key);
+  const energy = useMemo(() => cityEnergy(detail), [detail]);
 
   return (
     <section className="why" id="why" aria-labelledby="why-title">
@@ -196,6 +199,17 @@ function Why({ model }: { model: CityModel }) {
           <p className="why__hint">Полоса внизу: что греет каждый отрезок сильнее всего.</p>
         </footer>
       </article>
+
+      {energy && detail.energy && (
+        <article className="why__panel why__energy" aria-labelledby="why-energy-title">
+          <header className="why__head">
+            <h3 id="why-energy-title">Куда уходит солнце</h3>
+            <p className="why__line">{cityEnergyLine(detail.city.name, energy)}</p>
+          </header>
+          <EnergySummary summary={energy} />
+          <p className="why__hint">{energyCaveat(detail.energy)}</p>
+        </article>
+      )}
     </section>
   );
 }

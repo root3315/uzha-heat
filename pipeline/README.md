@@ -31,7 +31,14 @@ and to the city's entry in `cities.json`:
 PYTHONUTF8=1 python -m pipeline.run --city tashkent --only weather
 ```
 
-A full run does both steps too, at the end.
+The surface energy balance is a third light step. It needs `city.weather.overpass`, so run it after
+`--only weather`; it adds `cells.energy` and `energy` and makes no downloads:
+
+```bash
+PYTHONUTF8=1 python -m pipeline.run --all --only energy
+```
+
+A full run does all three steps too, at the end.
 
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
@@ -85,6 +92,53 @@ so rerunning the city retries them.
    `baseValue`; the pipeline asserts `sum(shap) + baseValue == prediction`. `globalImportance`
    is mean |SHAP| per factor, plus the Pearson correlation of the raw factor with LST.
 
+## Surface energy balance
+
+For each cell at the Landsat overpass (about 11:00 local), from data already in the city JSON
+(`lst`, `albedo`, `ndvi`) and the ERA5 means at the overpass hours (`solarWm2`, `airC`, `humidityPct`).
+Code: `uzha/energy.py`. All fluxes in W/m²: `g` positive into the ground, `h` and `le` positive into the air.
+
+| Step | Formula | Source |
+|---|---|---|
+| Absorbed sunlight | S_abs = (1 − α)·S↓ | α: Sentinel-2 broadband albedo (Liang 2001); S↓: ERA5 surface solar radiation downwards |
+| Surface emissivity | NDVI < 0.2: ε = 0.97; NDVI > 0.5: ε = 0.99; between: ε = 0.99·Pv + 0.97·(1 − Pv) + (1 − 0.97)(1 − Pv)·0.55·0.99, Pv = ((NDVI − 0.2)/0.3)² | NDVI threshold method, Sobrino, Jiménez-Muñoz & Paolini (2004), [doi:10.1016/j.rse.2004.02.003](https://doi.org/10.1016/j.rse.2004.02.003) |
+| Longwave from the surface | L↑ = ε·σ·Ts⁴, Ts = LST in K, σ = 5.670·10⁻⁸ W m⁻² K⁻⁴ | Stefan–Boltzmann |
+| Longwave from the sky | L↓ = ε_a·σ·Ta⁴, ε_a = 1.24·(e_a/Ta)^(1/7), e_a in hPa = RH·6.1094·exp(17.625·T/(T + 243.04)) | clear sky, Brutsaert (1975), [doi:10.1029/WR011i005p00742](https://doi.org/10.1029/WR011i005p00742); Magnus, Alduchov & Eskridge (1996), [doi:10.1175/1520-0450(1996)035<0601:IMFAOS>2.0.CO;2](https://doi.org/10.1175/1520-0450(1996)035%3C0601:IMFAOS%3E2.0.CO;2) |
+| Net radiation | Rn = S_abs + ε·L↓ − L↑ (the surface absorbs ε of L↓ and reflects the rest) | e.g. Allen, Tasumi & Trezza (2007) METRIC, [doi:10.1061/(ASCE)0733-9437(2007)133:4(380)](https://doi.org/10.1061/(ASCE)0733-9437(2007)133:4(380)) |
+| Ground heat flux | G = Rn·Ts·(0.0038 + 0.0074·α)·(1 − 0.98·NDVI⁴), Ts in °C | SEBAL, Bastiaanssen (2000), [doi:10.1016/S0022-1694(99)00202-4](https://doi.org/10.1016/S0022-1694(99)00202-4) |
+| Evaporative fraction | EF = (T_hot − Ts)/(T_hot − T_cold), clipped to 0..1. T_hot: mean LST of the 5 % hottest among the 10 % least green cells; T_cold: mean LST of the 5 % coldest among the 10 % greenest | hot/cold anchors as in SEBAL, Bastiaanssen et al. (1998), [doi:10.1016/S0022-1694(98)00253-4](https://doi.org/10.1016/S0022-1694(98)00253-4); linear EF in temperature as in S-SEBI, Roerink, Su & Menenti (2000), [doi:10.1016/S1464-1909(99)00128-8](https://doi.org/10.1016/S1464-1909(99)00128-8) and SSEB, Senay et al. (2007), [doi:10.3390/s7060979](https://doi.org/10.3390/s7060979) |
+| Evaporation and heating | LE = EF·(Rn − G), H = Rn − G − LE | energy closure |
+
+`rn`, `g`, `le` are rounded to whole W/m² and `h` is taken as `rn − g − le`, so the balance closes
+exactly in the JSON. The tests check closure and that midday Rn stays within 300–700 W/m².
+
+Heat storage is explained, not computed per cell. Reference values from Oke (1987) *Boundary Layer
+Climates*, 2nd ed., Table 2.1 ([doi:10.4324/9780203407219](https://doi.org/10.4324/9780203407219)); the
+role of admittance in urban heat storage: Oke, Mills, Christen & Voogt (2017) *Urban Climates*,
+ch. 6 ([doi:10.1017/9781139016476](https://doi.org/10.1017/9781139016476)):
+
+| Surface | Heat capacity C, MJ m⁻³ K⁻¹ | Conductivity k, W m⁻¹ K⁻¹ | Admittance μ = √(kC), J m⁻² s⁻½ K⁻¹ |
+|---|---|---|---|
+| Asphalt | 1.94 | 0.75 | 1205 |
+| Concrete (dense) | 2.11 | 1.51 | 1785 |
+| Dry sandy soil | 1.28 | 0.30 | 620 |
+| Saturated sandy soil | 2.96 | 2.20 | 2550 |
+
+A surface with high admittance takes heat deep into itself by day and gives it back after sunset.
+Asphalt and concrete do that two to three times better than dry soil, which is why built-up cells stay
+warm in the evening. Wet soil under irrigated greenery also stores a lot, but it spends the day's
+energy on evaporation first, so it starts the evening cooler.
+
+**Simplifications.** One model, one moment: the median summer LST against the mean ERA5 weather at
+the overpass hours. ERA5 is one ~25 km point per city, so S↓, air temperature and humidity are the
+same for every cell. L↓ assumes a clear sky (the overpasses are at < 1 % cloud). Emissivity comes from
+NDVI only: the soil value 0.97 is used for asphalt and roofs too (real ones are about 0.90–0.95), which
+puts L↑ a little high and Rn a little low on built-up cells. SEBAL's G/Rn was fitted over natural
+surfaces; in dense blocks heat storage at midday can reach 30–40 % of Rn, more than this gives. The
+evaporative fraction is relative to the city's own hottest and coolest cells: the hot anchor is taken
+to evaporate nothing and the cold anchor to evaporate as much as it can, so `le` compares places within
+a city better than it compares cities. Shading by buildings and trees and the wind are not in the model.
+
 ## Limitations
 
 - **LST is not air temperature.** It is the skin temperature of roofs, asphalt and soil at the
@@ -122,6 +176,7 @@ uzha/features.py    assemble the cell table, factor catalogue (labels/units)
 uzha/model.py       XGBoost, spatial CV, SHAP, global importance
 uzha/population.py  light step: people per cell and facilities into an existing city JSON
 uzha/weather.py     light step: summer weather (ERA5) into an existing city JSON and cities.json
+uzha/energy.py      light step: surface energy balance per cell from LST, albedo, NDVI and the overpass weather
 uzha/export.py      contract JSON (3-decimal values, 5-decimal coordinates)
 tests/              pytest
 ```

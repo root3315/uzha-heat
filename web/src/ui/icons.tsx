@@ -1,4 +1,5 @@
 import type { FacilityType } from '../data/contract';
+import type { Sink } from '../domain/energy';
 
 /**
  * One small icon per cause, drawn on a 24 px grid with a 1.5 px stroke in the current text colour.
@@ -58,6 +59,24 @@ export const FACILITY_SHAPES: Record<FacilityType, Shape[]> = {
   // больница: a building with a cross on its front
   hospital: [{ path: 'M5 20.5V5.5h14v15M3 20.5h18M10.5 20.5v-3.5h3v3.5' }, { path: 'M12 8v5M9.5 10.5h5' }],
 };
+
+/** Where the sun's energy goes, in the same hand: they name a flux, never a cause. */
+export const SINK_SHAPES: Record<Sink, Shape[]> = {
+  // испарение: a drop with vapour rising from it
+  le: [{ path: 'M12 10.5c2.4 3 4 5.3 4 7.3a4 4 0 0 1-8 0c0-2 1.6-4.3 4-7.3Z' }, { path: 'M7 7.5c-1-1.2 1-2.3 0-3.5M12 6c-1-1.2 1-2.3 0-3.5M17 7.5c-1-1.2 1-2.3 0-3.5' }],
+  // нагрев воздуха: heat shimmer rising off a hot ground line
+  h: [{ path: 'M2.5 20.5h19M7 16.5c-1.5-2 1.5-3.5 0-5.5s1.5-3.5 0-5.5M12 16.5c-1.5-2 1.5-3.5 0-5.5s1.5-3.5 0-5.5M17 16.5c-1.5-2 1.5-3.5 0-5.5s1.5-3.5 0-5.5' }],
+  // в грунт: an arrow going down through the ground line into the layers
+  g: [{ path: 'M2.5 9.5h19M12 2.5v13M9 12.5l3 3 3-3M4 14.5h3M17 14.5h3M5 18.5h14M8 21.5h8' }],
+};
+
+export function SinkIcon({ sink, size = 18, className = 'cause-icon' }: { sink: Sink; size?: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <Glyph shapes={SINK_SHAPES[sink]} />
+    </svg>
+  );
+}
 
 /** Keys outside the vocabulary: a plain ring, so the row still lines up. */
 const FALLBACK: Shape[] = [{ circle: [12, 12, 4] }];
