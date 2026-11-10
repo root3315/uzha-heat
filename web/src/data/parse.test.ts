@@ -145,3 +145,40 @@ describe('city weather', () => {
     expect(errorOf(() => parseCities([{ ...city, weather: broken }])).message).toContain('cities[0].weather.summer.airMaxC');
   });
 });
+
+describe('energy balance', () => {
+  const cellsEnergy = { sAbs: [650, 610], rn: [520, 400], g: [60, 100], h: [100, 280], le: [360, 20] };
+  const method = {
+    localHour: 11,
+    solarWm2: 799,
+    airC: 32,
+    humidityPct: 31,
+    longwaveDownWm2: 395,
+    hotAnchorC: 52.5,
+    coldAnchorC: 32.4,
+    mean: { sAbs: 630, rn: 460, g: 80, h: 190, le: 190 },
+    surfaces: [{ key: 'asphalt', label: 'Асфальт', heatCapacity: 1.94, conductivity: 0.75, admittance: 1205 }],
+  };
+
+  it('reads the per-cell fluxes and the method together, and leaves both out when absent', () => {
+    const raw = validDetail();
+    const detail = parseCityDetail({ ...raw, cells: { ...raw.cells, energy: cellsEnergy }, energy: method });
+    expect(detail.cells.energy?.le).toEqual([360, 20]);
+    expect(detail.energy?.mean.rn).toBe(460);
+    expect(detail.energy?.surfaces[0]?.admittance).toBe(1205);
+    const plain = parseCityDetail(raw);
+    expect(plain.cells.energy).toBeUndefined();
+    expect(plain.energy).toBeNull();
+  });
+
+  it('rejects half of it, a short column and a broken surface', () => {
+    const raw = validDetail();
+    expect(errorOf(() => parseCityDetail({ ...raw, energy: method })).message).toContain('cells.energy');
+    const short = { ...cellsEnergy, h: [100] };
+    expect(errorOf(() => parseCityDetail({ ...raw, cells: { ...raw.cells, energy: short }, energy: method })).message).toContain('cells.energy.h');
+    const broken = { ...method, surfaces: [{ key: 'asphalt', label: 'Асфальт', heatCapacity: 1.94 }] };
+    expect(errorOf(() => parseCityDetail({ ...raw, cells: { ...raw.cells, energy: cellsEnergy }, energy: broken })).message).toContain(
+      'energy.surfaces[0].conductivity',
+    );
+  });
+});

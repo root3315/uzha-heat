@@ -169,6 +169,7 @@
 }
 .why__panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: 22px 22px 24px;
   border-radius: var(--radius);
@@ -190,6 +191,9 @@
 .why__line {
   color: var(--ink-2);
   max-width: 44rem;
+}
+.why__energy {
+  margin-top: 16px;
 }
 .why__chart {
   min-width: 0;

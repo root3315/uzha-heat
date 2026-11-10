@@ -1,8 +1,9 @@
 import { advise, capitalize, cityAnswer, dominantFor, placeAnswer, restOfCauses, type Advice, type Phrase } from '../domain/answers';
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
+import { cellFluxes, energyView, meanFluxes, type EnergyView } from '../domain/energy';
 import { formatDeg, formatFactorValue } from '../domain/format';
-import type { PlaceProfile } from '../domain/places';
+import { hottestTenth, type PlaceProfile } from '../domain/places';
 import { siteNote, siteTitle, type Site } from '../domain/sites';
 
 export interface CauseRow {
@@ -23,6 +24,8 @@ export interface PanelContent {
   cause: (CauseRow & { note: string }) | null;
   rest: { summary: string; rows: CauseRow[] } | null;
   advice: Advice;
+  /** Where the sunlight goes: the picked cell, or the hottest tenth for the city. Null without energy data. */
+  energy: { title: string; view: EnergyView } | null;
 }
 
 /**
@@ -55,6 +58,9 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     if (others.length) rest = { summary: restOfCauses(subject.contributions, key).summary, rows: others };
   }
 
+  const fluxes = place?.cell !== undefined ? cellFluxes(detail, place.cell) : meanFluxes(detail, hottestTenth(detail));
+  const energy = energyView(detail, fluxes, subject.values);
+
   return {
     title: place ? (site ? siteTitle(site) : placeTitle) : detail.city.name,
     isCity: place === null,
@@ -65,5 +71,6 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     cause,
     rest,
     advice: place && site ? { kind: 'none', text: [siteNote(site)] } : advise(detail, subject, model.cityMeans),
+    energy: energy && { title: place ? 'Физика участка' : 'Физика горячей десятой части', view: energy },
   };
 }

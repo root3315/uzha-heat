@@ -90,6 +90,36 @@ export interface GlobalImportance {
 
 export type ColumnsByFeature = Record<string, number[]>;
 
+/** Surface energy balance terms, W/m²: absorbed sunlight, net radiation, into the ground, heating the air, evaporation. */
+export const FLUX_KEYS = ['sAbs', 'rn', 'g', 'h', 'le'] as const;
+export type FluxKey = (typeof FLUX_KEYS)[number];
+export type Fluxes = Record<FluxKey, number>;
+
+/** Reference thermal properties of one surface material (Oke 1987), for explanation, not per cell. */
+export interface SurfaceMaterial {
+  key: string;
+  label: string;
+  /** MJ m⁻³ K⁻¹. */
+  heatCapacity: number;
+  /** W m⁻¹ K⁻¹. */
+  conductivity: number;
+  /** Thermal admittance, J m⁻² s⁻½ K⁻¹: how readily the surface takes heat in and gives it back. */
+  admittance: number;
+}
+
+/** How the energy balance was computed for this city: the overpass weather it used and the city means. */
+export interface EnergyMethod {
+  localHour: number;
+  solarWm2: number;
+  airC: number;
+  humidityPct: number;
+  longwaveDownWm2: number;
+  hotAnchorC: number;
+  coldAnchorC: number;
+  mean: Fluxes;
+  surfaces: SurfaceMaterial[];
+}
+
 export interface Cells {
   lon: number[];
   lat: number[];
@@ -98,6 +128,8 @@ export interface Cells {
   shap: ColumnsByFeature;
   /** People living in each cell (WorldPop, modelled); absent in data without the population step. */
   pop?: number[];
+  /** Energy balance at the overpass, whole W/m²; rn = g + h + le. Absent without the energy step. */
+  energy?: Record<FluxKey, number[]>;
 }
 
 export interface Population {
@@ -146,4 +178,6 @@ export interface CityDetail {
   districts: District[];
   population: Population | null;
   facilities: Facility[];
+  /** Present exactly when `cells.energy` is. */
+  energy: EnergyMethod | null;
 }

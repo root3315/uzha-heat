@@ -6,6 +6,7 @@ import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, plural } from '../domain/format';
 import { facilitiesNear, facilityTitle, formatPeople, hotPlacesByPeople, peopleFigure, peopleInHeat, peopleNoun, populationCaveat } from '../domain/people';
+import { cityEnergy, cityEnergyLine, energyCaveat } from '../domain/energy';
 import { recommend } from '../domain/recommendations';
 import { distinctByName, hotTenthCauses, hottestPlaces, keyFigures, reportTransect } from '../domain/report';
 import { siteTitle } from '../domain/sites';
@@ -15,6 +16,7 @@ import { renderReportMap, type ReportMap } from '../map/snapshot';
 import { readTokens } from '../map/tokens';
 import { useAsync, useWidth } from '../ui/hooks';
 import { CityPhoto } from '../ui/CityPhoto';
+import { EnergyBlock, EnergySummary } from '../ui/Energy';
 import { CauseIcon, FacilityIcon } from '../ui/icons';
 import { cityModel } from '../ui/models';
 import { Evidence } from '../ui/panel/Panel';
@@ -176,6 +178,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
   const inHeat = peopleInHeat(detail);
   const pop = detail.cells.pop;
   const causes = useMemo(() => hotTenthCauses(detail, model.hotspot), [detail, model.hotspot]);
+  const energy = useMemo(() => cityEnergy(detail), [detail]);
   const measures = useMemo(
     () => recommend({ features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }).slice(0, 3),
     [features, model],
@@ -297,6 +300,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
                 ]}
               />
             )}
+            {place.energy && <EnergyBlock view={place.energy.view} title={place.energy.title} />}
           </Part>
         )}
 
@@ -376,6 +380,16 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
             }))}
           />
         </Part>
+
+        {energy && detail.energy && (
+          <Part n={++n} title="Физика: куда уходит солнце">
+            <p className="rp-lead rp-lead--small">{cityEnergyLine(detail.city.name, energy)}</p>
+            <EnergySummary summary={energy} />
+            <p className="rp-note">
+              Полоса: куда уходит солнечная энергия, оставшаяся после теплового излучения поверхности, в&nbsp;среднем по&nbsp;участкам. {energyCaveat(detail.energy)}
+            </p>
+          </Part>
+        )}
 
         {measures.length > 0 && (
           <Part n={++n} title="Что делать">

@@ -49,6 +49,10 @@ const SPECS: Record<string, PatternSpec> = {
   water_dist: { size: 10, marks: (s) => [{ d: `M0,${s / 2} Q${s / 4},${s / 2 - 2.2} ${s / 2},${s / 2} T${s},${s / 2}`, width: 0.8 }] },
   // высота: short vertical ticks
   elevation: { size: 7, marks: (s) => [{ d: `M${s / 2},${s * 0.28} V${s * 0.72}`, width: 0.9 }] },
+  // энергия: испарение, rising vapour as upright waves
+  'flux-le': { size: 8, marks: (s) => [{ d: `M${s / 2},${s} Q${s / 2 + 1.8},${s * 0.75} ${s / 2},${s / 2} T${s / 2},0`, width: 0.9 }] },
+  // энергия: в грунт, close stipple like packed earth
+  'flux-g': { size: 4, marks: (s) => [{ d: circle(s / 2, s / 2, 0.65), fill: true }] },
 };
 
 /** Keys outside the fixed vocabulary get small crosses. */

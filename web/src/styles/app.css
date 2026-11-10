@@ -897,6 +897,105 @@ summary.rest__summary:hover,
   min-width: 4.5ch;
 }
 
+/* Физика участка: where the sunlight goes. Ink and hatch only, colour stays for temperature. */
+.energy {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.energy__title {
+  font: 700 1.25rem/1.08 var(--font-display);
+  font-stretch: 85%;
+}
+.energy__lead {
+  margin-top: 8px;
+  font-weight: 600;
+  text-wrap: pretty;
+}
+.energy__intake {
+  margin: 10px 0 8px;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+}
+.energy__intake .num {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.energy__bar {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+.energy__part {
+  stroke: var(--ink);
+  stroke-width: 0.75;
+}
+.energy__figures {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+}
+.energy__figures div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.energy__figures dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.energy__figures dd {
+  white-space: nowrap;
+}
+.energy__text {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  text-wrap: pretty;
+}
+.energy__note {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 400 0.68rem/1.5 var(--font-mono);
+}
+.energy__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  color: var(--ink-2);
+  font: 400 0.66rem/1.4 var(--font-mono);
+}
+.energy__key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.energy-summary__rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.energy-summary__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.energy-summary__head .num {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+  font: 400 0.72rem/1.4 var(--font-mono);
+}
+
 .advice {
   margin-top: 28px;
   padding-top: 20px;
