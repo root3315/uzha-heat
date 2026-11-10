@@ -70,7 +70,7 @@ def period_ranges(period: Period) -> list:
 
 def summer_lst(bbox: tuple, raster: Raster) -> LstResult:
     for period in PERIODS:
-        items = _find_scenes(bbox, period)
+        items = find_scenes(bbox, period)
         scenes = [lst for lst in parallel_map(lambda item: _scene_lst(item, raster), items)
                   if np.isfinite(lst).mean() >= MIN_SCENE_CLEAR_FRACTION]
         log.info("Landsat %s: %d items, %d usable", period.label, len(items), len(scenes))
@@ -79,7 +79,7 @@ def summer_lst(bbox: tuple, raster: Raster) -> LstResult:
     raise RuntimeError(f"Fewer than {MIN_SCENES} clear Landsat scenes for {bbox}")
 
 
-def _find_scenes(bbox: tuple, period: Period) -> list:
+def find_scenes(bbox: tuple, period: Period) -> list:
     query = {"platform": {"in": ["landsat-8", "landsat-9"]}, "eo:cloud_cover": {"lt": MAX_SCENE_CLOUD}}
     items = [item for dates in period_ranges(period)
              for item in search("landsat-c2-l2", bbox, dates, query)]
