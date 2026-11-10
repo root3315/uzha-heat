@@ -27,16 +27,55 @@
     <meta name="twitter:image" content="https://uzha.mydevbox.xyz/og.jpg" />
   </head>
   <body>
-    <!-- Static first paint: the bar and the headline, replaced by the app when it starts. -->
-    <div id="root">
-      <header class="bar" style="position: fixed; inset: 0 0 auto; height: 56px; padding: 0 16px; display: flex; align-items: center; background: #eceeeb">
-        <b style="font: 800 1.3rem/1 'Arial Narrow', sans-serif">UzHa</b>
+    <!--
+      The first screen before the app runs, in the page's own classes: the bar, the headline and the map panel
+      with the city outline. The app reports the download into it and removes it when the page is ready.
+    -->
+    <div id="boot" class="boot" data-city="__UZHA_CITY_ID__">
+      <header class="bar">
+        <a href="/" class="bar__id">UzHa</a>
+        <nav class="bar__nav" aria-label="Разделы">
+          <a href="#problem">Проблема</a>
+          <a href="#why">Почему жарко</a>
+          <a href="#cities">Города</a>
+          <a href="#method">Как считали</a>
+        </nav>
+        <a class="pill pill--ink bar__open" href="/map/__UZHA_CITY_ID__">
+          <span class="bar__open-long">Открыть карту</span>
+          <span class="bar__open-short" aria-hidden="true">Карта</span>
+        </a>
       </header>
-      <main style="padding: 88px 16px 0; background: #eceeeb; color: #121417; font-family: 'Segoe UI', sans-serif">
-        <h1 style="margin: 0; max-width: 14ch; font: 800 clamp(40px, 6vw, 104px)/0.9 'Arial Narrow', sans-serif">Где город перегревается летом и&nbsp;почему</h1>
-        <p style="margin-top: 16px; color: #565a62">Считаю изотермы по&nbsp;снимкам Landsat</p>
+      <main aria-busy="true">
+        <section class="hero boot__hero">
+          <h1 class="hero__title">Где __UZHA_CITY_NAME__ перегревается летом и&nbsp;почему</h1>
+          <div class="hero__island" aria-hidden="true">
+            <p class="hero__figure boot__figure">+0,0°</p>
+            <div class="boot__lines"><i></i><i></i><i></i><i class="boot__short"></i><i></i><i class="boot__short"></i></div>
+            <div class="boot__lines hero__people"><i></i><i class="boot__short"></i><i class="boot__short"></i></div>
+          </div>
+        </section>
+        <section class="live">
+          <div class="live__face boot__face">
+            <svg class="boot__outline" data-boot-outline viewBox="__UZHA_OUTLINE_VIEWBOX__" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <path d="__UZHA_OUTLINE_D__" />
+            </svg>
+            <div class="boot__progress">
+              <p role="status" data-boot-status>загружаю данные</p>
+              <span class="boot__meter is-open"><span data-boot-meter></span></span>
+            </div>
+          </div>
+          <aside class="live__side" aria-hidden="true">
+            <div class="gauge">
+              <p class="gauge__label">температура поверхности, доля города</p>
+              <span class="boot__ramp"></span>
+              <div class="boot__lines gauge__hint"><i></i><i></i><i class="boot__short"></i></div>
+            </div>
+            <span class="pill pill--big live__open boot__pill"></span>
+          </aside>
+        </section>
       </main>
     </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

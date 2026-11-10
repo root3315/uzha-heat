@@ -52,46 +52,80 @@ function transectSource(detail: CityDetail, grid: CellGrid, field: Field, outlin
   };
 }
 
-function openingTransect(field: Field, source: TransectSource): Transect {
+/**
+ * The heavy, data-only half of the model: the surface, its contours, the cause areas and where the
+ * opening section goes. Plain data with typed arrays, so it can be computed in a worker and posted back.
+ */
+export interface CitySurface {
+  grid: CellGrid;
+  field: Field;
+  levels: IsothermLevels;
+  shares: number[];
+  isotherms: IsothermGeometry;
+  causeAreas: FeatureCollection<MultiPolygon, CauseAreaProperties>;
+  inside: boolean[];
+  island: HeatIsland | null;
+  /** Centre of the hottest neighbourhood inside the city, where the opening section is laid. */
+  hotCenter: LonLat;
+}
+
+function hotCenter(field: Field, outline: Outline | null): LonLat {
   const toLonLat = (u: number, v: number): LonLat => slotToLonLat(field.grid, fineToSlot(field.factor, u), fineToSlot(field.factor, v));
   const radius = Math.round((HOT_PATCH_RADIUS_M / field.grid.cellSizeM) * field.factor);
   const hottest = hottestPatch(
     field.values,
     field.fx,
     field.fy,
-    (u, v) => (field.coverage[v * field.fx + u] ?? 0) >= COVERED && source.inside(toLonLat(u, v)),
+    (u, v) => (field.coverage[v * field.fx + u] ?? 0) >= COVERED && (!outline || pointInGeometry(toLonLat(u, v), outline)),
     radius,
   );
-  const center = hottest ? toLonLat(hottest[0], hottest[1]) : toLonLat(field.fx / 2, field.fy / 2);
-  return defaultTransect(source, center);
+  return hottest ? toLonLat(hottest[0], hottest[1]) : toLonLat(field.fx / 2, field.fy / 2);
 }
 
-export function buildCityModel(detail: CityDetail, outline: Outline | null): CityModel {
+export function citySurface(detail: CityDetail, outline: Outline | null): CitySurface {
   const { cells, grid: gridInfo, stats } = detail;
   const grid = buildCellGrid(cells.lon, cells.lat, gridInfo.cellSizeM);
   const field = buildField(grid, cells.lst);
   const levels = isothermLevels(stats.lstMean);
-  const source = transectSource(detail, grid, field, outline);
-  const hotspot = hotspotProfile(detail);
   const dominant = dominantFactorPerCell(detail);
-  const inside = insideMask(cells.lon, cells.lat, outline);
-  const island = outline ? heatIslandIntensity(cells.lst, inside) : null;
   const strength = dominant.map((key, i) => (key ? (cells.shap[key]?.[i] ?? 0) : 0));
+  const inside = insideMask(cells.lon, cells.lat, outline);
   return {
-    detail,
-    outline,
     grid,
     field,
     levels,
     shares: classShares(levels, cells.lst),
     isotherms: isothermGeometry(field, levels),
     causeAreas: causeAreas(grid, dominant, strength),
+    inside,
+    island: outline ? heatIslandIntensity(cells.lst, inside) : null,
+    hotCenter: hotCenter(field, outline),
+  };
+}
+
+/** The light half: what needs the parsed data and functions over the surface. Cheap enough for the main thread. */
+export function assembleCityModel(detail: CityDetail, outline: Outline | null, surface: CitySurface): CityModel {
+  const { grid, field, levels, shares, isotherms, causeAreas: areas, inside, island } = surface;
+  const source = transectSource(detail, grid, field, outline);
+  return {
+    detail,
+    outline,
+    grid,
+    field,
+    levels,
+    shares,
+    isotherms,
+    causeAreas: areas,
     source,
-    hotspot,
+    hotspot: hotspotProfile(detail),
     facts: cityFacts(detail, inside, island),
     inside,
     island,
     cityMeans: cityFactorMeans(detail),
-    defaultTransect: openingTransect(field, source),
+    defaultTransect: defaultTransect(source, surface.hotCenter),
   };
+}
+
+export function buildCityModel(detail: CityDetail, outline: Outline | null): CityModel {
+  return assembleCityModel(detail, outline, citySurface(detail, outline));
 }
