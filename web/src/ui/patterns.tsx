@@ -41,6 +41,10 @@ const SPECS: Record<string, PatternSpec> = {
   roads: { size: 8, marks: (s) => [{ d: `M0,${s * 0.38} H${s} M0,${s * 0.62} H${s}`, width: 0.7 }] },
   // здания: small open squares
   buildings: { size: 8, marks: (s) => [{ d: `M${s * 0.3},${s * 0.3} h${s * 0.4} v${s * 0.4} h${-s * 0.4} Z`, width: 0.8 }] },
+  // высота зданий: long vertical lines, the hatch of a section through tall walls
+  height: { size: 5, marks: (s) => [{ d: `M${s / 2},0 V${s}`, width: 0.7 }] },
+  // объём застройки: small filled squares, the mass of buildings
+  volume: { size: 7, marks: (s) => [{ d: `M${s * 0.32},${s * 0.32} h${s * 0.36} v${s * 0.36} h${-s * 0.36} Z`, fill: true }] },
   // далеко от воды: wavy line
   water_dist: { size: 10, marks: (s) => [{ d: `M0,${s / 2} Q${s / 4},${s / 2 - 2.2} ${s / 2},${s / 2} T${s},${s / 2}`, width: 0.8 }] },
   // высота: short vertical ticks
