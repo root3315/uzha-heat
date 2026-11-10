@@ -1,6 +1,7 @@
 """OpenStreetMap layers via the Overpass API: roads, buildings, water, district boundaries."""
 import json
 import logging
+import re
 import time
 
 import numpy as np
@@ -31,6 +32,9 @@ ROAD_TYPES = "motorway|trunk|primary|secondary|tertiary|unclassified|residential
 SAMPLE_STEP_M = 10.0
 CELL_AREA_KM2_PER_M2 = 1e-6
 CELL_AREA_HA_PER_M2 = 1e-4
+METRES_PER_LEVEL = 3.0
+MIN_HEIGHT_M = 2.0
+MAX_HEIGHT_M = 300.0
 
 
 def overpass(query: str, rounds: int = RETRY_ROUNDS, sleep=time.sleep):
@@ -153,6 +157,31 @@ def building_density(elements: list, grid: Grid) -> np.ndarray:
     to_utm = Transformer.from_crs(WGS84, grid.crs, always_xy=True)
     x, y = to_utm.transform([c["lon"] for c in centers], [c["lat"] for c in centers])
     return grid.sum_points(np.asarray(x), np.asarray(y)) / (grid.cell_size ** 2 * CELL_AREA_HA_PER_M2)
+
+
+def tagged_height(tags: dict):
+    """Building height in metres from OSM tags: `height`, else `building:levels` × 3 m; None if absent or implausible."""
+    for key, scale in (("height", 1.0), ("building:levels", METRES_PER_LEVEL)):
+        match = re.match(r"\s*(\d+(?:[.,]\d+)?)\s*(m|м)?\s*$", str(tags.get(key, "")))
+        if match:
+            metres = float(match.group(1).replace(",", ".")) * scale
+            if MIN_HEIGHT_M <= metres <= MAX_HEIGHT_M:
+                return metres
+    return None
+
+
+def building_heights(elements: list, grid: Grid) -> tuple:
+    """Per cell: (buildings counted by centre, buildings with a height in OSM, sum of those heights, m)."""
+    rows = [(el["center"], tagged_height(el.get("tags", {}))) for el in elements if "center" in el]
+    if not rows:
+        return np.zeros(grid.shape), np.zeros(grid.shape), np.zeros(grid.shape)
+    to_utm = Transformer.from_crs(WGS84, grid.crs, always_xy=True)
+    x, y = to_utm.transform([c["lon"] for c, _ in rows], [c["lat"] for c, _ in rows])
+    x, y = np.asarray(x), np.asarray(y)
+    known = np.array([h is not None for _, h in rows])
+    heights = np.array([h or 0.0 for _, h in rows])
+    return (grid.sum_points(x, y), grid.sum_points(x[known], y[known]),
+            grid.sum_points(x[known], y[known], heights[known]))
 
 
 def line_length_per_cell(grid: Grid, lines: list, step: float = SAMPLE_STEP_M) -> np.ndarray:
