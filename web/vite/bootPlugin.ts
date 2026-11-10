@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HtmlTagDescriptor, Plugin, ResolvedConfig } from 'vite';
+import { boundaryGeometry } from '../src/data/boundary';
+import { outlinePath } from '../src/domain/outlinePath';
 
 /** Font files the first screen sets text in: the headline and the bar (Tektur), the captions (Onest). */
 const FIRST_SCREEN_FONTS = [/tektur-cyrillic-standard-normal-[\w-]+\.woff2$/, /tektur-latin-standard-normal-[\w-]+\.woff2$/, /onest-cyrillic-wght-normal-[\w-]+\.woff2$/];
@@ -31,8 +33,9 @@ function defaultCity(dataDir: string): DefaultCity {
 }
 
 /**
- * The first screen before the app runs: the opening city's file and the first-screen fonts preloaded,
- * and the display face held back until it is ready instead of flashing a fallback.
+ * The first screen before the app runs: the opening city's name and outline baked into index.html,
+ * the city file and the first-screen fonts preloaded, and the display face held back until it is ready
+ * instead of flashing a fallback.
  */
 export function boot(): Plugin[] {
   let config: ResolvedConfig;
@@ -47,6 +50,19 @@ export function boot(): Plugin[] {
     configResolved(resolved) {
       config = resolved;
       city = defaultCity(join(resolved.publicDir, 'data'));
+    },
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        const geometry = boundaryGeometry(readJson(join(config.publicDir, 'boundaries', `${city.id}.geojson`)));
+        const outline = geometry ? outlinePath(geometry) : { d: '', width: 1000, height: 1000 };
+        const page = html
+          .replaceAll('__UZHA_CITY_NAME__', city.name)
+          .replaceAll('__UZHA_CITY_ID__', city.id)
+          .replace('__UZHA_OUTLINE_VIEWBOX__', `0 0 ${outline.width} ${outline.height}`)
+          .replace('__UZHA_OUTLINE_D__', outline.d);
+        return page;
+      },
     },
   };
 
