@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { CitySummary } from '../data/contract';
 import { loadCities } from '../data/load';
 import { genitive } from '../domain/answers';
 import { huntTarget } from '../domain/hunt';
+import { loadingLine } from '../domain/loading';
 import { Bar } from './Bar';
+import { endBoot, isBooting, showBootStage } from './boot';
 import { scrollToId, useAsync } from './hooks';
 import { Landing, REPO } from './landing/Landing';
 import { MethodPage } from './MethodPage';
-import { cityModel } from './models';
+import { cityModel, watchLoad } from './models';
 import { PatternDefs } from './patterns';
 import { methodHref, navigate, redirect, toolHref, useRoute, type Route } from './routing';
 import { Tool } from './Tool';
@@ -26,6 +28,13 @@ function Status({ children, onRetry }: { children: string; onRetry?(): void }) {
       )}
     </div>
   );
+}
+
+/** The loading line once the first screen is gone: switching cities, trying again. */
+function Loading({ cityId }: { cityId: string }) {
+  const [line, setLine] = useState(() => loadingLine({ download: null, building: false }));
+  useEffect(() => watchLoad(cityId, (stage) => setLine(loadingLine(stage))), [cityId]);
+  return <Status>{line}</Status>;
 }
 
 function Footer() {
@@ -74,6 +83,13 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
   }, [route.view, route.cityId, known, city]);
 
   const ready = state.status === 'ready';
+  const subjectId = subject?.id;
+  useEffect(() => (subjectId ? watchLoad(subjectId, (stage) => showBootStage(subjectId, stage)) : undefined), [subjectId]);
+  // Swap the first screen for the page before the browser paints, so nothing is shown twice.
+  useLayoutEffect(() => {
+    if (state.status !== 'loading' || !subject) endBoot();
+  }, [state.status, subject]);
+
   useEffect(() => {
     const id = window.location.hash.slice(1);
     if (ready && id && !id.startsWith('/')) window.requestAnimationFrame(() => scrollToId(id, true));
@@ -90,13 +106,14 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
   const noticeLine = notice && <Notice text={notice} onClose={() => setNotice(null)} />;
 
   if (!subject) return <Status>В cities.json нет ни одного города.</Status>;
+  if (state.status === 'loading' && isBooting()) return null;
   if (state.status !== 'ready' || !model) {
     // A failed load is dropped from the cache, so a new attempt fetches again.
     const retry = () => setAttempt((n) => n + 1);
     return (
       <>
         {bar}
-        {state.status === 'loading' && <Status>{`Считаю изотермы ${genitive(subject.name)}`}</Status>}
+        {state.status === 'loading' && <Loading cityId={subject.id} />}
         {state.status === 'error' && <Status onRetry={retry}>{`Не получилось загрузить данные ${genitive(subject.name)}. Проверьте связь и попробуйте ещё раз.`}</Status>}
         {state.status === 'ready' && <Status>{`Для ${genitive(subject.name)} данных пока нет.`}</Status>}
       </>
@@ -124,7 +141,11 @@ export function App() {
     window.history.scrollRestoration = 'manual';
   }, []);
 
-  if (cities.status === 'loading') return <Status>Загружаю города</Status>;
+  useLayoutEffect(() => {
+    if (cities.status === 'error') endBoot();
+  }, [cities.status]);
+
+  if (cities.status === 'loading') return isBooting() ? null : <Status>Загружаю города</Status>;
   if (cities.status === 'error') {
     return <Status onRetry={() => setAttempt((n) => n + 1)}>Не получилось загрузить список городов. Проверьте связь и попробуйте ещё раз.</Status>;
   }
