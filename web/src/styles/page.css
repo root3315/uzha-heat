@@ -191,6 +191,9 @@
   color: var(--ink-2);
   max-width: 44rem;
 }
+.why__energy {
+  margin-top: 16px;
+}
 .why__chart {
   min-width: 0;
   padding: 16px 12px 6px;
