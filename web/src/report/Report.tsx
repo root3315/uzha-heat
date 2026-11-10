@@ -10,6 +10,7 @@ import { recommend } from '../domain/recommendations';
 import { distinctByName, hotTenthCauses, hottestPlaces, keyFigures, reportTransect } from '../domain/report';
 import { siteTitle } from '../domain/sites';
 import type { Transect } from '../domain/transect';
+import { overpassLine } from '../domain/weather';
 import { renderReportMap, type ReportMap } from '../map/snapshot';
 import { readTokens } from '../map/tokens';
 import { useAsync, useWidth } from '../ui/hooks';
@@ -21,6 +22,7 @@ import { Ramp } from '../ui/panel/Ramp';
 import type { PanelContent } from '../ui/panelContent';
 import { PatternScopeProvider, directionOf, usePatternFill } from '../ui/patterns';
 import { Phrase } from '../ui/Phrase';
+import { WeatherCompare } from '../ui/Weather';
 import { ProfileChart } from '../ui/ProfileChart';
 
 interface ReportProps {
@@ -463,6 +465,17 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
               Остров тепла: поверхность в&nbsp;черте города против кольца вокруг. R²: какую долю разницы температур модель объясняет на&nbsp;кусках города, которых
               не&nbsp;видела.
             </p>
+            {detail.city.weather && (
+              <div className="rp-weather">
+                <h3 className="rp-sub">Погода этим летом</h3>
+                <WeatherCompare cities={cities} currentId={detail.city.id} className="rp-table rp-table--wx" />
+                {overpassLine(detail.city.weather) && (
+                  <p className="rp-note">
+                    {detail.city.name}. {overpassLine(detail.city.weather)}
+                  </p>
+                )}
+              </div>
+            )}
           </Part>
         )}
 
