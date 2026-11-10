@@ -10,7 +10,7 @@ from . import boundary
 from .cache import Cache
 from .cities import City
 from .grid import Grid, aggregate
-from .sources import dem, landsat, osm, sentinel, worldcover
+from .sources import dem, ghsl, landsat, osm, sentinel, worldcover
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ FINE_FACTOR = 7  # 200 m / 7 ≈ 28.6 m, close to Landsat's 30 m
 LANDCOVER_FACTOR = 20  # 10 m, WorldCover's native resolution
 MIN_VALID_FRACTION = 0.5
 MAX_WATER_FRACTION = 0.5
+M2_PER_HA = 10_000.0
 
 FACTORS = {
     "ndvi": ("Растительность", "NDVI",
@@ -29,6 +30,10 @@ FACTORS = {
                "Доля отражённого солнечного излучения, Sentinel-2, формула Liang (2001)."),
     "roads": ("Плотность дорог", "км/км²", "Длина автодорог на км², OpenStreetMap."),
     "buildings": ("Плотность зданий", "шт/га", "Число зданий на гектар, OpenStreetMap."),
+    "height": ("Высота зданий", "м",
+               "Средняя высота зданий участка: OpenStreetMap (height или этажи × 3 м), где её нет, GHSL Built-H 2018."),
+    "volume": ("Объём застройки", "м³/га",
+               "Объём зданий на гектар: площадь под зданиями по GHSL Built-S 2020, умноженная на их высоту."),
     "water_dist": ("Удалённость от воды", "м",
                    "Среднее расстояние до воды: водоёмы ESA WorldCover, реки и каналы OpenStreetMap."),
     "elevation": ("Высота", "м", "Высота над уровнем моря, Copernicus DEM GLO-30."),
@@ -83,6 +88,13 @@ def build(city: City, grid: Grid, cache: Cache, area=None) -> FeatureTable:
     else:
         dropped.append("buildings")
 
+    ghsl_built = _optional(cache, "ghsl", lambda: ghsl.built(bbox, fine, cache.root.parent / "ghsl"), dropped,
+                           ["height", "volume"])
+    if ghsl_built is not None:
+        counts = osm.building_heights(buildings, grid) if buildings is not None else (np.zeros(grid.shape),) * 3
+        layers["height"], layers["volume"], valid["height"] = building_form(*ghsl_built, *counts)
+        _log_height_coverage(city, counts)
+
     osm_water = cache.get_or_compute("osm_water", lambda: osm.fetch_water(bbox))
     water = wc_water | (osm.water_mask(osm_water, landcover_raster) if osm_water else False)
     if water.any():
@@ -98,6 +110,29 @@ def build(city: City, grid: Grid, cache: Cache, area=None) -> FeatureTable:
     factors = [key for key in FACTORS if key in layers]
     log.info("%s: %d of %d cells kept; factors: %s", city.id, len(table), grid.rows * grid.cols, factors)
     return FeatureTable(table, factors, lst.scenes, surface.scenes if surface else 0, lst.period.label, dropped)
+
+
+def building_form(ghsl_height: np.ndarray, ghsl_share: np.ndarray, counts: np.ndarray, tagged: np.ndarray,
+                  tagged_sum: np.ndarray) -> tuple:
+    """Per cell: mean building height (m), built volume (m³/ha) and the fraction of GHSL pixels with data.
+
+    Every OSM building counts with its own height where OSM has one; the rest take the cell's GHSL height
+    (ANBH weighted by built-up share). A cell without OSM buildings takes the GHSL height. Volume is the
+    GHSL built-up share of the cell times that height.
+    """
+    share, valid = aggregate(ghsl_share, FINE_FACTOR)
+    weighted, _ = aggregate(ghsl_share * ghsl_height, FINE_FACTOR)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ghsl_cell = np.where(share > 0, weighted / share, 0.0)
+        height = np.where(counts > 0, (tagged_sum + (counts - tagged) * ghsl_cell) / np.maximum(counts, 1), ghsl_cell)
+    height = np.where(np.isfinite(share), height, np.nan)
+    return height, share * height * M2_PER_HA, valid
+
+
+def _log_height_coverage(city: City, counts: tuple) -> None:
+    total, tagged = counts[0].sum(), counts[1].sum()
+    log.info("%s: %d of %d OSM buildings (%.1f %%) have a height or levels; the rest take GHSL", city.id,
+             tagged, total, 100 * tagged / total if total else 0)
 
 
 def _optional(cache: Cache, name: str, compute, dropped: list, keys: list):

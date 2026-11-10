@@ -50,6 +50,8 @@ bbox takes about a minute. Delete a layer's `.pkl` to refetch it. A first run of
 | `elevation` | Copernicus DEM GLO-30 | mean, m |
 | `roads` | OSM `highway=*` drivable classes (motorway … service, `_link`) | km per km² |
 | `buildings` | OSM `building=*` (`out center`) | footprints per hectare |
+| `height` | OSM `height` / `building:levels` × 3 m (same building query, tags), gaps from GHSL Built-H 2018 ANBH, 3″ (JRC) | per building: its OSM height if tagged (2–300 m), else the cell's GHSL height (ANBH weighted by GHSL built-up share); cell = mean over its OSM buildings, or the GHSL height where OSM has none |
+| `volume` | GHSL Built-S 2020, 3″ (JRC) × `height` | built-up share of the cell × height, m³/ha; GHSL tiles (10°, ~10–15 MB zip each) downloaded once to `pipeline/cache/ghsl/` and read through `/vsizip/` |
 | districts | OSM admin boundaries (`admin_level=6` inside the Tashkent city relation) | optional |
 | `cells.pop` | WorldPop 2025, 100 m, constrained, UN-adjusted (R2025A), `uzb_pop_2025_CN_100m_R2025A_v1.tif` | downloaded once to `pipeline/cache/worldpop/`; windowed read over the grid; each pixel's count goes to the cell under its centre (sum), whole people |
 | `facilities` | OSM `amenity=school/kindergarten/clinic/hospital` (nodes, way and relation centres) | only those inside a cell; `name:ru`, else `name`, else `name:uz` |
