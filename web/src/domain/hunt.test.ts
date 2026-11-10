@@ -22,6 +22,8 @@ function city(): CityDetail {
       shap: { ndvi: [-3, -1, 0.2, 2, 4, 1], built: [0.5, 0.2, -0.4, 0.5, 1, 3] },
     },
     districts: [],
+    population: null,
+    facilities: [],
   };
 }
 

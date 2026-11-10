@@ -17,6 +17,15 @@ PYTHONUTF8=1 python -m pipeline.run --all             # tashkent, samarkand, buk
 python -m pytest pipeline/tests -q
 ```
 
+Population and social facilities are a separate light step that reads an existing `<id>.json`,
+adds `cells.pop`, `population` and `facilities`, and writes it back (no satellite reads, no model):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.run --city tashkent --only population
+```
+
+A full run does this step too, at the end.
+
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
 Downloads are cached in `pipeline/cache/<city>_<grid-hash>/` (gitignored); a rerun with the same
@@ -35,6 +44,8 @@ bbox takes about a minute. Delete a layer's `.pkl` to refetch it. A first run of
 | `roads` | OSM `highway=*` drivable classes (motorway … service, `_link`) | km per km² |
 | `buildings` | OSM `building=*` (`out center`) | footprints per hectare |
 | districts | OSM admin boundaries (`admin_level=6` inside the Tashkent city relation) | optional |
+| `cells.pop` | WorldPop 2025, 100 m, constrained, UN-adjusted (R2025A), `uzb_pop_2025_CN_100m_R2025A_v1.tif` | downloaded once to `pipeline/cache/worldpop/`; windowed read over the grid; each pixel's count goes to the cell under its centre (sum), whole people |
+| `facilities` | OSM `amenity=school/kindergarten/clinic/hospital` (nodes, way and relation centres) | only those inside a cell; `name:ru`, else `name`, else `name:uz` |
 | photo | ru.wikipedia REST page summary | lead image, credit "Wikipedia / Wikimedia Commons" |
 
 OSM is queried through the Overpass API with the User-Agent `uzha-heat-pipeline/0.1`, cycling
@@ -77,6 +88,9 @@ so rerunning the city retries them.
   missing mapping.
 - `water_dist` only sees water inside the grid, so cells near the edge may overestimate it.
 - WorldCover is 2021; recent construction is not reflected.
+- WorldPop is a modelled estimate: census totals spread over buildings by a model, not counted
+  residents. It says where people sleep, not where they are at 11 am. A pixel on a cell edge goes
+  wholly to one cell.
 - The UTM-aligned cells are exported as centers plus a fixed half-size in degrees, so drawn squares
   are very slightly rotated/overlapping relative to the true cells.
 
@@ -90,9 +104,10 @@ uzha/boundary.py    bbox and cell mask from the boundary + margin
 uzha/grid.py        UTM grid, sub-grid rasters, block aggregation
 uzha/stac.py        Planetary Computer search, COG window read + reproject
 uzha/cache.py       per-layer pickle cache
-uzha/sources/       landsat, sentinel, worldcover, dem, osm, wiki
+uzha/sources/       landsat, sentinel, worldcover, dem, osm, wiki, worldpop
 uzha/features.py    assemble the cell table, factor catalogue (labels/units)
 uzha/model.py       XGBoost, spatial CV, SHAP, global importance
+uzha/population.py  light step: people per cell and facilities into an existing city JSON
 uzha/export.py      contract JSON (3-decimal values, 5-decimal coordinates)
 tests/              pytest
 ```

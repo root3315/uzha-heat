@@ -249,6 +249,7 @@ const SOURCE_BY_KEY: Record<string, string> = {
 export function sourcesLine(detail: CityDetail): string {
   const sources = ['NASA/USGS Landsat 8/9', ...new Set(detail.features.map((f) => SOURCE_BY_KEY[f.key]).filter((s): s is string => Boolean(s)))];
   if (detail.features.some((f) => f.key === 'water_dist') && !sources.includes('OpenStreetMap')) sources.push('OpenStreetMap');
+  if (detail.population) sources.push(`WorldPop ${detail.population.year}`);
   const { model } = detail;
   return (
     `${sources.join(', ')}, ${detail.period.label}. ` +

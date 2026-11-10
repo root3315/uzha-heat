@@ -48,6 +48,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [transect, setTransect] = useState<Transect>(model.defaultTransect);
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
+  const [people, setPeople] = useState(false);
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
@@ -55,6 +56,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const narrow = width < NARROW_PX;
   const { detail } = model;
   const { cellUnder, describe } = useReadout(model);
+  const hasPeople = detail.cells.pop !== undefined;
 
   const profile = useMemo(() => sampleTransect(model.source, transect), [model, transect]);
   const place = useMemo(() => (picked ? cellProfile(detail, picked.cell) : null), [detail, picked]);
@@ -164,6 +166,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           probe={probe?.point ?? null}
           found={[]}
           mode={mode}
+          people={people}
           describe={describe}
           onIdle={refineName}
         >
@@ -176,6 +179,11 @@ export function Tool({ model, cities, onCity }: ToolProps) {
               <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={toggleMode}>
                 Причины
               </button>
+              {hasPeople && (
+                <button type="button" className="pill pill--small" aria-pressed={people} onClick={() => setPeople(!people)}>
+                  Люди
+                </button>
+              )}
               {reportButton}
             </div>
           )}
@@ -192,6 +200,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           onDraw={toggleDrawing}
           onReset={() => setTransect(model.defaultTransect)}
           onModeChange={setMode}
+          people={hasPeople ? people : undefined}
+          onPeopleChange={setPeople}
           onProbe={setProbe}
           onPick={(sample) => pick(sample.point)}
         />

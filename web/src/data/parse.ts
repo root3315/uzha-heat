@@ -4,6 +4,8 @@ import type {
   CitySummary,
   ColumnsByFeature,
   District,
+  Facility,
+  FacilityType,
   FeatureMeta,
   GlobalImportance,
   GridInfo,
@@ -11,6 +13,7 @@ import type {
   LstStats,
   ModelInfo,
   Period,
+  Population,
 } from './contract';
 
 export class DataContractError extends Error {
@@ -196,6 +199,37 @@ function parseDistrict(value: unknown, path: string): District {
   };
 }
 
+function parsePopulation(value: unknown): Population | null {
+  if (value === undefined) return null;
+  const population = requireObject(value, 'population');
+  return {
+    source: requireString(population.source, 'population.source'),
+    year: requireNumber(population.year, 'population.year'),
+    total: requireNumber(population.total, 'population.total'),
+  };
+}
+
+const FACILITY_TYPES: readonly FacilityType[] = ['school', 'kindergarten', 'clinic', 'hospital'];
+
+function parseFacility(value: unknown, path: string): Facility {
+  const facility = requireObject(value, path);
+  const type = requireString(facility.type, `${path}.type`);
+  if (!FACILITY_TYPES.includes(type as FacilityType)) throw new DataContractError(`${path}.type: неизвестный тип ${type}`);
+  return {
+    name: requireString(facility.name, `${path}.name`),
+    type: type as FacilityType,
+    lon: requireNumber(facility.lon, `${path}.lon`),
+    lat: requireNumber(facility.lat, `${path}.lat`),
+  };
+}
+
+function parsePop(value: unknown, length: number): number[] | undefined {
+  if (value === undefined) return undefined;
+  const pop = requireNumberArray(value, 'cells.pop');
+  if (pop.length !== length) throw new DataContractError(`cells.pop: длина ${pop.length}, ожидалось ${length}`);
+  return pop;
+}
+
 export function parseCities(raw: unknown): CitySummary[] {
   return requireArray(raw, 'cities').map((entry, i) => parseCitySummary(entry, `cities[${i}]`));
 }
@@ -229,7 +263,10 @@ export function parseCityDetail(raw: unknown): CityDetail {
       lst,
       values: requireColumns(cellsRaw.values, keys, lon.length, 'cells.values'),
       shap: requireColumns(cellsRaw.shap, keys, lon.length, 'cells.shap'),
+      pop: parsePop(cellsRaw.pop, lon.length),
     },
     districts: districts.map((d, i) => parseDistrict(d, `districts[${i}]`)),
+    population: parsePopulation(root.population),
+    facilities: root.facilities === undefined ? [] : requireArray(root.facilities, 'facilities').map((f, i) => parseFacility(f, `facilities[${i}]`)),
   };
 }

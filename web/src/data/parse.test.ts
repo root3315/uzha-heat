@@ -83,6 +83,31 @@ describe('parseCityDetail', () => {
     expect(errorOf(() => parseCityDetail({ ...raw, districts: [district] })).message).toContain('districts[0].shapMean.ndvi');
   });
 
+  it('reads optional population and facilities, and defaults them when absent', () => {
+    const raw = validDetail();
+    const withPeople = {
+      ...raw,
+      cells: { ...raw.cells, pop: [120, 0] },
+      population: { source: 'WorldPop', year: 2025, total: 120 },
+      facilities: [{ name: '', type: 'school', lon: 69.2, lat: 41.3 }],
+    };
+    const detail = parseCityDetail(withPeople);
+    expect(detail.cells.pop).toEqual([120, 0]);
+    expect(detail.population?.year).toBe(2025);
+    expect(detail.facilities).toEqual([{ name: '', type: 'school', lon: 69.2, lat: 41.3 }]);
+    const plain = parseCityDetail(raw);
+    expect(plain.cells.pop).toBeUndefined();
+    expect(plain.population).toBeNull();
+    expect(plain.facilities).toEqual([]);
+  });
+
+  it('rejects a population column of the wrong length and an unknown facility type', () => {
+    const raw = validDetail();
+    expect(errorOf(() => parseCityDetail({ ...raw, cells: { ...raw.cells, pop: [1] } })).message).toContain('cells.pop');
+    const shop = [{ name: 'Магазин', type: 'shop', lon: 69.2, lat: 41.3 }];
+    expect(errorOf(() => parseCityDetail({ ...raw, facilities: shop })).message).toContain('facilities[0].type');
+  });
+
   it('rejects cell columns of the wrong length', () => {
     const raw = validDetail();
     raw.cells.shap = { ndvi: [1] };

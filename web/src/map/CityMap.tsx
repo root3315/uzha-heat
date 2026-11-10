@@ -19,6 +19,8 @@ import type { Site } from '../domain/sites';
 import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
 import { patternImage } from '../ui/patterns';
+import type { FacilityType } from '../data/contract';
+import { facilityImage, facilityImageId } from './facilityImages';
 import { IsothermLabelLayer } from './isothermLabels';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
 import { LAYER, SOURCE, bandOpacity, buildStyle } from './style';
@@ -56,6 +58,8 @@ interface CityMapProps {
   /** Hot quarters already found in the opening game. */
   found: LonLat[];
   mode: MapMode;
+  /** People living on each cell as dots, and schools and clinics on the hottest cells. */
+  people?: boolean;
   /** Text of the small readout under the pointer, or null where there is nothing to say. */
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
@@ -70,6 +74,7 @@ const HINT_KEY = 'uzha.handles-hinted';
 const HINT_MS = 2600;
 const TAP_TIP_MS = 2400;
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
+const FACILITY_TYPES: FacilityType[] = ['school', 'kindergarten', 'clinic', 'hospital'];
 
 const lineOf = (transect: Transect) => ({ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates: transect } });
 const pointOf = (point: LonLat | null) => (point ? { type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: point } } : EMPTY);
@@ -129,7 +134,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -194,6 +199,10 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
         const id = `hatch-${properties.key}-heats`;
         const image = patternImage(properties.key, 'heats', tokens.hatchHeats, 2);
         if (image && !map.hasImage(id)) map.addImage(id, image, { pixelRatio: 2 });
+      }
+      for (const type of FACILITY_TYPES) {
+        const image = facilityImage(type, tokens, 2);
+        if (image && !map.hasImage(facilityImageId(type))) map.addImage(facilityImageId(type), image, { pixelRatio: 2 });
       }
     };
 
@@ -379,6 +388,17 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (map.getLayer(LAYER.causes)) apply();
     else map.once('load', apply);
   }, [mode, model]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      map.setLayoutProperty(LAYER.people, 'visibility', people ? 'visible' : 'none');
+      map.setLayoutProperty(LAYER.facilities, 'visibility', people ? 'visible' : 'none');
+    };
+    if (map.getLayer(LAYER.people)) apply();
+    else map.once('load', apply);
+  }, [people, model]);
 
   useEffect(() => {
     containerRef.current?.classList.toggle('is-drawing', drawing);
