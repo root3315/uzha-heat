@@ -127,3 +127,23 @@ describe('formatRatio', () => {
     expect(formatRatio(ratio)).toBe(text);
   });
 });
+
+describe('dense tall blocks', () => {
+  const blocks = (volume: number, height: number, contributions: Record<string, number>): RecommendationInput => ({
+    features: [feature('height', 'Высота зданий', 'м'), feature('volume', 'Объём застройки', 'м³/га')],
+    values: { height, volume },
+    cityMeans: { height: 6, volume: 9000 },
+    contributions,
+  });
+
+  it('asks for shade where a big built volume heats the place, with the height as a second reason', () => {
+    const rule = recommend(blocks(30000, 18, { volume: 0.8, height: 0.3 })).find((r) => r.id === 'shade-dense-blocks');
+    expect(rule?.reasons.map((r) => r.key)).toEqual(['volume', 'height']);
+    expect(plain(rule?.reasons[0]?.text)).toBe('Объём застройки 30 000 м³/га, в 3,3 раза выше среднего по городу (9 000 м³/га)');
+    expect(rule?.evidence.url).toBe('https://doi.org/10.1016/j.buildenv.2005.01.013');
+  });
+
+  it('stays quiet where tall houses heat but the block is not dense', () => {
+    expect(recommend(blocks(4000, 18, { volume: 0.1, height: 0.5 })).map((r) => r.id)).not.toContain('shade-dense-blocks');
+  });
+});
