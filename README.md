@@ -86,6 +86,10 @@ python -m pytest pipeline/tests -q
 Python, rasterio, XGBoost, Microsoft Planetary Computer · Vite, React, TypeScript, MapLibre GL, d3-contour, Vitest ·
 nginx и Cloudflare Tunnel.
 
+## Участие
+
+Как устроена работа с кодом и git: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Команда
 
 Амира, Олия, Макс, rabenvater, Степан.
