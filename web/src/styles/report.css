@@ -514,3 +514,35 @@
     font-size: 0.86rem;
   }
 }
+
+/* ---------- People in the heat ---------- */
+.rp-people {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.rp-people__value {
+  font: 800 1.3em/1 var(--font-display);
+  font-stretch: 80%;
+  font-variant-numeric: tabular-nums;
+}
+.rp-place__people {
+  margin-top: 4px;
+  font-size: 0.86rem;
+}
+.rp-place__near {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+}
+.rp-place__near li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.rp-place__t--people span {
+  color: var(--ink);
+}

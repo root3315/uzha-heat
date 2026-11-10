@@ -1,9 +1,11 @@
+import type { FacilityType } from '../data/contract';
+
 /**
  * One small icon per cause, drawn on a 24 px grid with a 1.5 px stroke in the current text colour.
  * They sit next to the hatch, never instead of it: the hatch says where, the icon says what.
  */
 
-type Shape =
+export type Shape =
   | { path: string }
   | { circle: [cx: number, cy: number, r: number]; dot?: boolean };
 
@@ -41,16 +43,27 @@ const SHAPES: Record<string, Shape[]> = {
   elevation: [{ path: 'M2 20 9 7.5l4.4 7.4L16 11l6 9H2Z' }, { path: 'm7 11 2 1.5 2-1.4' }],
 };
 
+/** Schools, kindergartens and clinics, in the same hand: they mark who is in the heat, not why it is hot. */
+export const FACILITY_SHAPES: Record<FacilityType, Shape[]> = {
+  // школа: a schoolhouse with its bell tower
+  school: [{ path: 'M4 20.5V11l8-4.5 8 4.5v9.5M2.5 20.5h19M10 20.5v-4.5h4v4.5M12 6.5V3.5M12 3.5h3v2h-3' }, { circle: [12, 11.8, 1.6] }],
+  // детский сад: a child with arms open
+  kindergarten: [{ circle: [12, 5.5, 2.3] }, { path: 'M12 8.5v6.5M6.5 10.5l5.5 2 5.5-2M9 21l3-6 3 6' }],
+  // поликлиника: a cross in a frame
+  clinic: [{ path: 'M4.5 4.5h15v15h-15Z' }, { path: 'M12 8v8M8 12h8' }],
+  // больница: a building with a cross on its front
+  hospital: [{ path: 'M5 20.5V5.5h14v15M3 20.5h18M10.5 20.5v-3.5h3v3.5' }, { path: 'M12 8v5M9.5 10.5h5' }],
+};
+
 /** Keys outside the vocabulary: a plain ring, so the row still lines up. */
 const FALLBACK: Shape[] = [{ circle: [12, 12, 4] }];
 
 export const hasIcon = (key: string): boolean => key in SHAPES;
 
-/** The icon's marks as SVG children, for placing inside another SVG (the profile ribbon). */
-export function CauseGlyph({ cause }: { cause: string }) {
+function Glyph({ shapes }: { shapes: Shape[] }) {
   return (
     <g fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      {(SHAPES[cause] ?? FALLBACK).map((shape, i) =>
+      {shapes.map((shape, i) =>
         'path' in shape ? (
           <path key={i} d={shape.path} />
         ) : (
@@ -61,10 +74,23 @@ export function CauseGlyph({ cause }: { cause: string }) {
   );
 }
 
+/** The icon's marks as SVG children, for placing inside another SVG (the profile ribbon). */
+export function CauseGlyph({ cause }: { cause: string }) {
+  return <Glyph shapes={SHAPES[cause] ?? FALLBACK} />;
+}
+
 export function CauseIcon({ cause, size = 20, className = 'cause-icon' }: { cause: string; size?: number; className?: string }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <CauseGlyph cause={cause} />
+    </svg>
+  );
+}
+
+export function FacilityIcon({ type, size = 18, className = 'cause-icon' }: { type: FacilityType; size?: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <Glyph shapes={FACILITY_SHAPES[type]} />
     </svg>
   );
 }

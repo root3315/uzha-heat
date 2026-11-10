@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import type { CitySummary } from '../data/contract';
+import type { CitySummary, Facility } from '../data/contract';
 import { capitalize, genitive, hotTenthAnswer, islandAnswer, sectionAnswer, sourcesLine } from '../domain/answers';
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, plural } from '../domain/format';
+import { facilitiesNear, facilityTitle, formatPeople, hotPlacesByPeople, peopleFigure, peopleInHeat, peopleNoun, populationCaveat } from '../domain/people';
 import { recommend } from '../domain/recommendations';
 import { distinctByName, hotTenthCauses, hottestPlaces, keyFigures, reportTransect } from '../domain/report';
 import { siteTitle } from '../domain/sites';
@@ -12,7 +13,7 @@ import type { Transect } from '../domain/transect';
 import { renderReportMap, type ReportMap } from '../map/snapshot';
 import { readTokens } from '../map/tokens';
 import { useAsync, useWidth } from '../ui/hooks';
-import { CauseIcon } from '../ui/icons';
+import { CauseIcon, FacilityIcon } from '../ui/icons';
 import { cityModel } from '../ui/models';
 import { Evidence } from '../ui/panel/Panel';
 import { Ramp } from '../ui/panel/Ramp';
@@ -40,6 +41,11 @@ const UNNAMED = 'Участок без названия';
 /** Hottest places listed, and how many candidates are named to find that many different ones. */
 const PLACES = 5;
 const CANDIDATES = 10;
+/** Schools and clinics this close to a place are "nearby", m; at most this many are listed. */
+const NEAR_M = 500;
+const NEAR_MAX = 3;
+/** Fewer people than this on a 200 m cell is not housing. */
+const FEW_PEOPLE = 5;
 
 const today = () => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
 const coords = ([lon, lat]: [number, number]) => `${formatNumber(lat, 3)}° с.ш., ${formatNumber(lon, 3)}° в.д.`;
@@ -87,6 +93,28 @@ function CauseRows({ rows }: { rows: CauseRowData[] }) {
         );
       })}
     </ul>
+  );
+}
+
+/** Who lives on the cell and which schools and clinics stand near it. */
+function PlacePeople({ people, near }: { people?: number; near: Facility[] }) {
+  return (
+    <>
+      {people !== undefined && (
+        <p className="rp-place__people">{people < FEW_PEOPLE ? 'жилья на участке почти нет' : `живёт ~${formatPeople(people)}`}</p>
+      )}
+      {near.length > 0 && (
+        <ul className="rp-place__near" aria-label={`Рядом, до ${NEAR_M} м`}>
+          {near.slice(0, NEAR_MAX).map((f) => (
+            <li key={`${f.lon},${f.lat}`}>
+              <FacilityIcon type={f.type} size={16} />
+              {facilityTitle(f)}
+            </li>
+          ))}
+          {near.length > NEAR_MAX && <li>и ещё {formatNumber(near.length - NEAR_MAX, 0)}</li>}
+        </ul>
+      )}
+    </>
   );
 }
 
@@ -141,6 +169,9 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
 
   const { transect, profile } = useMemo(() => reportTransect(model.source, current, model.defaultTransect), [model, current]);
   const places = useMemo(() => hottestPlaces(detail, model.inside, CANDIDATES), [detail, model.inside]);
+  const crowded = useMemo(() => hotPlacesByPeople(detail, PLACES), [detail]);
+  const inHeat = peopleInHeat(detail);
+  const pop = detail.cells.pop;
   const causes = useMemo(() => hotTenthCauses(detail, model.hotspot), [detail, model.hotspot]);
   const measures = useMemo(
     () => recommend({ features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }).slice(0, 3),
@@ -152,11 +183,12 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
 
   useEffect(() => {
     let live = true;
-    renderReportMap(model, transect, readTokens(), places.map((p) => p.point)).then((result) => live && setMap(result));
+    const points = [...places, ...crowded].map((p) => p.point);
+    renderReportMap(model, transect, readTokens(), points).then((result) => live && setMap(result));
     return () => {
       live = false;
     };
-  }, [model, transect, places]);
+  }, [model, transect, places, crowded]);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -177,6 +209,8 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
     const site = map?.sites[i] ?? null;
     return site ? siteTitle(site) : (map?.names[i]?.name ?? null);
   };
+  /** The crowded places were named after the hottest ones. */
+  const crowdedName = (i: number) => placeName(places.length + i);
   const isoStep = (model.levels.thresholds[1] ?? 0) - (model.levels.thresholds[0] ?? 0);
   let n = 0;
 
@@ -219,6 +253,12 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           <p className="rp-lead">
             <Phrase spans={hotTenthAnswer(detail, model.facts)} />
           </p>
+          {inHeat && (
+            <p className="rp-people">
+              <span className="rp-people__value">{formatPeople(inHeat.people)}</span> живут на&nbsp;самых горячих участках, это{' '}
+              {formatPercent(inHeat.people / (inHeat.total || 1))} жителей карты.
+            </p>
+          )}
         </Part>
 
         <Part n={++n} title="Ключевые цифры">
@@ -276,6 +316,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
                         {causeLabel(words, p.cause.value)}, {formatDegSigned(p.cause.value)}
                       </p>
                     )}
+                    <PlacePeople people={pop?.[p.cell]} near={facilitiesNear(detail.facilities, p.point, NEAR_M)} />
                     <p className="rp-place__where">{coords(p.point)}</p>
                   </div>
                   <p className="rp-place__t">
@@ -287,6 +328,34 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
             })}
           </ol>
         </Part>
+
+        {inHeat && crowded.length > 0 && (
+          <Part n={++n} title="Где в жаре живёт больше всего людей">
+            <p className="rp-note rp-note--lead">
+              Участки горячей десятой части, где живёт больше всего людей, не&nbsp;ближе 1&nbsp;км друг к&nbsp;другу. Рядом: школы, детские сады и&nbsp;поликлиники
+              до&nbsp;{NEAR_M}&nbsp;м по&nbsp;OpenStreetMap.
+            </p>
+            <ol className="rp-places">
+              {crowded.map((p, i) => (
+                <li key={p.cell} className="rp-place">
+                  <span className="rp-place__rank">{i + 1}</span>
+                  <div className="rp-place__body">
+                    <p className="rp-place__name">{crowdedName(i) ?? (map ? UNNAMED : '…')}</p>
+                    <PlacePeople near={facilitiesNear(detail.facilities, p.point, NEAR_M)} />
+                    <p className="rp-place__where">{coords(p.point)}</p>
+                  </div>
+                  <p className="rp-place__t rp-place__t--people">
+                    <span>~{peopleFigure(p.people)}</span>
+                    <small>
+                      {peopleNoun(p.people, ['житель', 'жителя', 'жителей'])} · {formatDeg(p.lst)}
+                    </small>
+                  </p>
+                </li>
+              ))}
+            </ol>
+            {detail.population && <p className="rp-note">{populationCaveat(detail.population.year)}</p>}
+          </Part>
+        )}
 
         <Part n={++n} title="Что греет горячую десятую часть">
           <p className="rp-note rp-note--lead">
@@ -406,6 +475,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
             <li>Landsat снимает около 11 утра. Вечерний и&nbsp;ночной перегрев здесь не&nbsp;виден.</li>
             <li>Вклад фактора показывает связь в&nbsp;данных, а&nbsp;не&nbsp;эксперимент. Где мало зелени, там обычно плотнее застройка.</li>
             <li>Эффект мер взят из&nbsp;обзоров по&nbsp;другим городам: это ориентир, а&nbsp;не&nbsp;прогноз для участка.</li>
+            {detail.population && <li>{populationCaveat(detail.population.year)} Она показывает, где люди живут, а&nbsp;не&nbsp;где они днём.</li>}
           </ul>
           <p className="rp-sources">{sourcesLine(detail)} Подложка: © OpenStreetMap, OpenFreeMap.</p>
         </Part>

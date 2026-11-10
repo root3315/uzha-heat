@@ -1123,3 +1123,14 @@ summary.rest__summary:hover,
     animation: none !important;
   }
 }
+
+/* ---------- People layer key ---------- */
+.people-key__dot {
+  fill: var(--ink);
+  fill-opacity: 0.34;
+}
+.people-key__note {
+  margin-top: 6px;
+  color: var(--ink-2);
+  font: 400 0.66rem/1.5 var(--font-mono);
+}

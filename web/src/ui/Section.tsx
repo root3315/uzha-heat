@@ -1,10 +1,12 @@
 import { sectionAnswer } from '../domain/answers';
 import { causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
+import { formatNumber } from '../domain/format';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
-import { CauseIcon } from './icons';
+import { formatPeople, hotFacilities, peopleInHeat, populationCaveat } from '../domain/people';
+import { CauseIcon, FacilityIcon } from './icons';
 import { usePatternFill } from './patterns';
 import { Phrase } from './Phrase';
 import { ProfileChart } from './ProfileChart';
@@ -18,6 +20,9 @@ interface SectionProps {
   onDraw(): void;
   onReset(): void;
   onModeChange(mode: MapMode): void;
+  /** People on the map; undefined when the city has no population data. */
+  people?: boolean;
+  onPeopleChange?(on: boolean): void;
   onProbe(sample: Sample | null): void;
   onPick(sample: Sample): void;
   /** While the page is still telling the story, the section is shown but not yet operated. */
@@ -44,8 +49,38 @@ export function CauseKey({ model }: { model: CityModel }) {
   );
 }
 
+/** What the "Люди" layer shows, how many live in the heat, and how sure that number is. */
+export function PeopleKey({ model }: { model: CityModel }) {
+  const { detail } = model;
+  const inHeat = peopleInHeat(detail);
+  const facilities = hotFacilities(detail, model.source.cellAt);
+  if (!inHeat) return null;
+  return (
+    <div className="people-key">
+      <ul className="cause-key" aria-label="Что на карте в слое «Люди»">
+        <li>
+          <svg className="swatch" width="18" height="12" aria-hidden="true">
+            <circle cx="5" cy="6" r="2" className="people-key__dot" />
+            <circle cx="13" cy="6" r="4" className="people-key__dot" />
+          </svg>
+          жители участка
+        </li>
+        <li>
+          <FacilityIcon type="school" size={16} />
+          <FacilityIcon type="kindergarten" size={16} />
+          <FacilityIcon type="clinic" size={16} />
+          школы, сады и поликлиники в горячей десятой части: {formatNumber(facilities.length, 0)}
+        </li>
+      </ul>
+      <p className="people-key__note">
+        На самых горячих участках живут {formatPeople(inHeat.people)}. {detail.population ? populationCaveat(detail.population.year) : ''}
+      </p>
+    </div>
+  );
+}
+
 /** The cross-section under the map: one sentence, a few quiet controls and the profile itself. */
-export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, onProbe, onPick, quiet = false }: SectionProps) {
+export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, people, onPeopleChange, onProbe, onPick, quiet = false }: SectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>(900);
   const { detail } = model;
   return (
@@ -64,9 +99,15 @@ export function Section({ model, profile, isDefault, drawing, mode, onDraw, onRe
           <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={() => onModeChange(mode === 'causes' ? 'temperature' : 'causes')}>
             Причины на карте
           </button>
+          {people !== undefined && onPeopleChange && (
+            <button type="button" className="pill pill--small" aria-pressed={people} onClick={() => onPeopleChange(!people)}>
+              Люди
+            </button>
+          )}
         </div>
       </div>
       {mode === 'causes' && <CauseKey model={model} />}
+      {people && <PeopleKey model={model} />}
       <div ref={ref} className="section__chart">
         <ProfileChart
           profile={profile}

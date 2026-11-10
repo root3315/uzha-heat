@@ -64,6 +64,24 @@ export interface Cells {
   lst: number[];
   values: ColumnsByFeature;
   shap: ColumnsByFeature;
+  /** People living in each cell (WorldPop, modelled); absent in data without the population step. */
+  pop?: number[];
+}
+
+export interface Population {
+  source: string;
+  year: number;
+  total: number;
+}
+
+export type FacilityType = 'school' | 'kindergarten' | 'clinic' | 'hospital';
+
+export interface Facility {
+  /** May be empty: not every school in OSM has a name. */
+  name: string;
+  type: FacilityType;
+  lon: number;
+  lat: number;
 }
 
 export interface PolygonGeometry {
@@ -94,4 +112,6 @@ export interface CityDetail {
   globalImportance: GlobalImportance[];
   cells: Cells;
   districts: District[];
+  population: Population | null;
+  facilities: Facility[];
 }

@@ -1,6 +1,8 @@
 import type { ExpressionSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl';
 import type { CityModel } from '../domain/cityModel';
 import { outsideOf } from '../domain/isotherms';
+import { hotFacilities } from '../domain/people';
+import { facilityImageId } from './facilityImages';
 import { withAlpha, type MapTokens } from './tokens';
 
 export const SOURCE = {
@@ -15,9 +17,19 @@ export const SOURCE = {
   probe: 'probe',
   place: 'place',
   found: 'found',
+  people: 'people',
+  facilities: 'facilities',
 } as const;
 
-export const LAYER = { causes: 'causes', bands: 'bands', isolines: 'isolines', transect: 'transect', transectCasing: 'transect-casing' } as const;
+export const LAYER = {
+  causes: 'causes',
+  bands: 'bands',
+  isolines: 'isolines',
+  transect: 'transect',
+  transectCasing: 'transect-casing',
+  people: 'people',
+  facilities: 'facilities',
+} as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';
@@ -26,6 +38,36 @@ const EMPTY = { type: 'FeatureCollection' as const, features: [] };
 
 /** With causes hatched over it, the temperature recedes to half strength. */
 const CAUSES_DIM = 0.5;
+
+/** Cells with fewer people than this get no dot: a farm house is not a neighbourhood. */
+const MIN_PEOPLE = 5;
+
+/** One dot per cell, its area growing with the people living there; `r` is 0–1 of the most crowded cell. */
+function peopleData(model: CityModel) {
+  const { pop, lon, lat } = model.detail.cells;
+  if (!pop) return EMPTY;
+  const most = pop.reduce((m, p) => Math.max(m, p), 1);
+  return {
+    type: 'FeatureCollection' as const,
+    features: pop.flatMap((p, i) =>
+      p >= MIN_PEOPLE
+        ? [{ type: 'Feature' as const, properties: { r: Math.sqrt(p / most) }, geometry: { type: 'Point' as const, coordinates: [lon[i] ?? 0, lat[i] ?? 0] } }]
+        : [],
+    ),
+  };
+}
+
+/** Schools, kindergartens and clinics on the hottest tenth. */
+function facilityData(model: CityModel) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: hotFacilities(model.detail, model.source.cellAt).map((f) => ({
+      type: 'Feature' as const,
+      properties: { image: facilityImageId(f.type) },
+      geometry: { type: 'Point' as const, coordinates: [f.lon, f.lat] },
+    })),
+  };
+}
 
 export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes'): ExpressionSpecification {
   const scale = mode === 'causes' ? CAUSES_DIM : 1;
@@ -63,6 +105,8 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       [SOURCE.probe]: { type: 'geojson', data: EMPTY },
       [SOURCE.place]: { type: 'geojson', data: EMPTY },
       [SOURCE.found]: { type: 'geojson', data: EMPTY },
+      [SOURCE.people]: { type: 'geojson', data: peopleData(model) },
+      [SOURCE.facilities]: { type: 'geojson', data: facilityData(model) },
     },
     layers: [
       { id: 'ground', type: 'background', paint: { 'background-color': tokens.ground } },
@@ -85,6 +129,18 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         layout: { 'line-join': 'round', visibility: 'none' },
         source: SOURCE.isolines,
         paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
+      },
+      // People as quiet ink dots, never as colour: colour stays temperature.
+      {
+        id: LAYER.people,
+        type: 'circle',
+        source: SOURCE.people,
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-color': tokens.ink,
+          'circle-opacity': 0.34,
+          'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 10, ['+', 0.5, ['*', ['get', 'r'], 1]], 15, ['+', 1, ['*', ['get', 'r'], 24]]],
+        },
       },
       // Inside the city but without a satellite reading: a flat shade, so a gap never reads as a temperature.
       { id: 'outside-data', type: 'fill', source: SOURCE.outsideData, paint: { 'fill-color': tokens.shade } },
@@ -109,6 +165,12 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         paint: { 'line-color': withAlpha(tokens.ink, 0.2), 'line-width': 0.6, 'line-dasharray': [3, 2] },
       },
       { id: 'outline', type: 'line', source: SOURCE.outline, paint: { 'line-color': tokens.ink, 'line-width': 1, 'line-opacity': 0.65 } },
+      {
+        id: LAYER.facilities,
+        type: 'symbol',
+        source: SOURCE.facilities,
+        layout: { visibility: 'none', 'icon-image': ['get', 'image'], 'icon-allow-overlap': true, 'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.7, 14, 1] },
+      },
       {
         id: LAYER.transectCasing,
         type: 'line',

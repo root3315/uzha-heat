@@ -4,6 +4,7 @@ import { genitive, hotTenthAnswer, plainText, sectionAnswer } from '../../domain
 import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned, formatNumber, plural } from '../../domain/format';
 import type { HeatIsland } from '../../domain/heatIsland';
+import { formatPeople, peopleFigure, peopleInHeat } from '../../domain/people';
 import { findMessage, huntCell, leadingFactor, registerFind, type HuntCandidate, type HuntTarget } from '../../domain/hunt';
 import { recommend } from '../../domain/recommendations';
 import { sampleTransect, type LonLat } from '../../domain/transect';
@@ -204,6 +205,7 @@ function CityCard({ city }: { city: CitySummary }) {
   const model = state.status === 'ready' ? state.data : null;
   const detail = model?.detail;
   const failed = state.status === 'error';
+  const inHeat = detail ? peopleInHeat(detail) : null;
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
@@ -227,6 +229,12 @@ function CityCard({ city }: { city: CitySummary }) {
           <dt>горячая десятая часть</dt>
           <dd>{detail ? `от ${formatDeg(detail.stats.lstP90)}` : '…'}</dd>
         </div>
+        {inHeat && (
+          <div>
+            <dt>живут на самых горячих участках</dt>
+            <dd>{peopleFigure(inHeat.people)}</dd>
+          </div>
+        )}
       </dl>
       <p className="tag town__meta">
         {detail
@@ -290,6 +298,12 @@ function Closing({ model }: { model: CityModel }) {
           Модель {fit.type} предсказывает температуру по&nbsp;факторам, проверяем её на&nbsp;кусках города, которых она не&nbsp;видела. Вклад фактора в&nbsp;градусах
           считает SHAP: это связь в&nbsp;данных, а&nbsp;не&nbsp;эксперимент. Остров тепла: медиана участков внутри черты города минус медиана кольца вокруг.
         </p>
+        {detail.population && (
+          <p>
+            Жителей участка берём из&nbsp;WorldPop {detail.population.year}: это модель, которая раскладывает перепись по&nbsp;застройке на&nbsp;снимках, а&nbsp;не&nbsp;подсчёт
+            людей. Школы, детские сады и&nbsp;поликлиники взяты из&nbsp;OpenStreetMap.
+          </p>
+        )}
         <p className="close__data">
           [{detail.city.nameEn.toLowerCase()}] {period.lstScenes} сцен Landsat · {period.s2Scenes} сцен Sentinel-2 · {formatNumber(grid.count, 0)} участков · R²{' '}
           {formatNumber(fit.r2Cv, 2)} · MAE {formatDeg(fit.maeCv)}
@@ -318,7 +332,7 @@ function Closing({ model }: { model: CityModel }) {
           </li>
         </ul>
         <p className="close__credit">
-          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
+          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, население WorldPop, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
         </p>
       </div>
     </footer>
@@ -329,6 +343,7 @@ function Closing({ model }: { model: CityModel }) {
 export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
   const { detail, island } = model;
   const name = genitive(detail.city.name);
+  const inHeat = peopleInHeat(detail);
   return (
     <main>
       <section className="hero" id="top">
@@ -341,6 +356,12 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
               : `Поверхность в черте ${name} горячее, чем в кольце вокруг: медианы участков 200 м, лето ${detail.period.label}.`}{' '}
             <span className="hero__note">Это температура поверхности по&nbsp;снимкам около 11 утра, не&nbsp;воздуха.</span>
           </p>
+          {inHeat && (
+            <p className="hero__people">
+              <b>{formatPeople(inHeat.people)}</b> живут на&nbsp;самых горячих участках {name}, в&nbsp;его горячей десятой части.{' '}
+              <span className="hero__note">По&nbsp;оценке WorldPop {detail.population?.year}: это модель, а&nbsp;не&nbsp;перепись.</span>
+            </p>
+          )}
         </div>
       </section>
 
