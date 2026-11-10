@@ -18,6 +18,10 @@ const SHAPES: Record<string, Shape[]> = {
   built: [{ path: 'M3.5 20.5V11h5.5v9.5M9 20.5V5.5h6v15M15 20.5v-7.5h5.5v7.5M2 20.5h20' }],
   // здания: one building with windows
   buildings: [{ path: 'M6 20.5V3.5h12v17M3.5 20.5h17M9.5 7.5h1M13.5 7.5h1M9.5 11h1M13.5 11h1M9.5 14.5h1M13.5 14.5h1M11 20.5v-3h2v3' }],
+  // высота зданий: a tower beside a low house, with a height mark
+  height: [{ path: 'M9 20.5V3.5h6v17M3.5 20.5v-6h5.5M2 20.5h20M19 3.5v17M17.8 4.7 19 3.5l1.2 1.2M17.8 19.3l1.2 1.2 1.2-1.2' }],
+  // объём застройки: a solid block seen from above and the side
+  volume: [{ path: 'M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z' }, { path: 'M4 7.5 12 12l8-4.5M12 12v9' }],
   // дороги: a road going away, with its centre line
   roads: [{ path: 'M8.5 3.5 4 20.5M15.5 3.5l4.5 17M12 4v2.5M12 10v3M12 17v3.5' }],
   // голая земля: the ground line and loose soil under it

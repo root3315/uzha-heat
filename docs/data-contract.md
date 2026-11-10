@@ -70,6 +70,7 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 - `shap[key][i]` is in °C: contribution of factor `key` to the cell's temperature relative to
   `model.baseValue`. Positive = this factor heats the cell, negative = cools it.
 - `globalImportance` is sorted by `meanAbsShap` desc. `correlation` = Pearson(feature, lst).
+- `height` is metres (not rounded to 10 m like distances); `volume` is m³ of buildings per hectare.
 - Area-share factors (`tree`, `built`, `bare`) are percent of the cell area, 0–100 (not 0–1 fractions).
 - `districts` is optional (may be absent or empty).
 - `cells.pop` is optional: people living in the cell, whole numbers, from the WorldPop 100 m
@@ -101,5 +102,7 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 | `albedo` | Отражающая способность | albedo 0–1 | Sentinel-2, Liang (2001) broadband |
 | `roads` | Плотность дорог | км/км² | OpenStreetMap highways |
 | `buildings` | Плотность зданий | шт/га | OpenStreetMap buildings |
+| `height` | Высота зданий | м | mean building height in the cell: OSM `height`, else `building:levels` × 3 m; buildings without either, and cells without OSM buildings, take GHSL Built-H 2018 (ANBH) weighted by built-up share; 0 where nothing is built |
+| `volume` | Объём застройки | м³/га | GHSL Built-S 2020 built-up share of the cell × `height` × 10 000 m²/ha |
 | `water_dist` | Удалённость от воды | м | ESA WorldCover class 80 + OSM water |
 | `elevation` | Высота | м | Copernicus DEM GLO-30 |

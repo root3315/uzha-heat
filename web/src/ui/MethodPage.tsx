@@ -12,6 +12,8 @@ const SOURCE_OF: Record<string, string> = {
   water_dist: 'ESA WorldCover и OpenStreetMap',
   roads: 'OpenStreetMap',
   buildings: 'OpenStreetMap',
+  height: 'OpenStreetMap и GHSL Built-H 2018',
+  volume: 'GHSL Built-S 2020 и Built-H 2018',
   elevation: 'Copernicus DEM GLO-30',
 };
 

@@ -249,6 +249,8 @@ const SOURCE_BY_KEY: Record<string, string> = {
   water_dist: 'ESA WorldCover',
   roads: 'OpenStreetMap',
   buildings: 'OpenStreetMap',
+  height: 'GHSL',
+  volume: 'GHSL',
   elevation: 'Copernicus DEM',
 };
 

@@ -94,6 +94,26 @@ const WORDS: Record<string, CauseWords> = {
     better: 'down',
     measure: (v) => `${formatNumber(v, 1)} зданий на га`,
   },
+  height: {
+    heats: 'высокая застройка',
+    cools: 'тень высоких домов',
+    heatsShort: 'высокие дома',
+    coolsShort: 'тень домов',
+    there: 'высокие дома',
+    better: null,
+    explain:
+      'Высокие дома и греют, и затеняют: днём их тень остужает двор и улицу, а стены и крыши копят тепло. Что перевешивает, зависит от квартала, поэтому высоту читаем вместе с объёмом застройки.',
+    measure: (v) => `дома в среднем ${formatNumber(v, 0)}${NBSP}м высотой`,
+  },
+  volume: {
+    heats: 'плотная масса домов',
+    cools: 'просторная застройка',
+    heatsShort: 'плотная застройка',
+    coolsShort: 'просторно',
+    there: 'плотная масса домов',
+    better: 'down',
+    measure: (v) => `${formatNumber(Math.round(v / 100) * 100, 0)}${NBSP}м³ зданий на га`,
+  },
   water_dist: {
     heats: 'удалённость от воды',
     cools: 'близость воды',

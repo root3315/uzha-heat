@@ -50,8 +50,11 @@ export function formatFactorValue(feature: Pick<FeatureMeta, 'unit'>, value: num
   const unit = feature.unit;
   if (unit.includes('%')) return `${formatNumber(value, 0)}${NBSP}%`;
   if (unit === 'м') {
-    return value >= 1000 ? `${formatNumber(value / 1000, 1)}${NBSP}км` : `${formatNumber(Math.round(value / 10) * 10, 0)}${NBSP}м`;
+    if (value >= 1000) return `${formatNumber(value / 1000, 1)}${NBSP}км`;
+    // Building heights are a few metres, distances to water hundreds: round each to what it can say.
+    return value >= 100 ? `${formatNumber(Math.round(value / 10) * 10, 0)}${NBSP}м` : `${formatNumber(value, 0)}${NBSP}м`;
   }
+  if (unit === 'м³/га') return `${formatNumber(Math.round(value / 100) * 100, 0)}${NBSP}м³/га`;
   if (unit.includes('NDVI') || unit.includes('0–1') || unit.includes('albedo')) return formatNumber(value, 2);
   if (unit.includes('км/км²') || unit.includes('шт/га')) return `${formatNumber(value, 1)}${NBSP}${unit}`;
   return `${formatNumber(value, Math.abs(value) >= 100 ? 0 : 2)}${NBSP}${unit}`;

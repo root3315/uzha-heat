@@ -306,7 +306,7 @@ function Closing({ model }: { model: CityModel }) {
         <p>
           Город режем на&nbsp;участки {grid.cellSizeM} на&nbsp;{grid.cellSizeM}&nbsp;м. Для каждого берём температуру поверхности со&nbsp;спутников NASA/USGS Landsat 8
           и&nbsp;9: медиана безоблачных снимков за&nbsp;{period.label}. Рядом {detail.features.length} факторов: зелень и&nbsp;альбедо по&nbsp;Sentinel-2, застройка
-          и&nbsp;грунт по&nbsp;ESA WorldCover, дороги и&nbsp;вода по&nbsp;OpenStreetMap, высота по&nbsp;Copernicus DEM.
+          и&nbsp;грунт по&nbsp;ESA WorldCover, дороги и&nbsp;вода по&nbsp;OpenStreetMap, высота и&nbsp;объём зданий по&nbsp;OpenStreetMap и&nbsp;GHSL, рельеф по&nbsp;Copernicus DEM.
         </p>
         <p>
           Модель {fit.type} предсказывает температуру по&nbsp;факторам, проверяем её на&nbsp;кусках города, которых она не&nbsp;видела. Вклад фактора в&nbsp;градусах
@@ -346,7 +346,7 @@ function Closing({ model }: { model: CityModel }) {
           </li>
         </ul>
         <p className="close__credit">
-          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, население WorldPop, погода ERA5 (Copernicus) via Open-Meteo, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
+          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, здания GHSL (JRC), население WorldPop, погода ERA5 (Copernicus) через Open-Meteo, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
         </p>
       </div>
     </footer>
