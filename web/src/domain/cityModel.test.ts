@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { boundaryGeometry } from '../data/load';
+import { boundaryGeometry } from '../data/boundary';
 import { parseCityDetail } from '../data/parse';
 import { assembleCityModel, buildCityModel, citySurface } from './cityModel';
 
