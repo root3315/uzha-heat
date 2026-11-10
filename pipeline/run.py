@@ -5,6 +5,7 @@ Usage (from the project root):
     python -m pipeline.run --all
     python -m pipeline.run --city tashkent --only population   # enrich an existing <id>.json
     python -m pipeline.run --city tashkent --only weather
+    python -m pipeline.run --all --only energy                 # needs weather at the overpass
 """
 import argparse
 import logging
@@ -12,7 +13,7 @@ from pathlib import Path
 
 import shapely
 
-from .uzha import boundary, export, features, model, population, weather
+from .uzha import boundary, energy, export, features, model, population, weather
 from .uzha.cache import Cache
 from .uzha.cities import CITIES, City, get_city
 from .uzha.grid import Grid, half_size_deg
@@ -61,6 +62,8 @@ def process_city(city: City, out_dir: Path) -> dict:
     )
     population.enrich(document, CACHE_ROOT)
     weather.enrich(document, CACHE_ROOT)  # adds city.weather, so the cities.json entry gets it too
+    if "overpass" in document["city"].get("weather", {}):
+        energy.enrich(document)
     export.write_json(out_dir / f"{city.id}.json", document)
     export.update_cities_index(out_dir / "cities.json", entry, list(CITIES))
     _log_summary(city, table, fitted, importance, stats, document)
@@ -115,13 +118,20 @@ def _log_weather(document: dict) -> None:
         log.info("%s: at Landsat overpasses %s", city["id"], city["weather"]["overpass"])
 
 
+def _log_energy(document: dict) -> None:
+    info = document["energy"]
+    log.info("%s: energy at %02d:00, S↓ %d W/m², L↓ %d W/m², anchors %.1f / %.1f °C, means %s",
+             document["city"]["id"], info["localHour"], info["solarWm2"], info["longwaveDownWm2"],
+             info["hotAnchorC"], info["coldAnchorC"], info["mean"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--city", choices=list(CITIES))
     target.add_argument("--all", action="store_true")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--only", choices=["population", "weather"],
+    parser.add_argument("--only", choices=["population", "weather", "energy"],
                         help="run one light step over the existing <id>.json instead of the whole pipeline")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -134,6 +144,8 @@ def main() -> None:
                 _log_population(population.enrich_file(args.out / f"{city_id}.json", CACHE_ROOT))
             elif args.only == "weather":
                 _log_weather(weather.enrich_file(args.out / f"{city_id}.json", CACHE_ROOT))
+            elif args.only == "energy":
+                _log_energy(energy.enrich_file(args.out / f"{city_id}.json"))
             else:
                 process_city(get_city(city_id), args.out)
         except Exception:
