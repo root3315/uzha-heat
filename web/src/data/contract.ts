@@ -3,6 +3,37 @@
 export type LonLat = [number, number];
 export type BBox = [number, number, number, number];
 
+/** Summer means at one ERA5 point near the city centre: m/s, %, kWh/m² a day, %, °C. */
+export interface SummerWeather {
+  windMs: number;
+  humidityPct: number;
+  solarKwhM2: number;
+  cloudPct: number;
+  airMeanC: number;
+  /** Mean of the daily maxima. */
+  airMaxC: number;
+}
+
+/** The same at the hours of the Landsat overpasses; solar radiation is the hourly mean, W/m². */
+export interface OverpassWeather {
+  days: number;
+  localHour: number;
+  windMs: number;
+  humidityPct: number;
+  solarWm2: number;
+  cloudPct: number;
+  airC: number;
+}
+
+/** Weather context for comparing cities: ERA5 is ~25 km, so it is not a factor inside a city. */
+export interface Weather {
+  source: string;
+  period: string;
+  point: LonLat;
+  summer: SummerWeather;
+  overpass?: OverpassWeather;
+}
+
 export interface CitySummary {
   id: string;
   name: string;
@@ -13,6 +44,7 @@ export interface CitySummary {
   photo?: { url: string; credit: string };
   lstMean: number;
   r2: number;
+  weather?: Weather;
 }
 
 export interface FeatureMeta {
