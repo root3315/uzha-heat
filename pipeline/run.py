@@ -3,6 +3,7 @@
 Usage (from the project root):
     python -m pipeline.run --city tashkent
     python -m pipeline.run --all
+    python -m pipeline.run --city tashkent --only population   # enrich an existing <id>.json
 """
 import argparse
 import logging
@@ -10,7 +11,7 @@ from pathlib import Path
 
 import shapely
 
-from .uzha import boundary, export, features, model
+from .uzha import boundary, export, features, model, population
 from .uzha.cache import Cache
 from .uzha.cities import CITIES, City, get_city
 from .uzha.grid import Grid, half_size_deg
@@ -57,6 +58,7 @@ def process_city(city: City, out_dir: Path) -> dict:
                                  {key: fitted.shap[key] for key in table.factors}),
         districts=_districts(city, grid, cells, fitted.shap, cache),
     )
+    population.enrich(document, CACHE_ROOT)
     export.write_json(out_dir / f"{city.id}.json", document)
     export.update_cities_index(out_dir / "cities.json", entry, list(CITIES))
     _log_summary(city, table, fitted, importance, stats, document)
@@ -94,12 +96,22 @@ def _log_summary(city, table, fitted, importance, stats, document) -> None:
     log.info("%s: %d districts", city.id, len(document.get("districts", [])))
 
 
+def _log_population(document: dict) -> None:
+    city_id = document["city"]["id"]
+    if "population" in document:
+        log.info("%s: %d people in %d cells", city_id, document["population"]["total"], len(document["cells"]["pop"]))
+    kinds = [f["type"] for f in document.get("facilities", [])]
+    log.info("%s: facilities %s", city_id, {kind: kinds.count(kind) for kind in sorted(set(kinds))})
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--city", choices=list(CITIES))
     target.add_argument("--all", action="store_true")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--only", choices=["population"],
+                        help="run one light step over the existing <id>.json instead of the whole pipeline")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -107,7 +119,10 @@ def main() -> None:
     failed = []
     for city_id in city_ids:
         try:
-            process_city(get_city(city_id), args.out)
+            if args.only == "population":
+                _log_population(population.enrich_file(args.out / f"{city_id}.json", CACHE_ROOT))
+            else:
+                process_city(get_city(city_id), args.out)
         except Exception:
             log.exception("%s failed", city_id)
             failed.append(city_id)

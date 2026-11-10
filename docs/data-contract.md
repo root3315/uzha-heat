@@ -41,8 +41,13 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
     "lat": [41.20],
     "lst": [45.1],
     "values": { "ndvi": [0.12] },
-    "shap":   { "ndvi": [1.3] }
+    "shap":   { "ndvi": [1.3] },
+    "pop": [412]
   },
+  "population": { "source": "WorldPop 2025, 100 м, constrained, R2025A", "year": 2025, "total": 2633011 },
+  "facilities": [
+    { "name": "Школа № 110", "type": "school", "lon": 69.24051, "lat": 41.31112 }
+  ],
   "districts": [
     { "name": "Юнусабадский район", "geometry": { "type": "Polygon", "coordinates": [] },
       "lstMean": 43.0, "cellCount": 900, "shapMean": { "ndvi": 0.4 } }
@@ -60,6 +65,12 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 - `globalImportance` is sorted by `meanAbsShap` desc. `correlation` = Pearson(feature, lst).
 - Area-share factors (`tree`, `built`, `bare`) are percent of the cell area, 0–100 (not 0–1 fractions).
 - `districts` is optional (may be absent or empty).
+- `cells.pop` is optional: people living in the cell, whole numbers, from the WorldPop 100 m
+  population grid (a modelled estimate, not a census). When present, `population` is present too,
+  with `total` = sum of `cells.pop`.
+- `facilities` is optional: schools, kindergartens, clinics and hospitals from OpenStreetMap
+  (`amenity` = `school` | `kindergarten` | `clinic` | `hospital`) that fall into one of the cells.
+  `name` may be an empty string. Coordinates have 5 decimals.
 - `features` lists only the factors actually present; the web app must iterate it and never hardcode
   which keys exist.
 
