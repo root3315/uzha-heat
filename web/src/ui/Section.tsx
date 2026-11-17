@@ -1,7 +1,7 @@
 import { sectionAnswer } from '../domain/answers';
 import { causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
-import { formatNumber } from '../domain/format';
+import { formatDeg, formatNumber } from '../domain/format';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
@@ -52,8 +52,8 @@ export function CauseKey({ model }: { model: CityModel }) {
 /** What the "Люди" layer shows, how many live in the heat, and how sure that number is. */
 export function PeopleKey({ model }: { model: CityModel }) {
   const { detail } = model;
-  const inHeat = peopleInHeat(detail);
-  const facilities = hotFacilities(detail, model.source.cellAt);
+  const inHeat = peopleInHeat(detail, model.inside);
+  const facilities = hotFacilities(detail, model.source.cellAt).filter((f) => model.inside[model.source.cellAt([f.lon, f.lat])]);
   if (!inHeat) return null;
   return (
     <div className="people-key">
@@ -69,11 +69,11 @@ export function PeopleKey({ model }: { model: CityModel }) {
           <FacilityIcon type="school" size={16} />
           <FacilityIcon type="kindergarten" size={16} />
           <FacilityIcon type="clinic" size={16} />
-          школы, сады и поликлиники в горячей десятой части: {formatNumber(facilities.length, 0)}
+          школы, сады и поликлиники на самых горячих участках в черте города: {formatNumber(facilities.length, 0)}
         </li>
       </ul>
       <p className="people-key__note">
-        На самых горячих участках живут {formatPeople(inHeat.people)}. {detail.population ? populationCaveat(detail.population.year) : ''}
+        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {detail.population ? populationCaveat(detail.population.year) : ''}
       </p>
     </div>
   );

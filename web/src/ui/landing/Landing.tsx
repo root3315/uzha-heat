@@ -107,9 +107,9 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
         >
           <div className="hunt-chip" aria-live="polite">
             <p>
-              горячих найдено <b>{formatNumber(hunt.found.size, 0)}</b>&nbsp;/&nbsp;{formatNumber(hunt.target.total, 0)}
+              найдено горячих участков <b>{formatNumber(hunt.found.size, 0)}</b> из&nbsp;{formatNumber(hunt.target.total, 0)}
             </p>
-            <p className="hunt-chip__log">{said ?? `горячий: от ${formatDeg(hunt.target.threshold)}, нажмите на такой`}</p>
+            <p className="hunt-chip__log">{said ?? `найдите участок от ${formatDeg(hunt.target.threshold)}: он горячее 90 % города`}</p>
           </div>
         </CityMap>
       </div>
@@ -221,7 +221,7 @@ function CityCard({ city }: { city: CitySummary }) {
   const model = state.status === 'ready' ? state.data : null;
   const detail = model?.detail;
   const failed = state.status === 'error';
-  const inHeat = detail ? peopleInHeat(detail) : null;
+  const inHeat = model ? peopleInHeat(model.detail, model.inside) : null;
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
@@ -248,7 +248,7 @@ function CityCard({ city }: { city: CitySummary }) {
         </div>
         {inHeat && (
           <div>
-            <dt>живут на самых горячих участках</dt>
+            <dt>живут на самых горячих участках в черте</dt>
             <dd>{peopleFigure(inHeat.people)}</dd>
           </div>
         )}
@@ -270,7 +270,7 @@ function TownsWeather({ cities }: { cities: CitySummary[] }) {
   if (cities.filter((c) => c.weather).length < 2) return null;
   return (
     <div className="towns__weather" aria-labelledby="towns-weather-title">
-      <h3 id="towns-weather-title">Погода этим летом</h3>
+      <h3 id="towns-weather-title">Погода летом</h3>
       <WeatherCompare cities={cities} currentId={null} />
     </div>
   );
@@ -286,7 +286,7 @@ function Actions({ model }: { model: CityModel }) {
         <h2 id="acts-title">Что делать</h2>
         <p>
           Для горячей десятой части {genitive(detail.city.name)}. Число слева: сколько градусов поверхности эта причина даёт там по&nbsp;модели. Сколько снимет мера,
-          известно из&nbsp;обзоров по&nbsp;другим городам, ссылка у&nbsp;каждой.
+          известно из&nbsp;обзоров по&nbsp;другим городам, ссылка у&nbsp;каждой. Причина здесь значит связь, которую нашла модель, а&nbsp;не&nbsp;результат эксперимента.
         </p>
       </div>
       <ol className="acts__list">
@@ -371,7 +371,7 @@ function Closing({ model }: { model: CityModel }) {
 export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
   const { detail, island } = model;
   const name = genitive(detail.city.name);
-  const inHeat = peopleInHeat(detail);
+  const inHeat = peopleInHeat(detail, model.inside);
   return (
     <main>
       <section className="hero" id="top">
@@ -381,12 +381,12 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
           <p className="hero__caption">
             {island && island.intensity < 0
               ? `Поверхность в черте ${name} прохладнее, чем вокруг: голая земля за чертой нагревается сильнее.`
-              : `Поверхность в черте ${name} горячее, чем в кольце вокруг: медианы участков 200 м, лето ${detail.period.label}.`}{' '}
-            <span className="hero__note">Это температура поверхности по&nbsp;снимкам около 11 утра, не&nbsp;воздуха.</span>
+              : `Поверхность в черте ${name} горячее, чем в кольце вокруг: медианы участков 200 м, ${detail.period.label}.`}{' '}
+            <span className="hero__note">Это температура поверхности по&nbsp;снимкам Landsat 8/9 (NASA/USGS) около 11 утра, не&nbsp;воздуха.</span>
           </p>
           {inHeat && (
             <p className="hero__people">
-              <b>{formatPeople(inHeat.people)}</b> живут на&nbsp;самых горячих участках {name}, в&nbsp;его горячей десятой части.{' '}
+              <b>{formatPeople(inHeat.people)}</b> живут в&nbsp;черте {name} на&nbsp;самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}.{' '}
               <span className="hero__note">По&nbsp;оценке WorldPop {detail.population?.year}: это модель, а&nbsp;не&nbsp;перепись.</span>
             </p>
           )}
