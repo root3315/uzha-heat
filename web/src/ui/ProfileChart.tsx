@@ -2,7 +2,7 @@ import { useId, useMemo, useState, type MouseEvent, type PointerEvent } from 're
 import { causeLabel, causeWords } from '../domain/causes';
 import { formatDeg, formatDegSigned, formatNumber } from '../domain/format';
 import { classOf, type IsothermLevels } from '../domain/isotherms';
-import { sampleAt, type Profile, type Sample } from '../domain/transect';
+import { runsOf, sampleAt, type Profile, type Sample } from '../domain/transect';
 import type { FeatureMeta } from '../data/contract';
 import { CauseGlyph } from './icons';
 import { usePatternFill } from './patterns';
@@ -21,15 +21,19 @@ interface ProfileChartProps {
 }
 
 const M = { top: 22, right: 14, bottom: 22, left: 34 };
-const RIBBON_H = 20;
-const RIBBON_GAP = 6;
-const LABEL_PAD = 4;
+const RIBBON_H = 24;
+const RIBBON_GAP = 8;
+const LABEL_PAD = 6;
 /** The cause icon in a ribbon label, px, and the gap after it. */
-const ICON = 12;
-const ICON_GAP = 3;
-/** Martian Mono at the label size is wide: about 0.7 em per character. */
-const CHAR_W = 7.4;
+const ICON = 13;
+const ICON_GAP = 4;
+/** Martian Mono at 11 px is wide: about 0.76 em per character. */
+const CHAR_W = 8.4;
 const MIN_TICK_GAP_PX = 52;
+/** Temperature labels closer than this, px, would touch: every other one is dropped. */
+const MIN_LEVEL_GAP_PX = 15;
+/** Room left between a ribbon label and the next boundary, px. */
+const LABEL_GAP_PX = 6;
 
 export function ProfileChart({ profile, levels, cityMean, features, width, height, onProbe, onPick }: ProfileChartProps) {
   const fill = usePatternFill();
@@ -71,7 +75,20 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   };
 
   const step = profile.samples.length > 1 ? x(profile.samples[1]?.d ?? 0) - x(0) : 1;
+  // One rect per stretch of a temperature class, so the fill has no seams between samples.
+  const classRuns = runsOf(
+    profile.samples.map((s) => s.d),
+    profile.samples.map((s) => (s.inside ? String(classOf(levels, s.t)) : null)),
+  ).filter((run) => run.tag !== null);
   const gridLevels = levels.thresholds.filter((t) => t > lo && t < hi);
+  const levelGap = levels.thresholds.length > 1 ? y(levels.thresholds[0] ?? 0) - y(levels.thresholds[1] ?? 0) : Infinity;
+  // Labels too close to read keep to the major levels, then every n-th of them; the grid lines all stay.
+  const stride = Math.ceil(MIN_LEVEL_GAP_PX / Math.max(levelGap, 1e-6));
+  const labelled = new Set(
+    stride <= 1 ? levels.thresholds : levels.major.filter((_, i) => i % Math.max(1, Math.ceil(stride / 2)) === 0),
+  );
+  // A boundary mark at each end of every segment, except where the ribbon itself starts or ends.
+  const edges = [...new Set(profile.segments.flatMap((s) => [s.d0, s.d1]))].filter((d) => d > 0 && d < profile.length);
   const kmStep = [1, 2, 5, 10].find((k) => x(k * 1000) - x(0) >= MIN_TICK_GAP_PX) ?? 20;
   const kmTicks = Array.from({ length: Math.floor(length / (kmStep * 1000)) }, (_, i) => (i + 1) * kmStep * 1000).filter(
     (d) => x(length) - x(d) > MIN_TICK_GAP_PX / 2,
@@ -114,16 +131,26 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
         {gridLevels.map((t) => (
           <g key={t}>
             <line x1={M.left} x2={width - M.right} y1={y(t)} y2={y(t)} />
-            <text x={M.left - 6} y={y(t) + 4} textAnchor="end">
-              {formatDeg(t, 0)}
-            </text>
+            {labelled.has(t) && (
+              <text x={M.left - 6} y={y(t) + 4} textAnchor="end">
+                {formatDeg(t, 0)}
+              </text>
+            )}
           </g>
         ))}
       </g>
 
       <g clipPath={`url(#${clipId})`}>
-        {inside.map((s) => (
-          <rect key={s.d} x={x(s.d) - step / 2} width={step + 0.6} y={M.top} height={plotBottom - M.top} style={{ fill: `var(--t${classOf(levels, s.t)})`, fillOpacity: `var(--o${classOf(levels, s.t)})` }} />
+        {classRuns.map((run) => (
+          <rect
+            key={run.d0}
+            x={x(run.d0) - step / 2}
+            width={x(run.d1) - x(run.d0) + (run.d1 === profile.length ? step : 0)}
+            y={M.top}
+            height={plotBottom - M.top}
+            shapeRendering="crispEdges"
+            style={{ fill: `var(--t${run.tag})`, fillOpacity: `var(--o${run.tag})` }}
+          />
         ))}
       </g>
 
@@ -136,40 +163,36 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
       <path className="profile__curve" d={curve(false)} />
 
       <g className="profile__ribbon">
+        {profile.segments.map((segment) => (
+          <rect
+            key={`${segment.key}-${segment.d0}`}
+            x={x(segment.d0)}
+            y={ribbonY}
+            width={Math.max(1, x(segment.d1) - x(segment.d0))}
+            height={RIBBON_H}
+            className="profile__segment"
+            style={{ fill: fill(segment.key, segment.heats ? 'heats' : 'cools') }}
+          />
+        ))}
+        {edges.map((d) => (
+          <line key={`edge-${d}`} className="profile__edge" x1={x(d)} x2={x(d)} y1={ribbonY - 3} y2={ribbonY + RIBBON_H} />
+        ))}
         {profile.segments.map((segment) => {
           const x0 = x(segment.d0);
-          const x1 = x(segment.d1);
           const words = wordsOf(segment.key);
           const label = segment.heats ? words.heatsShort : words.coolsShort;
           const labelW = ICON + ICON_GAP + label.length * CHAR_W + LABEL_PAD * 2;
+          if (x(segment.d1) - x0 < labelW + LABEL_GAP_PX) return null;
+          const cool = segment.heats ? '' : ' is-cool';
           return (
-            <g key={`${segment.key}-${segment.d0}`}>
-              <rect
-                x={x0}
-                y={ribbonY}
-                width={Math.max(1, x1 - x0 - 1)}
-                height={RIBBON_H}
-                style={{ fill: fill(segment.key, segment.heats ? 'heats' : 'cools') }}
-              />
-              {x1 - x0 > labelW + 6 && (
-                <g>
-                  <rect className="profile__label-bg" x={x0 + 3} y={ribbonY + 3} width={labelW} height={RIBBON_H - 6} />
-                  <svg
-                    className={segment.heats ? 'profile__icon' : 'profile__icon is-cool'}
-                    x={x0 + 3 + LABEL_PAD - 1}
-                    y={ribbonY + (RIBBON_H - ICON) / 2}
-                    width={ICON}
-                    height={ICON}
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <CauseGlyph cause={segment.key} />
-                  </svg>
-                  <text className={segment.heats ? 'profile__label' : 'profile__label is-cool'} x={x0 + 3 + LABEL_PAD + ICON + ICON_GAP} y={ribbonY + RIBBON_H / 2 + 4}>
-                    {label}
-                  </text>
-                </g>
-              )}
+            <g key={`label-${segment.d0}`}>
+              <rect className="profile__label-bg" x={x0 + LABEL_PAD - 3} y={ribbonY + 4} width={labelW - LABEL_PAD * 2 + 6} height={RIBBON_H - 8} rx={2} />
+              <svg className={`profile__icon${cool}`} x={x0 + LABEL_PAD} y={ribbonY + (RIBBON_H - ICON) / 2} width={ICON} height={ICON} viewBox="0 0 24 24" aria-hidden="true">
+                <CauseGlyph cause={segment.key} />
+              </svg>
+              <text className={`profile__label${cool}`} x={x0 + LABEL_PAD + ICON + ICON_GAP} y={ribbonY + RIBBON_H / 2 + 3.5}>
+                {label}
+              </text>
             </g>
           );
         })}
