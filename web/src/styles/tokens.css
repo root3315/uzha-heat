@@ -56,6 +56,8 @@
   /* Hatching for causes: ink when a factor heats, the cool ink when it cools. */
   --hatch-heats: var(--ink);
   --hatch-cools: var(--cool);
+  /* Under heating hatches in every SVG (profile, panel bars, swatches, report), not on the map: a bar of hatching reads as one shape. */
+  --hatch-ground: var(--paper-2);
 
   --font-display: 'Tektur Variable', 'Arial Narrow', sans-serif;
   --font-body: 'Onest Variable', 'Segoe UI', sans-serif;
