@@ -3,22 +3,29 @@ import { formatNumber, plural } from './format';
 import { distanceM } from './placeName';
 import { hottestTenth } from './places';
 
-/** How many people live in the hottest tenth of the city, out of everyone on the map. */
+/** How many people inside the city outline live in its hottest tenth, out of everyone inside the outline. */
 export interface PeopleInHeat {
   people: number;
   total: number;
-  /** Cells in the hottest tenth. */
+  /** Cells of the hottest tenth inside the outline. */
   cells: number;
 }
 
 const sumAt = (values: readonly number[], members: readonly number[]) => members.reduce((s, i) => s + (values[i] ?? 0), 0);
 
-/** People living on the cells at or above the hottest-tenth threshold; null when the data has no population. */
-export function peopleInHeat(detail: CityDetail): PeopleInHeat | null {
+/** Cells of the hottest tenth that lie inside the city outline: the ring around the city is not its people. */
+const hotInside = (detail: CityDetail, inside: readonly boolean[]) => hottestTenth(detail).filter((i) => inside[i]);
+
+/**
+ * People inside the city outline living on cells at or above the hottest-tenth threshold, out of everyone inside it;
+ * null when the data has no population.
+ */
+export function peopleInHeat(detail: CityDetail, inside: readonly boolean[]): PeopleInHeat | null {
   const { pop } = detail.cells;
   if (!pop) return null;
-  const members = hottestTenth(detail);
-  return { people: sumAt(pop, members), total: sumAt(pop, pop.map((_, i) => i)), cells: members.length };
+  const members = hotInside(detail, inside);
+  const total = pop.reduce((sum, p, i) => (inside[i] ? sum + p : sum), 0);
+  return { people: sumAt(pop, members), total, cells: members.length };
 }
 
 export interface PeoplePlace {
@@ -30,13 +37,13 @@ export interface PeoplePlace {
 }
 
 /**
- * Hot places ranked by how many people they touch: cells of the hottest tenth, most people first (hotter first on a tie),
+ * Hot places ranked by how many people they touch: cells of the hottest tenth inside the outline, most people first (hotter first on a tie),
  * at least `minGapM` apart, so five places are five neighbourhoods and not one block counted five times.
  */
-export function hotPlacesByPeople(detail: CityDetail, count = 5, minGapM = 1000): PeoplePlace[] {
+export function hotPlacesByPeople(detail: CityDetail, inside: readonly boolean[], count = 5, minGapM = 1000): PeoplePlace[] {
   const { pop, lst, lon, lat } = detail.cells;
   if (!pop) return [];
-  const order = hottestTenth(detail)
+  const order = hotInside(detail, inside)
     .filter((i) => (pop[i] ?? 0) > 0)
     .sort((a, b) => (pop[b] ?? 0) - (pop[a] ?? 0) || (lst[b] ?? 0) - (lst[a] ?? 0));
   const picked: PeoplePlace[] = [];

@@ -14,20 +14,26 @@ function city(lst: number[], pop?: number[], facilities: Facility[] = []): CityD
 
 const lst = [50, 51, 40, 40, 49, 40, 40, 48, 40, 52];
 const pop = [300, 900, 5000, 0, 700, 0, 0, 2000, 0, 0];
+const all = lst.map(() => true);
 
 describe('peopleInHeat', () => {
   it('sums the people on cells at or above the hottest-tenth threshold', () => {
-    expect(peopleInHeat(city(lst, pop))).toEqual({ people: 300 + 900 + 700 + 0, total: 8900, cells: 4 });
+    expect(peopleInHeat(city(lst, pop), all)).toEqual({ people: 300 + 900 + 700 + 0, total: 8900, cells: 4 });
+  });
+
+  it('counts only people inside the city outline, the ring around it is not the city', () => {
+    const inside = lst.map((_, i) => i !== 1 && i !== 7);
+    expect(peopleInHeat(city(lst, pop), inside)).toEqual({ people: 300 + 700 + 0, total: 8900 - 900 - 2000, cells: 3 });
   });
 
   it('says nothing without population data', () => {
-    expect(peopleInHeat(city(lst))).toBeNull();
+    expect(peopleInHeat(city(lst), all)).toBeNull();
   });
 });
 
 describe('hotPlacesByPeople', () => {
   it('ranks hot cells by people, skips empty and too close ones, ignores cool crowded cells', () => {
-    const places = hotPlacesByPeople(city(lst, pop), 5, 1500);
+    const places = hotPlacesByPeople(city(lst, pop), all, 5, 1500);
     // 5000 and 2000 live on cooler cells; 900 wins; 300 is 1.1 km from it and is skipped; 52° has nobody.
     expect(places.map((p) => [p.cell, p.people])).toEqual([
       [1, 900],
@@ -37,12 +43,12 @@ describe('hotPlacesByPeople', () => {
   });
 
   it('breaks a tie in people by heat', () => {
-    const places = hotPlacesByPeople(city([50, 40, 40, 52], [400, 0, 0, 400]), 2, 0);
+    const places = hotPlacesByPeople(city([50, 40, 40, 52], [400, 0, 0, 400]), [true, true, true, true], 2, 0);
     expect(places.map((p) => p.cell)).toEqual([3, 0]);
   });
 
   it('is empty without population data', () => {
-    expect(hotPlacesByPeople(city(lst))).toEqual([]);
+    expect(hotPlacesByPeople(city(lst), all)).toEqual([]);
   });
 });
 

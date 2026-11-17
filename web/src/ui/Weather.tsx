@@ -7,7 +7,7 @@ export function WeatherSummary({ weather }: { weather: Weather }) {
   return (
     <section className="wx" aria-labelledby="wx-title">
       <h2 id="wx-title" className="wx__title">
-        Погода этим летом
+        Погода летом
       </h2>
       <dl className="wx__figs">
         {summerFigures(weather).map((f) => (
