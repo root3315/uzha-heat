@@ -18,8 +18,14 @@ interface PatternSpec {
 }
 
 const SPECS: Record<string, PatternSpec> = {
-  // мало зелени: sparse open circles
-  ndvi: { size: 9, marks: (s) => [{ d: circle(s / 2, s / 2, s * 0.17), width: 0.9 }] },
+  // мало зелени: open circles in a half-drop, so they read as a texture and not as a grid
+  ndvi: {
+    size: 10,
+    marks: (s) => [
+      { d: circle(s * 0.25, s * 0.25, s * 0.12), width: 0.85 },
+      { d: circle(s * 0.75, s * 0.75, s * 0.12), width: 0.85 },
+    ],
+  },
   // нет деревьев: small open chevrons, the survey mark for missing canopy
   tree: { size: 10, marks: (s) => [{ d: `M${s * 0.34},${s * 0.62} L${s / 2},${s * 0.36} L${s * 0.66},${s * 0.62}`, width: 0.9 }] },
   // застройка: diagonal hatch at 45°
@@ -112,6 +118,8 @@ export function PatternDefs({ extraKeys = [], scope = '' }: { extraKeys?: readon
             const ink = direction === 'heats' ? 'var(--hatch-heats)' : 'var(--hatch-cools)';
             return (
               <pattern key={patternId(key, direction)} id={patternId(key, direction, scope)} width={size} height={size} patternUnits="userSpaceOnUse">
+                {/* A heating hatch sits on a light ground, so a bar of it reads as one shape; a cooling one stays open. */}
+                {direction === 'heats' && <rect width={size} height={size} style={{ fill: 'var(--hatch-ground)' }} />}
                 {marks.map((mark) => (
                   <path
                     key={mark.d}

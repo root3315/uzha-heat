@@ -88,13 +88,14 @@ export function smoothTags(tags: readonly (string | null)[], window: number): (s
   });
 }
 
-interface TaggedRun {
+export interface TaggedRun {
   tag: string | null;
   d0: number;
   d1: number;
 }
 
-function runsOf(distances: readonly number[], tags: readonly (string | null)[]): TaggedRun[] {
+/** Stretches of one tag; each runs from its first sample to the first sample of the next. */
+export function runsOf(distances: readonly number[], tags: readonly (string | null)[]): TaggedRun[] {
   const runs: TaggedRun[] = [];
   distances.forEach((d, i) => {
     const tag = tags[i] ?? null;

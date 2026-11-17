@@ -38,7 +38,7 @@ function CauseBar({ row, scale }: { row: CauseRow & { note: string }; scale: num
       </p>
       <svg className="cause__bar" width="100%" height="16" role="img" aria-label={`${row.label}: ${formatDegSigned(row.value)}`}>
         <line className="cause__track" x1="0" x2="100%" y1="15.5" y2="15.5" />
-        <rect className="cause__fill" x="0" y="1" height="14" style={{ width: `${share * 100}%`, fill: fill(row.key, direction) }} />
+        <rect className="cause__fill" x="0.5" y="1" height="14" style={{ width: `calc(${share * 100}% - 1px)`, fill: fill(row.key, direction) }} />
       </svg>
       <p className="cause__note">{row.note}</p>
     </div>
