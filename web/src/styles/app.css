@@ -618,10 +618,16 @@ select {
   color: var(--ink-2);
   vertical-align: middle;
 }
+.swatch {
+  flex: 0 0 auto;
+}
+.swatch .swatch__marks {
+  stroke: none;
+}
 .swatch rect {
   stroke: var(--ink);
-  stroke-width: 0.6;
-  stroke-opacity: 0.5;
+  stroke-width: 1;
+  stroke-opacity: 0.22;
 }
 
 .profile {
@@ -890,7 +896,7 @@ summary.rest__summary:hover,
 }
 .rest__list li {
   display: grid;
-  grid-template-columns: 18px 1fr auto;
+  grid-template-columns: 28px 1fr auto;
   align-items: center;
   gap: 12px;
 }

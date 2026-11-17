@@ -13,16 +13,25 @@ export type Shape =
 const SHAPES: Record<string, Shape[]> = {
   // мало зелени: a leaf with its vein
   ndvi: [{ path: 'M19 4.5C11.5 4.5 6 8.5 6 14.5c0 1.6.4 3 1.1 4.2C13.6 18.7 19 14 19 4.5Z' }, { path: 'M4.5 20.5c2.6-4.6 6-8.4 10.5-11.5' }],
-  // нет деревьев: a round crown on a trunk
-  tree: [{ path: 'M12 15.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Z' }, { path: 'M12 15.5V21M8.5 21h7M12 12.5l-2-2M12 13.5l2.2-2.2' }],
-  // застройка: blocks of different heights on one ground line
-  built: [{ path: 'M3.5 20.5V11h5.5v9.5M9 20.5V5.5h6v15M15 20.5v-7.5h5.5v7.5M2 20.5h20' }],
+  // нет деревьев: a round crown with the trunk and one bough showing through it, on the ground
+  tree: [{ circle: [12, 9, 6] }, { path: 'M12 20.5V9.5M12 13l2.5-2.5M8 20.5h8' }],
+  // застройка: a block of houses sharing walls, with windows, so it never reads as a bar chart
+  built: [
+    { path: 'M3.5 20.5V10h5.5v10.5M9 20.5V5h6.5v15.5M15.5 20.5V12.5h5v8M2 20.5h20' },
+    { path: 'M5.6 13h1.3M5.6 16.5h1.3M11.5 8h2.5M11.5 11.5h2.5M11.5 15h2.5M17.4 15.5h1.3' },
+  ],
   // здания: one building with windows
   buildings: [{ path: 'M6 20.5V3.5h12v17M3.5 20.5h17M9.5 7.5h1M13.5 7.5h1M9.5 11h1M13.5 11h1M9.5 14.5h1M13.5 14.5h1M11 20.5v-3h2v3' }],
-  // высота зданий: a tower beside a low house, with a height mark
-  height: [{ path: 'M9 20.5V3.5h6v17M3.5 20.5v-6h5.5M2 20.5h20M19 3.5v17M17.8 4.7 19 3.5l1.2 1.2M17.8 19.3l1.2 1.2 1.2-1.2' }],
-  // объём застройки: a solid block seen from above and the side
-  volume: [{ path: 'M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z' }, { path: 'M4 7.5 12 12l8-4.5M12 12v9' }],
+  // высота зданий: one tower and its dimension line, as on a drawing
+  height: [
+    { path: 'M6.5 20.5V3.5h7v17M3 20.5h14.5M10 7h0M10 10.5h0M10 14h0' },
+    { path: 'M19.5 3.5v17M18 3.5h3M18 20.5h3' },
+  ],
+  // объём застройки: a building mass in isometric, floors drawn on one side only
+  volume: [
+    { path: 'M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z' },
+    { path: 'M4 7.5 12 12l8-4.5M12 12v9M4 10.5l8 4.5M4 13.5l8 4.5' },
+  ],
   // дороги: a road going away, with its centre line
   roads: [{ path: 'M8.5 3.5 4 20.5M15.5 3.5l4.5 17M12 4v2.5M12 10v3M12 17v3.5' }],
   // голая земля: the ground line and loose soil under it
@@ -40,7 +49,7 @@ const SHAPES: Record<string, Shape[]> = {
   // яркий грунт: the sun over the ground, and light bouncing back off it
   albedo: [
     { circle: [12, 7.5, 3] },
-    { path: 'M12 2v1M5.5 7.5h1.2M17.3 7.5h1.2M7.4 3l.8.8M16.6 3l-.8.8M2.5 14h19M8 20.5l2-3.5M12 21v-4M16 20.5l-2-3.5' },
+    { path: 'M12 1.5v1.5M5 7.5h2M17 7.5h2M7 2.6l1.2 1.2M17 2.6l-1.2 1.2M2.5 14h19M8 21l2-4M12 21.5v-4.5M16 21l-2-4' },
   ],
   // далеко от воды: a drop
   water_dist: [{ path: 'M12 3.5c3.6 4.4 6 8 6 11a6 6 0 0 1-12 0c0-3 2.4-6.6 6-11Z' }, { path: 'M9.2 14.8a2.8 2.8 0 0 0 2.8 2.8' }],
@@ -51,9 +60,14 @@ const SHAPES: Record<string, Shape[]> = {
 /** Schools, kindergartens and clinics, in the same hand: they mark who is in the heat, not why it is hot. */
 export const FACILITY_SHAPES: Record<FacilityType, Shape[]> = {
   // школа: a schoolhouse with its bell tower
-  school: [{ path: 'M4 20.5V11l8-4.5 8 4.5v9.5M2.5 20.5h19M10 20.5v-4.5h4v4.5M12 6.5V3.5M12 3.5h3v2h-3' }, { circle: [12, 11.8, 1.6] }],
-  // детский сад: a child with arms open
-  kindergarten: [{ circle: [12, 5.5, 2.3] }, { path: 'M12 8.5v6.5M6.5 10.5l5.5 2 5.5-2M9 21l3-6 3 6' }],
+  school: [{ path: 'M4 20.5V11l8-4.5 8 4.5v9.5M2.5 20.5h19M10 20.5v-4.5h4v4.5M12 6.5V2.5l3.5 1.2L12 5' }, { circle: [12, 11.8, 1.6] }],
+  // детский сад: a grown-up and a child holding hands
+  kindergarten: [
+    { circle: [8, 4.5, 2] },
+    { path: 'M8 7.5v7M8 14.5l-2 6M8 14.5l2 6M8 9.5l-2.5 4M8 9.5l4.5 4.5 3.5-1.5' },
+    { circle: [17, 10, 1.7] },
+    { path: 'M17 12.5v4M17 16.5l-1.5 4M17 16.5l1.5 4' },
+  ],
   // поликлиника: a cross in a frame
   clinic: [{ path: 'M4.5 4.5h15v15h-15Z' }, { path: 'M12 8v8M8 12h8' }],
   // больница: a building with a cross on its front

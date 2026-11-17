@@ -2,7 +2,7 @@ import type { Fluxes } from '../data/contract';
 import { SINKS, formatWatts, sinkShares, type CityEnergy, type EnergyView, type Sink } from '../domain/energy';
 import { capitalize } from '../domain/answers';
 import { SinkIcon } from './icons';
-import { usePatternFill } from './patterns';
+import { HatchSwatch, usePatternFill } from './patterns';
 
 /** Heating the air is the solid ink; evaporation and the ground are hatched, so the bar prints in black and white. */
 function useSinkFill(): (sink: Sink) => string {
@@ -31,12 +31,7 @@ export function EnergyBar({ fluxes, label }: { fluxes: Fluxes; label: string }) 
 }
 
 function SinkSwatch({ sink }: { sink: Sink }) {
-  const fill = useSinkFill();
-  return (
-    <svg className="swatch" width="18" height="12" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: fill(sink) }} />
-    </svg>
-  );
+  return sink === 'h' ? <HatchSwatch solid="var(--ink)" /> : <HatchSwatch hatch={`flux-${sink}`} direction={sink === 'le' ? 'cools' : 'heats'} />;
 }
 
 /** What each segment of the bar is, once per block. */
