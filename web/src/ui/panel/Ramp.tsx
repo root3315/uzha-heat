@@ -14,7 +14,7 @@ interface RampProps {
 
 const BAR_Y = 22;
 const BAR_H = 12;
-const LABEL_GAP = 22;
+const LABEL_GAP = 28;
 
 /** The city as a strip of its own temperature classes, with the shown place marked on it. */
 export function Ramp({ levels, shares, min, max, value, meanMark }: RampProps) {
