@@ -6,7 +6,7 @@ import { formatDeg, formatDegSigned } from '../../domain/format';
 import type { CauseRow, PanelContent } from '../panelContent';
 import { EnergyBlock } from '../Energy';
 import { CauseIcon } from '../icons';
-import { directionOf, usePatternFill } from '../patterns';
+import { directionOf, HatchSwatch, usePatternFill } from '../patterns';
 import { Phrase } from '../Phrase';
 import { Ramp } from './Ramp';
 
@@ -46,14 +46,11 @@ function CauseBar({ row, scale }: { row: CauseRow & { note: string }; scale: num
 }
 
 function RestRows({ rows }: { rows: CauseRow[] }) {
-  const fill = usePatternFill();
   return (
     <ul className="rest__list">
       {rows.map((row) => (
         <li key={row.key}>
-          <svg className="swatch" width="18" height="12" aria-hidden="true">
-            <rect x="0.5" y="0.5" width="17" height="11" style={{ fill: fill(row.key, directionOf(row.value)) }} />
-          </svg>
+          <HatchSwatch hatch={row.key} direction={directionOf(row.value)} />
           <span className="rest__label">
             <CauseIcon cause={row.key} size={18} />
             {row.label}
