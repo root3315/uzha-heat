@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useId, type ReactNode } from 'react';
 
 /**
  * Causes are drawn as cartographic hatching, never as colour: colour is reserved for temperature.
@@ -26,8 +26,14 @@ const SPECS: Record<string, PatternSpec> = {
       { d: circle(s * 0.75, s * 0.75, s * 0.12), width: 0.85 },
     ],
   },
-  // нет деревьев: small open chevrons, the survey mark for missing canopy
-  tree: { size: 10, marks: (s) => [{ d: `M${s * 0.34},${s * 0.62} L${s / 2},${s * 0.36} L${s * 0.66},${s * 0.62}`, width: 0.9 }] },
+  // нет деревьев: the map sign for a tree, a ring on a short stem, in a half-drop
+  tree: {
+    size: 12,
+    marks: (s) => [
+      { d: `${circle(s * 0.25, s * 0.2, s * 0.1)} M${s * 0.25},${s * 0.3} V${s * 0.42}`, width: 0.8 },
+      { d: `${circle(s * 0.75, s * 0.7, s * 0.1)} M${s * 0.75},${s * 0.8} V${s * 0.92}`, width: 0.8 },
+    ],
+  },
   // застройка: diagonal hatch at 45°
   built: {
     size: 6,
@@ -53,8 +59,14 @@ const SPECS: Record<string, PatternSpec> = {
   volume: { size: 7, marks: (s) => [{ d: `M${s * 0.32},${s * 0.32} h${s * 0.36} v${s * 0.36} h${-s * 0.36} Z`, fill: true }] },
   // далеко от воды: wavy line
   water_dist: { size: 10, marks: (s) => [{ d: `M0,${s / 2} Q${s / 4},${s / 2 - 2.2} ${s / 2},${s / 2} T${s},${s / 2}`, width: 0.8 }] },
-  // высота: short vertical ticks
-  elevation: { size: 7, marks: (s) => [{ d: `M${s / 2},${s * 0.28} V${s * 0.72}`, width: 0.9 }] },
+  // высота: short hachures in a half-drop, as relief is shaded on an old map
+  elevation: {
+    size: 8,
+    marks: (s) => [
+      { d: `M${s * 0.25},${s * 0.08} V${s * 0.4}`, width: 0.8 },
+      { d: `M${s * 0.75},${s * 0.58} V${s * 0.9}`, width: 0.8 },
+    ],
+  },
   // энергия: испарение, rising vapour as upright waves
   'flux-le': { size: 8, marks: (s) => [{ d: `M${s / 2},${s} Q${s / 2 + 1.8},${s * 0.75} ${s / 2},${s / 2} T${s / 2},0`, width: 0.9 }] },
   // энергия: в грунт, close stipple like packed earth
@@ -104,6 +116,44 @@ export function PatternScopeProvider({ scope, children }: { scope: string; child
 export function usePatternFill(): (key: string, direction: Direction) => string {
   const scope = useContext(PatternScope);
   return useCallback((key, direction) => `url(#${patternId(key, direction, scope)})`, [scope]);
+}
+
+const SWATCH_W = 28;
+const SWATCH_H = 16;
+
+type SwatchProps = { hatch: string; direction: Direction } | { solid: string };
+
+/**
+ * A legend sample of a hatch, wide enough to read as a texture. The tile is scaled a little so a whole
+ * number of marks fits across and down: no mark is cut in half by the frame.
+ */
+export function HatchSwatch(props: SwatchProps) {
+  const id = `swatch-${useId().replace(/:/g, '')}`;
+  if ('solid' in props) {
+    return (
+      <svg className="swatch" width={SWATCH_W} height={SWATCH_H} aria-hidden="true">
+        <rect x="0.5" y="0.5" width={SWATCH_W - 1} height={SWATCH_H - 1} rx="3" style={{ fill: props.solid }} />
+      </svg>
+    );
+  }
+  const { size, marks } = patternTile(props.hatch, props.direction);
+  const sx = SWATCH_W / (Math.max(1, Math.round(SWATCH_W / size)) * size);
+  const sy = SWATCH_H / (Math.max(1, Math.round(SWATCH_H / size)) * size);
+  const ink = props.direction === 'heats' ? 'var(--hatch-heats)' : 'var(--hatch-cools)';
+  return (
+    <svg className="swatch" width={SWATCH_W} height={SWATCH_H} aria-hidden="true">
+      <defs>
+        <pattern id={id} width={size} height={size} patternUnits="userSpaceOnUse" patternTransform={`scale(${sx} ${sy})`}>
+          {marks.map((mark) => (
+            <path key={mark.d} d={mark.d} style={mark.fill ? { fill: ink } : { fill: 'none', stroke: ink, strokeWidth: mark.width ?? 0.8 }} />
+          ))}
+        </pattern>
+      </defs>
+      {/* The ground under the marks is its own layer: inside a scaled tile it would show the seams between tiles. */}
+      <rect x="0.5" y="0.5" width={SWATCH_W - 1} height={SWATCH_H - 1} rx="3" style={{ fill: props.direction === 'heats' ? 'var(--hatch-ground)' : 'none' }} />
+      <rect className="swatch__marks" x="0.5" y="0.5" width={SWATCH_W - 1} height={SWATCH_H - 1} rx="3" style={{ fill: `url(#${id})` }} />
+    </svg>
+  );
 }
 
 /** One hidden SVG with every pattern, so any inline SVG in the document can use url(#hatch-…). */
