@@ -174,8 +174,8 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
 
   const { transect, profile } = useMemo(() => reportTransect(model.source, current, model.defaultTransect), [model, current]);
   const places = useMemo(() => hottestPlaces(detail, model.inside, CANDIDATES), [detail, model.inside]);
-  const crowded = useMemo(() => hotPlacesByPeople(detail, PLACES), [detail]);
-  const inHeat = peopleInHeat(detail);
+  const crowded = useMemo(() => hotPlacesByPeople(detail, model.inside, PLACES), [detail, model.inside]);
+  const inHeat = peopleInHeat(detail, model.inside);
   const pop = detail.cells.pop;
   const causes = useMemo(() => hotTenthCauses(detail, model.hotspot), [detail, model.hotspot]);
   const energy = useMemo(() => cityEnergy(detail), [detail]);
@@ -262,8 +262,8 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           </p>
           {inHeat && (
             <p className="rp-people">
-              <span className="rp-people__value">{formatPeople(inHeat.people)}</span> живут на&nbsp;самых горячих участках, это{' '}
-              {formatPercent(inHeat.people / (inHeat.total || 1))} жителей карты.
+              <span className="rp-people__value">{formatPeople(inHeat.people)}</span> в&nbsp;черте города живут на&nbsp;самых горячих участках, это{' '}
+              {formatPercent(inHeat.people / (inHeat.total || 1))} его жителей.
             </p>
           )}
         </Part>
@@ -481,7 +481,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
             </p>
             {detail.city.weather && (
               <div className="rp-weather">
-                <h3 className="rp-sub">Погода этим летом</h3>
+                <h3 className="rp-sub">Погода летом</h3>
                 <WeatherCompare cities={cities} currentId={detail.city.id} className="rp-table rp-table--wx" />
                 {overpassLine(detail.city.weather) && (
                   <p className="rp-note">
