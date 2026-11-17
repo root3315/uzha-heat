@@ -51,7 +51,7 @@ interface InterventionRule {
   evidence: Evidence;
 }
 
-const KNIGHT_2021 = { cite: 'Knight и др., 2021, Environmental Evidence', url: 'https://doaj.org/article/a25650e3e71d43f1bf66e2651063233f' };
+const KNIGHT_2021 = { cite: 'Knight и др., 2021, Environmental Evidence', url: 'https://doi.org/10.1186/s13750-021-00226-y' };
 
 /**
  * Interventions keyed by the factors that make them relevant. Factors without a rule
@@ -123,11 +123,11 @@ export const INTERVENTIONS: readonly InterventionRule[] = [
     id: 'cover-bare-soil',
     title: 'Закрыть открытый грунт',
     actions: [
-      'засухоустойчивый газон и почвопокровные растения на пустырях',
+      'деревья, кустарник и засухоустойчивые почвопокровные растения на пустырях',
       'пылеподавление и озеленение промзон и обочин',
     ],
     triggers: [{ key: 'bare', problem: 'high' }],
-    evidence: { finding: 'по обзору 308 исследований, участки с травой в среднем на 0,6° прохладнее незелёных', ...KNIGHT_2021 },
+    evidence: { finding: 'по обзору 308 исследований, воздух над травой в среднем на 0,6° прохладнее, чем над незелёными участками, под деревьями на 0,8°', ...KNIGHT_2021 },
   },
   {
     id: 'water',
