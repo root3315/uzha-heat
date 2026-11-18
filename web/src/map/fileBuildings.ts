@@ -48,6 +48,8 @@ interface Options {
   classOf(t: number): number;
   /** The file failed mid-way: show the basemap's buildings instead. */
   onFail(): void;
+  /** The first buildings from the file are on the map: time to hide the basemap's. */
+  onData(): void;
 }
 
 /**
@@ -82,6 +84,7 @@ export function followView(map: MapLibreMap, options: Options): () => void {
         if (!whole && halfSpan !== HALF_SPANS_M[HALF_SPANS_M.length - 1]) continue;
         loaded = rect;
         (map.getSource(options.source) as GeoJSONSource | undefined)?.setData(collection(features));
+        options.onData();
         return;
       }
     } catch {

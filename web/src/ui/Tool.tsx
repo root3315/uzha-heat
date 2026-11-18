@@ -151,7 +151,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       title={threeD ? 'Плоская карта' : 'Город в 3D'}
       onClick={() => setThreeD(!threeD)}
     >
-      {threeD ? '2D' : '3D'}
+      3D
     </button>
   );
   // Back to the button that opened it, so a keyboard reader is not left at the top of the page.
