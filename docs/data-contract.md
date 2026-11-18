@@ -129,6 +129,14 @@ The city's final XGBoost model, for "что если" in the browser. Loaded onl
   `left` when x < `value` (compared as float32), else to `left + 1`; a missing x goes left when `defaultLeft` is 1.
 - `check`: sample cells and the booster's own predictions (°C), to verify an evaluator to 1e-4.
 
+## Language
+
+The texts in the files (`label`, `description`, `unit`, `period`, `weather.period`, district names) are Russian.
+The web app opens in English and keeps the English for this fixed vocabulary itself, in
+`web/src/domain/dataTexts.ts` (labels and descriptions by factor key, surfaces by key, Tashkent's districts,
+month names) and `web/src/domain/format.ts` (units); city names come from `nameEn`. A new factor key, surface
+or district needs its English there, otherwise English pages show the Russian text from the file.
+
 ## Factor keys (fixed vocabulary)
 
 | key | label | unit | source |
