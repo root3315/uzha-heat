@@ -7,6 +7,7 @@ Usage (from the project root):
 Writes web/public/data/buildings/<city>.fgb (properties h, conf, src) and model.json with the held-out errors.
 The .fgb files are tens of megabytes: they are not committed, the deploy copies them.
 """
+import hashlib
 import argparse
 import json
 import logging
@@ -45,7 +46,9 @@ class CityBuildings:
 def collect(city: City) -> CityBuildings:
     """OSM footprints of the city and its ring, plus the MS footprints OSM lacks, with their features."""
     bbox, area = boundary.city_extent(city)
-    cache = Cache(CACHE_ROOT / f"buildings_{city.id}")
+    # Keyed by the extent too: a wider outline or ring must not reuse footprints cached for the old one.
+    extent_key = hashlib.sha1(repr(tuple(round(v, 5) for v in bbox)).encode()).hexdigest()[:8]
+    cache = Cache(CACHE_ROOT / f"buildings_{city.id}_{extent_key}")
     crs = utm_crs_for(*city.center)
 
     osm_wkb, kinds, tagged = cache.get_or_compute("osm_footprints", lambda: _osm(bbox))

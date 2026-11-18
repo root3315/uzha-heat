@@ -17,6 +17,7 @@ import shapely
 from pystac_client.exceptions import APIError
 
 from ..stac import search
+from ..download import download_to
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,6 @@ BLOB_ROOT = f"https://{ACCOUNT}.blob.core.windows.net"
 PARTITION_HREF = re.compile(r"^abfs://(?P<container>[^/]+)/(?P<prefix>(?:.*/)?delta/(?P<date>[\d-]+)/.*quadkey=\d+)/?$")
 DOWNLOAD_TIMEOUT_S = (30, 900)
 LIST_TIMEOUT_S = 60
-CHUNK_BYTES = 1 << 20
 
 
 def partitions(items: list) -> list:
@@ -55,18 +55,7 @@ def _blob_names(container: str, prefix: str, token: str) -> list:
 
 def _download(container: str, name: str, token: str, cache_dir: Path) -> Path:
     path = Path(cache_dir) / name.replace("/", "_").replace("=", "-")
-    if path.exists():
-        return path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    log.info("downloading %s", name)
-    partial = path.with_suffix(".part")
-    with requests.get(f"{BLOB_ROOT}/{container}/{name}?{token}", stream=True, timeout=DOWNLOAD_TIMEOUT_S) as response:
-        response.raise_for_status()
-        with partial.open("wb") as f:
-            for chunk in response.iter_content(CHUNK_BYTES):
-                f.write(chunk)
-    partial.replace(path)
-    return path
+    return download_to(f"{BLOB_ROOT}/{container}/{name}?{token}", path, DOWNLOAD_TIMEOUT_S, label=name)
 
 
 def download(bbox: tuple, cache_dir: Path) -> list:

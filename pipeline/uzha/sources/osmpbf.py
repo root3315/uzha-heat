@@ -9,36 +9,23 @@ from pathlib import Path
 
 import numpy as np
 import pyogrio
-import requests
 import shapely
 
 from .osm import tagged_height
+from ..download import download_to
 
 log = logging.getLogger(__name__)
 
 EXTRACT_URL = "https://download.geofabrik.de/asia/uzbekistan-latest.osm.pbf"
 EXTRACT_NAME = "uzbekistan-latest.osm.pbf"
 DOWNLOAD_TIMEOUT_S = (30, 1800)
-CHUNK_BYTES = 1 << 20
 #: GDAL keeps tags it has no column for in one hstore string: "key"=>"value","key2"=>"value2"
 HSTORE_PAIR = re.compile(r'"((?:[^"\\]|\\.)*)"=>"((?:[^"\\]|\\.)*)"')
 
 
 def download(cache_dir: Path) -> Path:
     """The country extract in `cache_dir`, downloaded once."""
-    path = Path(cache_dir) / EXTRACT_NAME
-    if path.exists():
-        return path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    log.info("downloading %s", EXTRACT_URL)
-    partial = path.with_suffix(".part")
-    with requests.get(EXTRACT_URL, stream=True, timeout=DOWNLOAD_TIMEOUT_S) as response:
-        response.raise_for_status()
-        with partial.open("wb") as f:
-            for chunk in response.iter_content(CHUNK_BYTES):
-                f.write(chunk)
-    partial.replace(path)
-    return path
+    return download_to(EXTRACT_URL, Path(cache_dir) / EXTRACT_NAME, DOWNLOAD_TIMEOUT_S)
 
 
 def other_tags(hstore) -> dict:

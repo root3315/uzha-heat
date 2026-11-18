@@ -154,7 +154,10 @@ def neighbour_heights(near: np.ndarray, known: np.ndarray, usable: np.ndarray) -
 def split(labeled: np.ndarray, city: np.ndarray, fraction: float = TEST_FRACTION, seed: int = SEED) -> tuple:
     """Train and held-out indices of the labelled buildings, the same share from every city."""
     index = np.flatnonzero(labeled)
-    return train_test_split(index, test_size=fraction, random_state=seed, stratify=city[index])
+    # Stratifying needs two labelled buildings in every city; a city with one would stop the whole run.
+    _, counts = np.unique(city[index], return_counts=True)
+    stratify = city[index] if counts.min() >= 2 else None
+    return train_test_split(index, test_size=fraction, random_state=seed, stratify=stratify)
 
 
 def _model(**loss) -> HistGradientBoostingRegressor:

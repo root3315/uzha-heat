@@ -5,13 +5,13 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
-import requests
 from rasterio.enums import Resampling
 from rasterio.transform import rowcol
 from rasterio.windows import Window
 
 from ..grid import Raster
 from ..stac import GDAL_ENV, mosaic_to_raster
+from ..download import download_to
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,6 @@ TILE_LEFT = -180.0079
 TILE_DEG = 10.0
 EARTH_RADIUS_M = 6371008.8
 DOWNLOAD_TIMEOUT_S = (30, 600)
-CHUNK_BYTES = 1 << 20
 
 
 def tile_name(lon: float, lat: float) -> str:
@@ -45,20 +44,8 @@ def tiles_for(bbox: tuple) -> list:
 def download(product: str, tile: str, cache_dir: Path) -> Path:
     """The tile's zip in `cache_dir`, downloaded once (10–60 MB)."""
     name = f"{product}_V1_0_{tile}.zip"
-    path = Path(cache_dir) / name
-    if path.exists():
-        return path
-    path.parent.mkdir(parents=True, exist_ok=True)
     url = f"{ROOT}/{PRODUCT_DIRS[product]}/{product}/V1-0/tiles/{name}"
-    log.info("downloading %s", url)
-    partial = path.with_suffix(".part")
-    with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT_S) as response:
-        response.raise_for_status()
-        with partial.open("wb") as f:
-            for chunk in response.iter_content(CHUNK_BYTES):
-                f.write(chunk)
-    partial.replace(path)
-    return path
+    return download_to(url, Path(cache_dir) / name, DOWNLOAD_TIMEOUT_S)
 
 
 def _read(product: str, bbox: tuple, raster: Raster, cache_dir: Path) -> np.ndarray:

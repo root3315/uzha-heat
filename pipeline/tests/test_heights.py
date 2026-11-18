@@ -92,3 +92,12 @@ def test_estimate_learns_heights_and_reports_per_city_errors():
     assert modelled.min() >= heights.CONFIDENCE_MIN and modelled.max() <= heights.CONFIDENCE_MAX
     assert np.mean(np.abs(result.height[~tagged] - truth[~tagged])) < 2.5
     assert result.height.min() >= heights.MIN_HEIGHT_M
+
+
+def test_split_does_not_stop_on_a_city_with_one_labelled_building():
+    import numpy as np
+    from pipeline.uzha.heights import split
+    labeled = np.ones(41, dtype=bool)
+    city = np.array(["tashkent"] * 40 + ["newtown"])
+    train, test = split(labeled, city, fraction=0.2, seed=1)
+    assert len(train) + len(test) == 41

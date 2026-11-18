@@ -4,12 +4,12 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
-import requests
 from pyproj import Transformer
 from rasterio.transform import xy
 from rasterio.windows import from_bounds
 
 from ..grid import WGS84, Grid
+from ..download import download_to
 
 log = logging.getLogger(__name__)
 
@@ -18,26 +18,13 @@ FILE_NAME = f"uzb_pop_{YEAR}_CN_100m_R2025A_v1.tif"
 URL = f"https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/{YEAR}/UZB/v1/100m/constrained/{FILE_NAME}"
 SOURCE_LABEL = f"WorldPop {YEAR}, 100 м, constrained, R2025A"
 DOWNLOAD_TIMEOUT_S = (30, 300)
-CHUNK_BYTES = 1 << 20
 #: One pixel of margin around the grid, degrees (~100 m), so edge cells get their full count.
 MARGIN_DEG = 0.001
 
 
 def download(cache_dir: Path, url: str = URL) -> Path:
     """The country GeoTIFF in `cache_dir`, downloaded once (about 36 MB)."""
-    path = Path(cache_dir) / FILE_NAME
-    if path.exists():
-        return path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_suffix(".part")
-    log.info("downloading %s", url)
-    with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT_S) as response:
-        response.raise_for_status()
-        with partial.open("wb") as f:
-            for chunk in response.iter_content(CHUNK_BYTES):
-                f.write(chunk)
-    partial.replace(path)
-    return path
+    return download_to(url, Path(cache_dir) / FILE_NAME, DOWNLOAD_TIMEOUT_S)
 
 
 def people_per_cell(path: Path, grid: Grid) -> np.ndarray:
