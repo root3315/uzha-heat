@@ -49,27 +49,40 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
   const text = LEVER_TEXT[lever.key] ?? { label: feature.label, spoken: (v: string) => `${feature.label} ${v}` };
   const id = `whatif-${lever.key}`;
   const say = (v: number) => formatFactorValue(feature, v);
-  const [min, max] = lever.direction === 'up' ? [from, to] : [to, from];
+  const up = lever.direction === 'up';
+  const [min, max] = up ? [from, to] : [to, from];
+  // Where the chosen value sits along the track, 0..1; "сейчас" is the left end going up, the right end going down.
+  const at = Math.min(1, Math.max(0, (value - min) / (max - min)));
+  const [fillFrom, fillTo] = up ? [0, at] : [at, 1];
+  const limit = `до ${say(to)} — ${up ? 'верхние' : 'нижние'} 5 % города`;
   return (
     <div className="whatif__lever">
       <p className="whatif__head">
         <label htmlFor={id}>{text.label}</label>
         <span className="whatif__value num">{say(value)}</span>
       </p>
-      <input
-        id={id}
-        className="whatif__range"
-        type="range"
-        min={min}
-        max={max}
-        step={lever.step}
-        value={value}
-        aria-valuetext={`${text.spoken(say(value))}, сейчас ${say(from)}`}
-        onChange={(event) => onChange(Number(event.currentTarget.value))}
-      />
-      <p className="whatif__ends" aria-hidden="true">
-        <span>{lever.direction === 'up' ? `сейчас ${say(from)}` : `до ${say(to)}`}</span>
-        <span>{lever.direction === 'up' ? `до ${say(to)}` : `сейчас ${say(from)}`}</span>
+      <div className="whatif__slider">
+        <div className="whatif__rail" aria-hidden="true">
+          <span className="whatif__fill" style={{ left: `${fillFrom * 100}%`, width: `${(fillTo - fillFrom) * 100}%` }} />
+          <span className="whatif__now" style={{ left: up ? '0%' : '100%' }} />
+        </div>
+        <input
+          id={id}
+          className="whatif__range"
+          type="range"
+          min={min}
+          max={max}
+          step={lever.step}
+          value={value}
+          aria-valuetext={`${text.spoken(say(value))}, сейчас ${say(from)}`}
+          aria-describedby={`${id}-limit`}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+        />
+      </div>
+      <p className={`whatif__ends${up ? '' : ' whatif__ends--down'}`}>
+        {/* The value now is already in aria-valuetext; the limit is the slider's description. */}
+        <span aria-hidden="true">сейчас {say(from)}</span>
+        <span id={`${id}-limit`}>{limit}</span>
       </p>
     </div>
   );
@@ -138,7 +151,13 @@ export function WhatIfBlock({ detail, cell }: { detail: CityDetail; cell: number
   return (
     <details className="whatif" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className="whatif__summary">
-        Что если <span className="whatif__hint">пересчитать по модели</span>
+        <span className="whatif__title">Что если</span>
+        <span className="whatif__hint">
+          пересчитать по модели
+          <svg className="whatif__chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M2 3.5 5 6.5 8 3.5" />
+          </svg>
+        </span>
       </summary>
       {open && (
         <div className="whatif__body">
