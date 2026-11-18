@@ -17,6 +17,7 @@ import type {
   Period,
   Population,
   SurfaceMaterial,
+  TreeModel,
   Weather,
 } from './contract';
 import { FLUX_KEYS } from './contract';
@@ -324,4 +325,31 @@ export function parseCityDetail(raw: unknown): CityDetail {
     facilities: root.facilities === undefined ? [] : requireArray(root.facilities, 'facilities').map((f, i) => parseFacility(f, `facilities[${i}]`)),
     energy: energy.method,
   };
+}
+
+const isIndexArray = (value: unknown): value is number[] => Array.isArray(value) && value.every(Number.isInteger);
+
+/** `model-<id>.json`: every tree has its four arrays, of one length. */
+export function parseTreeModel(raw: unknown): TreeModel {
+  const root = requireObject(raw, 'model');
+  if (!isNumber(root.baseScore)) throw new DataContractError('model.baseScore должен быть числом');
+  const features = requireArray(root.features, 'model.features');
+  requireArray(root.trees, 'model.trees').forEach((tree, i) => {
+    const path = `model.trees[${i}]`;
+    const t = requireObject(tree, path);
+    if (!isIndexArray(t.feature) || !isIndexArray(t.left) || !isIndexArray(t.defaultLeft) || !Array.isArray(t.value) || !t.value.every(isNumber)) {
+      throw new DataContractError(`${path}: нет массивов feature, value, left, defaultLeft`);
+    }
+    const n = t.feature.length;
+    if (!n || t.value.length !== n || t.left.length !== n || t.defaultLeft.length !== n) {
+      throw new DataContractError(`${path}: массивы разной длины`);
+    }
+    if (t.feature.some((f) => f >= features.length)) throw new DataContractError(`${path}: признак вне model.features`);
+    // Leaves have feature −1; a split's left child is left[i], its right child left[i] + 1. Both must lie after the
+    // node and inside the tree, or a walk from the root could loop forever.
+    const left = t.left as number[];
+    const badChild = t.feature.some((f, node) => f >= 0 && !((left[node] ?? -1) > node && (left[node] ?? -1) + 1 < n));
+    if (badChild) throw new DataContractError(`${path}: ссылка на дочерний узел вне дерева или назад`);
+  });
+  return raw as TreeModel;
 }

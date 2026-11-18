@@ -181,3 +181,24 @@ export interface CityDetail {
   /** Present exactly when `cells.energy` is. */
   energy: EnergyMethod | null;
 }
+
+/** One regression tree of `model-<id>.json`, as parallel arrays over its nodes. */
+export interface Tree {
+  /** Split feature index into `TreeModel.features`, −1 for a leaf. */
+  feature: number[];
+  /** Split threshold (go left when x < value, as float32), or the leaf value. */
+  value: number[];
+  /** Left child; the right one is left + 1. −1 for a leaf. */
+  left: number[];
+  /** 1 when a missing value goes left. */
+  defaultLeft: number[];
+}
+
+/** `model-<id>.json`: the city's XGBoost model for "что если", evaluated in the browser. */
+export interface TreeModel {
+  features: string[];
+  baseScore: number;
+  trees: Tree[];
+  /** Sample rows with the booster's own predictions, written by the pipeline. */
+  check?: { rows: number[][]; prediction: number[] };
+}

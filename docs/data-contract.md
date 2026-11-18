@@ -110,6 +110,25 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
 - `features` lists only the factors actually present; the web app must iterate it and never hardcode
   which keys exist.
 
+## `web/public/data/model-<id>.json`
+
+The city's final XGBoost model, for "что если" in the browser. Loaded only when the reader opens that block.
+
+```json
+{
+  "format": "uzha-xgb-1",
+  "features": ["ndvi", "tree", "built"],
+  "baseScore": 43.6,
+  "trees": [{ "feature": [0, -1, -1], "value": [0.31, 0.42, -0.2], "left": [1, -1, -1], "defaultLeft": [1, 0, 0] }],
+  "check": { "rows": [[0.12, 0, 88]], "prediction": [47.1234] }
+}
+```
+
+- A row is the cell's values in `features` order. Prediction = `baseScore` + one leaf per tree.
+- In a tree, node 0 is the root. `feature` −1 marks a leaf, whose value is in `value`; otherwise go to
+  `left` when x < `value` (compared as float32), else to `left + 1`; a missing x goes left when `defaultLeft` is 1.
+- `check`: sample cells and the booster's own predictions (°C), to verify an evaluator to 1e-4.
+
 ## Factor keys (fixed vocabulary)
 
 | key | label | unit | source |
