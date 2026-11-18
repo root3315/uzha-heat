@@ -440,15 +440,19 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       fromFile.current = on;
       if (map.getLayer(LAYER.buildingsFile)) showBuildings(map, true, on);
     };
+    // The basemap's buildings stay on until the file has delivered: on a slow server the reader sees a city in 3D at once,
+    // and the exact buildings replace it when they arrive.
     const start = () => {
       if (cancelled) return;
-      use(true);
       stop = followView(map, {
         url,
         source: SOURCE.buildings,
         minZoom: BUILDINGS_MIN_ZOOM,
         temperatureAt: model.source.temperatureAt,
         classOf: (t) => classOf(model.levels, t),
+        onData: () => {
+          if (!fromFile.current) use(true);
+        },
         onFail: () => {
           stop?.();
           stop = null;
