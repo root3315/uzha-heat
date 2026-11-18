@@ -42,16 +42,40 @@ interface PickedPlace {
 
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
+const THREE_D_KEY = 'uzha.3d';
+
+function readThreeD(): boolean {
+  try {
+    return window.sessionStorage.getItem(THREE_D_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeThreeD(on: boolean): void {
+  try {
+    window.sessionStorage.setItem(THREE_D_KEY, on ? '1' : '0');
+  } catch {
+    /* private mode: 3D is just not remembered */
+  }
+}
+
 /** The working map: isotherms, a draggable section, the panel with one answer for the city or a place. */
 export function Tool({ model, cities, onCity }: ToolProps) {
   const mapRef = useRef<CityMapHandle>(null);
   const mapFrameRef = useRef<HTMLDivElement>(null);
   const reportButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const [transect, setTransect] = useState<Transect>(model.defaultTransect);
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
-  const [threeD, setThreeD] = useState(false);
+  // 3D stays on from one city to the next: the reader chose a way of looking, not a city.
+  const [threeD, setThreeDState] = useState(() => readThreeD());
+  const setThreeD = (on: boolean) => {
+    setThreeDState(on);
+    writeThreeD(on);
+  };
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
@@ -77,6 +101,11 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     },
     [cellUnder, detail],
   );
+
+  // A new place starts at its own title: the panel may still be scrolled down to the previous place's sliders.
+  useEffect(() => {
+    if (picked) panelRef.current?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [picked?.cell]);
 
   /** After zooming in, the basemap may know a closer name than it did at the first click. */
   const refineName = useCallback(() => {
@@ -239,7 +268,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           onPick={(sample) => pick(sample.point)}
         />
       </div>
-      <aside className="tool__panel" aria-label="Что здесь происходит">
+      <aside ref={panelRef} className="tool__panel" aria-label="Что здесь происходит">
         <Panel model={model} content={content} header={header} footer={footer} />
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
