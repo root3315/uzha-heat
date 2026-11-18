@@ -49,8 +49,11 @@ def without_overlap(extra: np.ndarray, base: np.ndarray, max_shared: float = MAX
     pairs = shapely.STRtree(base).query(extra, predicate="intersects")
     if pairs.shape[1] == 0:
         return keep
+    # Reprojecting can leave a valid lon/lat outline with a self-touching ring in metres; GEOS refuses to
+    # intersect those, so the overlap is measured on repaired copies.
+    a, b = shapely.make_valid(extra[pairs[0]]), shapely.make_valid(base[pairs[1]])
     shared = np.zeros(len(extra))
-    np.add.at(shared, pairs[0], shapely.area(shapely.intersection(extra[pairs[0]], base[pairs[1]])))
+    np.add.at(shared, pairs[0], shapely.area(shapely.intersection(a, b)))
     with np.errstate(divide="ignore", invalid="ignore"):
         keep = shared <= max_shared * shapely.area(extra)
     return keep
