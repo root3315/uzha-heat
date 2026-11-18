@@ -69,6 +69,9 @@ Notes:
 
 - `no-cache` on `/data/*.json` means the browser re-checks with ETag on every load and gets
   a 304 if the file is unchanged, so new data shows up right after a deploy.
+- `/data/buildings/<id>.fgb` (3D buildings, tens of MB) are read by HTTP range requests through their
+  spatial index. nginx answers `Range` on static files by default; keep `.fgb` out of `gzip_types`
+  (a compressed response cannot be ranged). Without the file the 3D view falls back to the basemap's buildings.
 - CSP: MapLibre workers run from `blob:`, style/tiles/glyphs come from `tiles.openfreemap.org`,
   photos from `upload.wikimedia.org`. A new external host has to be added here.
 - HSTS belongs wherever TLS ends (e.g. the Cloudflare side if the box sits behind a tunnel).
