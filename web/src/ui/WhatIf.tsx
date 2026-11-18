@@ -16,9 +16,10 @@ const LEVER_TEXT: Record<string, { label: string; spoken: (value: string) => str
 /** Changes smaller than this read as no change. */
 const NEGLIGIBLE_DEG = 0.05;
 
-type ModelState = { status: 'loading' } | { status: 'ready'; model: TreeModel } | { status: 'failed' };
+export type ModelState = { status: 'loading' } | { status: 'ready'; model: TreeModel } | { status: 'failed' };
 
-function useTreeModel(cityId: string): ModelState {
+/** The city's model for "что если", fetched once per city. */
+export function useTreeModel(cityId: string): ModelState {
   const [state, setState] = useState<ModelState>({ status: 'loading' });
   useEffect(() => {
     let alive = true;
