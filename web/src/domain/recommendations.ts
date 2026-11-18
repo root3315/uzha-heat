@@ -1,5 +1,8 @@
 import type { FeatureMeta } from '../data/contract';
-import { formatFactorValue, formatNumber } from './format';
+import type { Locale } from '../i18n/locale';
+import { featureLabel } from './dataTexts';
+import { formats } from './format';
+import { COMPARE_TEXTS, INTERVENTION_TEXTS, type InterventionId } from './recommendations.texts';
 
 export interface RecommendationInput {
   features: FeatureMeta[];
@@ -10,7 +13,7 @@ export interface RecommendationInput {
 
 export interface Reason {
   key: string;
-  /** e.g. "NDVI 0,08, в 3 раза ниже среднего по городу (0,24)" */
+  /** e.g. "NDVI 0.08, 3 times lower than the city average (0.24)" */
   text: string;
   /** °C this factor adds to the place's temperature. */
   contribution: number;
@@ -24,7 +27,7 @@ export interface Evidence {
 }
 
 export interface Recommendation {
-  id: string;
+  id: InterventionId;
   title: string;
   actions: string[];
   reasons: Reason[];
@@ -43,15 +46,15 @@ interface Trigger {
   alongWith?: { key: string; problem: ProblemSide };
 }
 
-interface InterventionRule {
-  id: string;
-  title: string;
-  actions: string[];
+/** A measure and the factors that make it relevant; its words are in `recommendations.texts.ts`, keyed by `id`. */
+export interface InterventionRule {
+  id: InterventionId;
   triggers: Trigger[];
-  evidence: Evidence;
+  /** Where to check the evidence. */
+  url: string;
 }
 
-const KNIGHT_2021 = { cite: 'Knight и др., 2021, Environmental Evidence', url: 'https://doi.org/10.1186/s13750-021-00226-y' };
+const KNIGHT_2021 = 'https://doi.org/10.1186/s13750-021-00226-y';
 
 /**
  * Interventions keyed by the factors that make them relevant. Factors without a rule
@@ -60,132 +63,93 @@ const KNIGHT_2021 = { cite: 'Knight и др., 2021, Environmental Evidence', url
 export const INTERVENTIONS: readonly InterventionRule[] = [
   {
     id: 'shade-trees',
-    title: 'Деревья вдоль улиц и теневые навесы',
-    actions: [
-      'высадить крупномерные деревья вдоль тротуаров и во дворах: чинара, карагач, тут',
-      'навесы и перголы над остановками, рынками и детскими площадками',
-    ],
     triggers: [
       { key: 'ndvi', problem: 'low' },
       { key: 'tree', problem: 'low' },
     ],
-    evidence: { finding: 'по обзору 308 исследований, под деревьями воздух в среднем на 0,8° прохладнее', ...KNIGHT_2021 },
+    url: KNIGHT_2021,
   },
   {
     id: 'cool-roofs',
-    title: 'Холодные и зелёные крыши',
-    actions: [
-      'светлые отражающие покрытия кровли при плановом ремонте',
-      'зелёные крыши на общественных и торговых зданиях с плоской кровлей',
-    ],
     triggers: [
       { key: 'built', problem: 'high' },
       { key: 'buildings', problem: 'high' },
       // Low albedo is a roof problem only where there are roofs; elsewhere dark ground is usually green.
       { key: 'albedo', problem: 'low', alongWith: { key: 'built', problem: 'high' } },
     ],
-    evidence: {
-      finding: 'по обзору моделей городов, зелёные крыши снижают температуру воздуха на 0,3–3°',
-      cite: 'Santamouris, 2014, Solar Energy',
-      url: 'https://doi.org/10.1016/j.solener.2012.07.003',
-    },
+    url: 'https://doi.org/10.1016/j.solener.2012.07.003',
   },
   {
     id: 'shade-dense-blocks',
-    title: 'Тень и улицы в плотных кварталах',
-    actions: [
-      'между высокими домами узкие улицы и дворы, галереи и навесы, чтобы дома затеняли тротуары и друг друга',
-      'новые улицы вести по оси север–юг или наискось, а не с востока на запад',
-    ],
     triggers: [
       { key: 'volume', problem: 'high' },
       { key: 'height', problem: 'high', alongWith: { key: 'volume', problem: 'high' } },
     ],
-    evidence: {
-      finding:
-        'по моделированию для жаркого сухого климата, тепловой стресс днём зависит от высоты домов к ширине улицы и её направления: открытые улицы и улицы с востока на запад жарче всего, глубокие и затенённые прохладнее',
-      cite: 'Ali-Toudert и Mayer, 2006, Building and Environment',
-      url: 'https://doi.org/10.1016/j.buildenv.2005.01.013',
-    },
+    url: 'https://doi.org/10.1016/j.buildenv.2005.01.013',
   },
   {
     id: 'cool-pavements',
-    title: 'Затенение и светлые покрытия дорог',
-    actions: ['светлый или проницаемый асфальт на парковках и тротуарах', 'деревья по разделительным полосам'],
     triggers: [{ key: 'roads', problem: 'high' }],
-    evidence: {
-      finding: 'по обзору, светлые и проницаемые покрытия нагреваются меньше обычного асфальта, насколько зависит от материала',
-      cite: 'Santamouris, 2013, Renewable and Sustainable Energy Reviews',
-      url: 'https://doi.org/10.1016/j.rser.2013.05.047',
-    },
+    url: 'https://doi.org/10.1016/j.rser.2013.05.047',
   },
   {
     id: 'cover-bare-soil',
-    title: 'Закрыть открытый грунт',
-    actions: [
-      'деревья, кустарник и засухоустойчивые почвопокровные растения на пустырях',
-      'пылеподавление и озеленение промзон и обочин',
-    ],
     triggers: [{ key: 'bare', problem: 'high' }],
-    evidence: { finding: 'по обзору 308 исследований, воздух над травой в среднем на 0,6° прохладнее, чем над незелёными участками, под деревьями на 0,8°', ...KNIGHT_2021 },
+    url: KNIGHT_2021,
   },
   {
     id: 'water',
-    title: 'Вода рядом: арыки, фонтаны, полив',
-    actions: [
-      'восстановить арычную сеть и капельный полив скверов',
-      'фонтаны и открытые водоёмы в общественных пространствах',
-    ],
     triggers: [{ key: 'water_dist', problem: 'high' }],
-    evidence: {
-      finding: 'по обзору, у воды воздух прохладнее, но насколько, сильно зависит от ветра и застройки вокруг',
-      cite: 'Völker и др., 2013, Erdkunde',
-      url: 'https://doi.org/10.3112/erdkunde.2013.04.05',
-    },
+    url: 'https://doi.org/10.3112/erdkunde.2013.04.05',
   },
 ];
+
+/** The evidence for a measure in the reader's language. */
+export function evidenceFor(rule: InterventionRule, locale: Locale): Evidence {
+  const { finding, cite } = INTERVENTION_TEXTS[locale][rule.id];
+  return { finding, cite, url: rule.url };
+}
 
 const MIN_CONTRIBUTION = 0.15;
 const NEAR_MEAN_SHARE = 0.1;
 const ALMOST_NONE_SHARE = 0.05;
 
-function timesWord(ratio: number): string {
-  const rounded = Math.round(ratio * 10) / 10;
-  if (!Number.isInteger(rounded)) return 'раза';
-  const lastTwo = rounded % 100;
-  const last = rounded % 10;
-  return last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'раза' : 'раз';
-}
-
-export function formatRatio(ratio: number): string {
+/** "в 3 раза", "3 times": a ratio rounded to what it can say. */
+export function formatRatio(ratio: number, locale: Locale): string {
   const rounded = Math.round(ratio * 10) / 10;
   const digits = Number.isInteger(rounded) || rounded >= 10 ? 0 : 1;
-  return `в ${formatNumber(digits === 0 ? Math.round(rounded) : rounded, digits)} ${timesWord(digits === 0 ? Math.round(rounded) : rounded)}`;
+  const n = digits === 0 ? Math.round(rounded) : rounded;
+  return COMPARE_TEXTS[locale].times(n, formats(locale).formatNumber(n, digits));
 }
 
 /** Plain-language comparison of a place's value with the city mean. */
-export function compareWithCity(feature: FeatureMeta, value: number, cityMean: number): string {
+export function compareWithCity(feature: FeatureMeta, value: number, cityMean: number, locale: Locale): string {
+  const t = COMPARE_TEXTS[locale];
+  const { formatFactorValue, formatNumber } = formats(locale);
   const meanText = formatFactorValue(feature, cityMean);
-  if (!Number.isFinite(cityMean) || cityMean <= 0 || value < 0) return `в среднем по городу ${meanText}`;
+  if (!Number.isFinite(cityMean) || cityMean <= 0 || value < 0) return t.unknownMean(meanText);
   const relative = (value - cityMean) / cityMean;
-  if (Math.abs(relative) < NEAR_MEAN_SHARE) return `на уровне среднего по городу (${meanText})`;
-  if (value <= cityMean * ALMOST_NONE_SHARE) return `почти нет, в среднем по городу ${meanText}`;
-  const direction = relative < 0 ? 'ниже' : 'выше';
+  if (Math.abs(relative) < NEAR_MEAN_SHARE) return t.nearMean(meanText);
+  if (value <= cityMean * ALMOST_NONE_SHARE) return t.almostNone(meanText);
   const ratio = relative < 0 ? cityMean / value : value / cityMean;
-  const amount = ratio >= 1.5 ? formatRatio(ratio) : `на ${formatNumber(Math.abs(relative) * 100, 0)} %`;
-  return `${amount} ${direction} среднего по городу (${meanText})`;
+  const amount =
+    ratio >= 1.5
+      ? ({ kind: 'times', text: formatRatio(ratio, locale) } as const)
+      : ({ kind: 'percent', text: t.percent(formatNumber(Math.abs(relative) * 100, 0)) } as const);
+  return t.differs(amount, relative < 0, meanText);
 }
 
-function factorName(feature: FeatureMeta): string {
-  return feature.unit === 'NDVI' ? 'NDVI' : feature.label;
+function factorName(feature: FeatureMeta, locale: Locale): string {
+  return feature.unit === 'NDVI' ? 'NDVI' : featureLabel(feature, locale);
 }
 
-function reasonFor(feature: FeatureMeta, input: RecommendationInput): Reason {
+function reasonFor(feature: FeatureMeta, input: RecommendationInput, locale: Locale): Reason {
   const value = input.values[feature.key] ?? Number.NaN;
   const cityMean = input.cityMeans[feature.key] ?? Number.NaN;
+  const { formatFactorValue } = formats(locale);
   return {
     key: feature.key,
-    text: `${factorName(feature)} ${formatFactorValue(feature, value)}, ${compareWithCity(feature, value, cityMean)}`,
+    text: `${factorName(feature, locale)} ${formatFactorValue(feature, value)}, ${compareWithCity(feature, value, cityMean, locale)}`,
     contribution: input.contributions[feature.key] ?? 0,
   };
 }
@@ -208,7 +172,7 @@ function isProblem(trigger: Trigger, input: RecommendationInput): boolean {
   return onProblemSide(trigger.key, trigger.problem, input);
 }
 
-export function recommend(input: RecommendationInput, minContribution = MIN_CONTRIBUTION): Recommendation[] {
+export function recommend(input: RecommendationInput, locale: Locale, minContribution = MIN_CONTRIBUTION): Recommendation[] {
   const featureByKey = new Map(input.features.map((f) => [f.key, f]));
   const recommendations: Recommendation[] = [];
 
@@ -217,19 +181,13 @@ export function recommend(input: RecommendationInput, minContribution = MIN_CONT
       .filter((trigger) => (input.contributions[trigger.key] ?? 0) >= minContribution && isProblem(trigger, input))
       .map((trigger) => featureByKey.get(trigger.key))
       .filter((feature): feature is FeatureMeta => feature !== undefined)
-      .map((feature) => reasonFor(feature, input))
+      .map((feature) => reasonFor(feature, input, locale))
       .sort((a, b) => b.contribution - a.contribution);
     if (reasons.length === 0) continue;
 
+    const { title, actions } = INTERVENTION_TEXTS[locale][rule.id];
     const heating = reasons.reduce((sum, r) => sum + r.contribution, 0);
-    recommendations.push({
-      id: rule.id,
-      title: rule.title,
-      actions: rule.actions,
-      reasons,
-      heating,
-      evidence: rule.evidence,
-    });
+    recommendations.push({ id: rule.id, title, actions, reasons, heating, evidence: evidenceFor(rule, locale) });
   }
 
   return recommendations.sort((a, b) => b.heating - a.heating);

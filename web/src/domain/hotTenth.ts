@@ -1,5 +1,5 @@
 import type { CityDetail } from '../data/contract';
-import { causeWords } from './causes';
+import { betterDirection } from './causes';
 import { dominantHeatingFactor } from './places';
 import { mean, meanAt } from './stats';
 
@@ -80,7 +80,7 @@ export function secondCause(detail: CityDetail, members: readonly number[], shar
   for (const candidate of shares.slice(1)) {
     if (candidate.share < MIN_SECOND_SHARE) return null;
     const feature = detail.features.find((f) => f.key === candidate.key);
-    const better = feature ? causeWords(feature).better : null;
+    const better = feature ? betterDirection(feature) : null;
     const values = detail.cells.values[candidate.key];
     if (!better || !values) continue;
     const hot = meanAt(values, members);

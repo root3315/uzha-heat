@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { advise, cityAnswer, cityFacts, islandAnswer, dominantFor, genitive, locative, placeAnswer, plainText, restOfCauses, sectionAnswer, sourcesLine } from './answers';
+import { genitive, locative } from '../i18n/russian';
+import { advise, cityAnswer, cityFacts, islandAnswer, dominantFor, placeAnswer, restOfCauses, sectionAnswer, sourcesLine } from './answers';
+import { plainText } from './phrase';
 import { cityFactorMeans, type PlaceProfile } from './places';
 import type { Profile, Sample } from './transect';
 
@@ -73,17 +75,21 @@ describe('islandAnswer', () => {
   const island = (intensity: number) => ({ inside: 44 + intensity, outside: 44, intensity, insideCount: 100, outsideCount: 100 });
 
   it('says how much hotter the city is than its surroundings', () => {
-    expect(say(islandAnswer('Бухара', island(3.01)))).toBe('В черте Бухары поверхность на 3,0° горячее, чем вокруг.');
+    expect(say(islandAnswer('Бухара', island(3.01), 'ru'))).toBe('В черте Бухары поверхность на 3,0° горячее, чем вокруг.');
   });
 
   it('says plainly when the city is the cooler one', () => {
-    const phrase = islandAnswer('Самарканд', island(-0.8));
+    const phrase = islandAnswer('Самарканд', island(-0.8), 'ru');
     expect(say(phrase)).toMatch(/^В черте Самарканда поверхность на 0,8° прохладнее, чем вокруг: /);
     expect(phrase[1]).toMatchObject({ tone: 'cool' });
   });
 
   it('says nothing without a comparison', () => {
-    expect(islandAnswer('Ташкент', null)).toEqual([]);
+    expect(islandAnswer('Ташкент', null, 'ru')).toEqual([]);
+  });
+
+  it('speaks English without Russian grammar', () => {
+    expect(say(islandAnswer('Bukhara', island(3.01), 'en'))).toBe('Within Bukhara, the surface is 3.0° hotter than around the city.');
   });
 });
 
@@ -94,7 +100,7 @@ describe('cityAnswer', () => {
   it('opens with the heat island, then the hottest tenth and its usual cause', () => {
     const detail = city();
     const island = { inside: 45, outside: 43.6, intensity: 1.4, insideCount: 5, outsideCount: 5 };
-    expect(say(cityAnswer(detail, cityFacts(detail, inside, island)))).toBe(
+    expect(say(cityAnswer(detail, cityFacts(detail, inside, island), 'ru'))).toBe(
       'В черте Ташкента поверхность на 1,4° горячее, чем вокруг. Каждый десятый участок 200 м горячее 50,2°. Сильнее всего с жарой там по модели связано: мало зелени, так в 100 % из них.',
     );
   });
@@ -103,7 +109,7 @@ describe('cityAnswer', () => {
     const detail = city();
     // The hottest cells are barely built and lie outside the city line.
     detail.cells.values.built = [80, 80, 80, 80, 80, 60, 60, 60, 5, 5];
-    const text = say(cityAnswer(detail, cityFacts(detail, inside, null)));
+    const text = say(cityAnswer(detail, cityFacts(detail, inside, null), 'ru'));
     expect(text).toContain('Это в основном открытые, мало застроенные места: застроено 5 % (−54 п.п.). 100 % из них за городской чертой.');
   });
 
@@ -112,18 +118,26 @@ describe('cityAnswer', () => {
     detail.cells.values.built = [40, 40, 40, 40, 40, 40, 40, 40, 90, 90];
     const facts = cityFacts(detail, inside.map(() => true), null);
     expect(facts.pattern.kind).toBe('dense');
-    expect(say(cityAnswer(detail, facts))).toContain('Это плотная застройка: застроено 90 %, на 40 п.п. больше среднего.');
+    expect(say(cityAnswer(detail, facts, 'ru'))).toContain('Это плотная застройка: застроено 90 %, на 40 п.п. больше среднего.');
+  });
+
+  it('opens in English with the English city name and the same numbers', () => {
+    const detail = city();
+    const island = { inside: 45, outside: 43.6, intensity: 1.4, insideCount: 5, outsideCount: 5 };
+    expect(say(cityAnswer(detail, cityFacts(detail, inside, island), 'en'))).toBe(
+      'Within Tashkent, the surface is 1.4° hotter than around the city. One in ten 200 m cells is hotter than 50.2°. What the model ties to the heat there most often: little greenery, in 100% of them.',
+    );
   });
 
   it('stops after the threshold when nothing heats the hottest tenth', () => {
     const detail = city();
     const facts = { ...cityFacts(detail, inside, null), top: null, second: null };
-    expect(say(cityAnswer(detail, facts))).toMatch(/^Каждый десятый участок 200 м горячее 50,2°\./);
+    expect(say(cityAnswer(detail, facts, 'ru'))).toMatch(/^Каждый десятый участок 200 м горячее 50,2°\./);
   });
 
   it('never uses an em-dash or the word "квартал"', () => {
     const detail = city();
-    const text = plainText(cityAnswer(detail, cityFacts(detail, inside, null)));
+    const text = plainText(cityAnswer(detail, cityFacts(detail, inside, null), 'ru'));
     expect(text).not.toContain('—');
     expect(text).not.toMatch(/квартал/i);
   });
@@ -131,29 +145,38 @@ describe('cityAnswer', () => {
 
 describe('placeAnswer', () => {
   it('says how much hotter, and what gives almost all of it', () => {
-    expect(say(placeAnswer(place(50, { ndvi: 5, built: 1 }), 43.4, FEATURES))).toBe(
+    expect(say(placeAnswer(place(50, { ndvi: 5, built: 1 }), 43.4, FEATURES, 'ru'))).toBe(
       'На 6,6° жарче, чем в среднем по городу. Почти всё это даёт нехватка зелени.',
     );
   });
 
   it('says "больше всего" when the top cause explains only part of it', () => {
-    expect(say(placeAnswer(place(50, { ndvi: 2, built: 1.8 }), 43.4, FEATURES))).toContain('Больше всего даёт нехватка зелени.');
+    expect(say(placeAnswer(place(50, { ndvi: 2, built: 1.8 }), 43.4, FEATURES, 'ru'))).toContain('Больше всего даёт нехватка зелени.');
   });
 
   it('names what cools a cool place', () => {
-    expect(say(placeAnswer(place(40, { ndvi: -3, built: 0.4 }), 43.4, FEATURES))).toBe(
+    expect(say(placeAnswer(place(40, { ndvi: -3, built: 0.4 }), 43.4, FEATURES, 'ru'))).toBe(
       'На 3,4° прохладнее, чем в среднем по городу. Больше всего охлаждает зелень.',
     );
   });
 
   it('calls a near-average place average', () => {
-    expect(say(placeAnswer(place(43.6, { ndvi: -0.2, built: 0.9 }), 43.4, FEATURES))).toBe(
+    expect(say(placeAnswer(place(43.6, { ndvi: -0.2, built: 0.9 }), 43.4, FEATURES, 'ru'))).toBe(
       'Почти как в среднем по городу. Сильнее всего влияет плотная застройка.',
     );
   });
 
+  it('says the same in English', () => {
+    expect(say(placeAnswer(place(50, { ndvi: 5, built: 1 }), 43.4, FEATURES, 'en'))).toBe(
+      '6.6° hotter than the city average. Almost all of it comes from lack of greenery.',
+    );
+    expect(say(placeAnswer(place(40, { ndvi: -3, built: 0.4 }), 43.4, FEATURES, 'en'))).toBe(
+      '3.4° cooler than the city average. Most of the cooling comes from greenery.',
+    );
+  });
+
   it('marks the difference as a hot number', () => {
-    const [, number] = placeAnswer(place(50, { ndvi: 5 }), 43.4, FEATURES);
+    const [, number] = placeAnswer(place(50, { ndvi: 5 }), 43.4, FEATURES, 'ru');
     expect(number).toMatchObject({ tone: 'hot' });
   });
 });
@@ -162,13 +185,13 @@ describe('dominantFor and restOfCauses', () => {
   it('shows what heats a hot place and folds the rest into one signed line', () => {
     const hot = place(50, { ndvi: 4.6, built: 1.2, elevation: -0.5 });
     expect(dominantFor(hot, 43.4)).toEqual(['ndvi', 4.6]);
-    const rest = restOfCauses(hot.contributions, 'ndvi');
+    const rest = restOfCauses(hot.contributions, 'ndvi', 'ru');
     expect(rest.count).toBe(2);
     expect(plain(rest.summary)).toBe('ещё 2 причины · +0,7°');
   });
 
   it('does not count causes that round to 0,0°', () => {
-    const rest = restOfCauses({ ndvi: 4.6, built: 1.2, elevation: 0.02 }, 'ndvi');
+    const rest = restOfCauses({ ndvi: 4.6, built: 1.2, elevation: 0.02 }, 'ndvi', 'ru');
     expect(rest.count).toBe(1);
     expect(plain(rest.summary)).toBe('ещё 1 причина · +1,2°');
   });
@@ -181,7 +204,7 @@ describe('dominantFor and restOfCauses', () => {
 describe('advise', () => {
   it('ties the measure to the cause with one number for the place and a source for the effect', () => {
     const detail = city();
-    const advice = advise(detail, place(52, { ndvi: 3, built: 0.2, elevation: 0.1 }, { ndvi: 0.05, built: 52, elevation: 450 }), cityFactorMeans(detail));
+    const advice = advise(detail, place(52, { ndvi: 3, built: 0.2, elevation: 0.1 }, { ndvi: 0.05, built: 52, elevation: 450 }), cityFactorMeans(detail), 'ru');
     expect(advice.kind).toBe('act');
     if (advice.kind !== 'act') return;
     expect(advice.title).toBe('Деревья вдоль улиц и теневые навесы');
@@ -192,20 +215,20 @@ describe('advise', () => {
   it('does not claim that green cools a cool place unless green is what cools it', () => {
     const detail = city();
     const cooledByElevation = place(40, { ndvi: 0.1, built: 0.1, elevation: -2 }, { ndvi: 0.3, built: 40, elevation: 450 });
-    const advice = advise(detail, cooledByElevation, cityFactorMeans(detail));
+    const advice = advise(detail, cooledByElevation, cityFactorMeans(detail), 'ru');
     expect(advice.kind).toBe('none');
     expect(say(advice.kind === 'none' ? advice.text : [])).toBe('Здесь прохладнее среднего, менять нечего.');
   });
 
   it('names what to keep when an actionable factor cools the place', () => {
     const detail = city();
-    const advice = advise(detail, place(40, { ndvi: -3, built: 0.1 }, { ndvi: 0.6, built: 40 }), cityFactorMeans(detail));
+    const advice = advise(detail, place(40, { ndvi: -3, built: 0.1 }, { ndvi: 0.6, built: 40 }), cityFactorMeans(detail), 'ru');
     expect(say(advice.kind === 'none' ? advice.text : [])).toBe('Здесь прохладнее среднего, менять нечего. Стоит сохранить то, что охлаждает: зелень, −3,0°.');
   });
 
   it('says plainly when the heat comes from something no measure changes', () => {
     const detail = city();
-    const advice = advise(detail, place(46, { ndvi: -0.2, built: 0.05, elevation: 1.4 }, { ndvi: 0.4, built: 40, elevation: 450 }), cityFactorMeans(detail));
+    const advice = advise(detail, place(46, { ndvi: -0.2, built: 0.05, elevation: 1.4 }, { ndvi: 0.4, built: 40, elevation: 450 }), cityFactorMeans(detail), 'ru');
     expect(say(advice.kind === 'none' ? advice.text : [])).toBe('Рельеф добавляет здесь +1,4°, а это благоустройством не изменить.');
   });
 });
@@ -224,23 +247,33 @@ describe('sectionAnswer', () => {
 
   it('says how much of the line is hot, how hot it peaks and what heats it', () => {
     const p = profile([0, 1000, 2000, 3000, 4000].map((d, i) => sample(d, i < 2 ? 40 : 48, i < 2 ? { ndvi: -1 } : { ndvi: 3, built: 1 })));
-    expect(say(sectionAnswer(p, 43.4, FEATURES))).toBe('Жарче среднего 2,4 км из 4,0 км, до +4,6°. Там больше всего греет нехватка зелени.');
+    expect(say(sectionAnswer(p, 43.4, FEATURES, 'ru'))).toBe('Жарче среднего 2,4 км из 4,0 км, до +4,6°. Там больше всего греет нехватка зелени.');
+  });
+
+  it('says the same in English', () => {
+    const p = profile([0, 1000, 2000, 3000, 4000].map((d, i) => sample(d, i < 2 ? 40 : 48, i < 2 ? { ndvi: -1 } : { ndvi: 3, built: 1 })));
+    expect(say(sectionAnswer(p, 43.4, FEATURES, 'en'))).toBe(
+      '2.4 km of 4.0 km is hotter than average, by up to +4.6°. Most of the heat there comes from lack of greenery.',
+    );
   });
 
   it('handles a line that is cool all along', () => {
     const p = profile([0, 1000, 2000, 3000].map((d) => sample(d, 40, { ndvi: -2, built: 0.3 })));
-    expect(say(sectionAnswer(p, 43.4, FEATURES))).toBe('Весь разрез прохладнее, чем в среднем по городу. Больше всего охлаждает зелень.');
+    expect(say(sectionAnswer(p, 43.4, FEATURES, 'ru'))).toBe('Весь разрез прохладнее, чем в среднем по городу. Больше всего охлаждает зелень.');
   });
 
   it('handles a line that misses the data', () => {
-    expect(say(sectionAnswer(profile([sample(0, 40, null), sample(10, 40, null)]), 43.4, FEATURES))).toBe('Разрез прошёл мимо данных.');
+    expect(say(sectionAnswer(profile([sample(0, 40, null), sample(10, 40, null)]), 43.4, FEATURES, 'ru'))).toBe('Разрез прошёл мимо данных.');
   });
 });
 
 describe('sourcesLine', () => {
   it('lists only the sources behind the factors present, and the model quality from the data', () => {
-    expect(plain(sourcesLine(city()))).toBe(
+    expect(plain(sourcesLine(city(), 'ru'))).toBe(
       'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, июнь–август 2023–2025. R² 0,74 на пространственной проверке, ошибка ~1,3°. Вклад факторов показывает связь, а не эксперимент.',
+    );
+    expect(plain(sourcesLine(city(), 'en'))).toBe(
+      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, June–August 2023–2025. R² 0.74 on spatial cross-validation, error ~1.3°. Factor contributions show association, not cause and effect.',
     );
   });
 });

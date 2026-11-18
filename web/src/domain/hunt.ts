@@ -1,6 +1,8 @@
 import type { CityDetail, GlobalImportance } from '../data/contract';
+import type { Locale } from '../i18n/locale';
 import { causeLabel, causeWords } from './causes';
-import { formatDeg } from './format';
+import { formats } from './format';
+import { HUNT_TEXTS } from './small.texts';
 import { dominantCause } from './transect';
 
 /**
@@ -49,14 +51,14 @@ export interface CellReadout {
 }
 
 /** What the map says under the cursor: the cell's temperature and its strongest cause. */
-export function cellReadout(detail: CityDetail, cell: number): CellReadout | null {
+export function cellReadout(detail: CityDetail, cell: number, locale: Locale): CellReadout | null {
   const t = detail.cells.lst[cell];
   if (t === undefined || !Number.isFinite(t)) return null;
   const contributions = Object.fromEntries(detail.features.map((f) => [f.key, detail.cells.shap[f.key]?.[cell] ?? 0]));
   const top = dominantCause(contributions);
   const feature = detail.features.find((f) => f.key === top?.key);
   if (!top || !feature) return { t, cause: null, heats: false };
-  return { t, cause: causeLabel(causeWords(feature), top.value), heats: top.value >= 0 };
+  return { t, cause: causeLabel(causeWords(feature, locale), top.value), heats: top.value >= 0 };
 }
 
 /** The factor that explains the largest part of the temperature differences, and how large that part is. */
@@ -68,9 +70,11 @@ export function leadingFactor(importance: readonly GlobalImportance[]): { key: s
 }
 
 /** The line under the counter after a click, in the page's plain voice. */
-export function findMessage(outcome: FindOutcome, t: number, target: HuntTarget, cityMean: number): string {
-  if (outcome === 'new') return `Засчитано: ${formatDeg(t)}, горячая десятая часть города.`;
-  if (outcome === 'repeat') return 'Этот участок уже засчитан.';
-  if (t >= cityMean) return `${formatDeg(t)}: теплее среднего, но горячими считаются от ${formatDeg(target.threshold)}.`;
-  return `${formatDeg(t)}: прохладнее среднего по городу, ${formatDeg(cityMean)}.`;
+export function findMessage(outcome: FindOutcome, t: number, target: HuntTarget, cityMean: number, locale: Locale): string {
+  const say = HUNT_TEXTS[locale];
+  const { formatDeg } = formats(locale);
+  if (outcome === 'new') return say.counted(formatDeg(t));
+  if (outcome === 'repeat') return say.repeat;
+  if (t >= cityMean) return say.warm(formatDeg(t), formatDeg(target.threshold));
+  return say.cool(formatDeg(t), formatDeg(cityMean));
 }

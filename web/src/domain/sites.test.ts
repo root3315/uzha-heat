@@ -14,7 +14,7 @@ describe('siteAt', () => {
     ];
     const site = siteAt([69.27, 41.255], features);
     expect(site).toEqual({ kind: 'airport', name: 'Ташкент' });
-    expect(siteTitle(site!)).toBe('Аэродром: Ташкент');
+    expect(siteTitle(site!, 'ru')).toBe('Аэродром: Ташкент');
   });
 
   it('finds a rail yard by its land use or by several yard tracks', () => {

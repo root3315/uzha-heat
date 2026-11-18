@@ -24,7 +24,7 @@ export interface Cause {
 }
 
 export interface Sample {
-  /** Distance from А, metres. */
+  /** Distance from the start (A), metres. */
   d: number;
   point: LonLat;
   cell: number;
