@@ -493,26 +493,25 @@ select {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
 }
-/* 3D: a third cell joined to the zoom card under it, so the view controls read as one group. */
+/* 3D: its own card under the zoom card, same size and corners; on, it is outlined in ink rather than filled. */
 .map-3d {
   position: absolute;
-  top: 99px;
+  top: 106px;
   right: 10px;
   z-index: 3;
   width: 44px;
   height: 44px;
   border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 14px 14px;
+  border-radius: 14px;
   background: var(--card);
   box-shadow: 0 0 0 1px var(--line);
-  color: var(--ink);
-  font: 600 0.8rem/1 var(--font-mono);
+  color: var(--ink-2);
+  font: 600 0.78rem/1 var(--font-mono);
   cursor: pointer;
 }
 .map-3d[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--ink);
 }
 .map.is-3d .map__labels {
   display: none;
