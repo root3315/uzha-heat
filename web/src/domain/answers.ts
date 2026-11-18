@@ -112,7 +112,7 @@ export function hotTenthAnswer(detail: CityDetail, facts: CityFacts): Phrase {
   if (pattern) phrase.push(pattern);
   if (!facts.top) return phrase;
   const words = wordsByKey(detail.features);
-  let cause = ` Главная причина по модели: ${words(facts.top.key).there}, так в ${formatPercent(facts.top.share)} из них`;
+  let cause = ` Сильнее всего с жарой там по модели связано: ${words(facts.top.key).there}, так в ${formatPercent(facts.top.share)} из них`;
   if (facts.second) cause += `; на втором месте ${words(facts.second.key).there} (${formatPercent(facts.second.share)})`;
   return [...phrase, `${cause}.`];
 }

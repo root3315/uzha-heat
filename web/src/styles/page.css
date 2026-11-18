@@ -28,7 +28,6 @@
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  background: linear-gradient(180deg, transparent 56%, var(--amber-wash) 56%, var(--amber-wash) 92%, transparent 92%);
 }
 .hero__caption {
   max-width: 24rem;
@@ -164,8 +163,7 @@
   text-wrap: pretty;
 }
 .why__answer .num--hot {
-  color: var(--ink);
-  background: linear-gradient(180deg, transparent 50%, var(--amber-wash) 50%, var(--amber-wash) 90%, transparent 90%);
+  color: var(--hot);
 }
 .why__panel {
   display: grid;
@@ -376,6 +374,11 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
+.town__note {
+  margin: 0;
+  color: var(--ink-2);
+  font: 400 0.68rem/1.45 var(--font-mono);
+}
 
 .mini {
   position: relative;
@@ -525,7 +528,7 @@
 }
 .foot a {
   color: var(--ink);
-  text-decoration-color: var(--amber);
+  text-decoration-color: var(--ink-2);
   text-underline-offset: 3px;
 }
 
