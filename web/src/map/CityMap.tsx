@@ -428,6 +428,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
 
   // In 3D, read the buildings of the view from the city's own file; the basemap's stay as the fallback.
   const fromFile = useRef(false);
+  /** Colours the basemap's buildings now; set by the paint effect, called when the file fails and they take over. */
+  const paintBasemap = useRef<(() => void) | null>(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !threeD) return undefined;
@@ -451,6 +453,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
           stop?.();
           stop = null;
           use(false);
+          paintBasemap.current?.();
         },
       });
     };
@@ -490,10 +493,12 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       timer = window.setTimeout(paint, PAINT_DELAY_MS);
     };
     map.on('sourcedata', onData);
+    paintBasemap.current = paint;
     if (map.isStyleLoaded()) paint();
     return () => {
       map.off('sourcedata', onData);
       window.clearTimeout(timer);
+      paintBasemap.current = null;
     };
   }, [threeD, model]);
 
