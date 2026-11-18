@@ -6,10 +6,15 @@
 
 **Live demo:** https://uzha.mydevbox.xyz
 
+**How to view the demo** (two minutes):
+1. Open https://uzha.mydevbox.xyz/map/tashkent and click any coloured place on the map.
+2. In the panel on the right open "What if" and move the sliders: the city model recalculates that place.
+3. Click "Whole city", then "Where to plant first": five places, each opens on the map.
+
 A map of summer surface overheating in Tashkent, with Samarkand and Bukhara as a check that the method transfers. For every
 200 × 200 m cell it shows how hot the surface is, which factors heat or cool that place and by how many degrees, and what
 can be done there. "What if" sliders recompute the temperature of a place with the city's own model right in the browser,
-"Where to plant first" ranks the places where trees cool the most people, and a 3D view colours about 660 thousand buildings
+"Where to plant first" ranks the places where greening cools the most people, and a 3D view colours about 660 thousand buildings
 by the surface temperature under them.
 
 ![Landing page](docs/screenshots/00-landing.png)
@@ -33,17 +38,27 @@ Tashkent, open nearly unbuilt land in Samarkand, building mixed with bare ground
 
 This is the temperature of the surface itself at about 11:00, from satellite images, not the air temperature.
 
-**Check against NASA MODIS** (MYD11A2, 1 km, same summers): the pattern matches with r = 0.85 / 0.61 / 0.81, mean
-difference +0.4 / −0.6 / −0.7 °C. At night (about 01:30) MODIS also shows the city warmer than the 1.5 km ring:
-+2.4 / +1.2 / +1.8 °C. Command: `python -m pipeline.validate --all --web`.
+**Check against NASA MODIS** (1 km, same summers, Tashkent / Samarkand / Bukhara):
+
+| | Overpass | Pattern, r | Mean difference, ours minus MODIS | RMSE |
+|---|---|---|---|---|
+| Terra (MOD11A2) | ~10:30, closer to Landsat's ~11:00 | 0.87 / 0.65 / 0.87 | +4.4 / +3.2 / +3.3 °C | 4.7 / 3.8 / 3.7 °C |
+| Aqua (MYD11A2) | ~13:30 | 0.85 / 0.61 / 0.81 | +0.4 / −0.6 / −0.7 °C | 1.7 / 2.1 / 1.8 °C |
+
+The main metric is r: it says whether we find the heat in the same places. The absolute level differs between the
+products for known reasons: emissivity, 30 m Landsat against 1 km MODIS, view angle and time of day. At night (Aqua,
+about 01:30) MODIS also shows the city warmer than the 1.5 km ring: +2.4 / +1.2 / +1.8 °C.
+Command: `python -m pipeline.validate --all --web`.
 
 **People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
 in the hottest tenth of cells inside the outline. In Samarkand the hottest cells are mostly empty open land, hence the small
 figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
 
-**Where to plant first.** The same planting, +20 percentage points of tree crown and +0.1 NDVI on a 200 m cell (never past
-the city's greenest 5 %), run through the city model on every inhabited cell. In Tashkent the top five places cool the surface
-by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
+**Where to plant first.** The same greening on every inhabited 200 m cell: tree crowns plus grass and watering, that is
++20 percentage points of tree crown and +0.1 NDVI (never past the city's 95th percentile), run through the city model. In
+Tashkent the top five places cool the surface by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
+Most of the effect comes from greenery as a whole, not from crowns alone. At the first place, near the Small Ring Road:
+crowns only −0.5 °C, NDVI only −3.1 °C, both −3.7 °C (surface 43.5 → 39.9 °C).
 
 ## How to use it
 
@@ -54,7 +69,7 @@ by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
 - Line A–B draws a cross-section: the temperature profile and a band of causes under it (hatched).
 - "People" shows residents as dots, and schools, kindergartens and clinics on the hottest cells. Colour stays temperature.
 - "3D" tilts the map and raises the buildings, each coloured by the surface temperature under it.
-- "What if" on a place: more trees and greenery, lighter roofs, less built-up. The city model recomputes the surface
+- "What if" on a place: more tree crown and greenery (NDVI), lighter roofs, less built-up. The city model recomputes the surface
   temperature of that place. Sliders stay within what the city already has (5–95 % of cells); built-up can drop by at most
   25 percentage points.
 - "Where to plant first" on the city view: five places, each opens on the map with its own "what if".
@@ -70,7 +85,8 @@ by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
    elevation from Copernicus DEM; roads, buildings and water from OpenStreetMap.
 4. An XGBoost model per city. Accuracy is measured on whole 2 × 2 km blocks left out of training (spatial cross-validation).
 5. The contribution of every factor in every cell, in °C, from SHAP.
-6. Checks: the heat island with rings of 0.5 / 1 / 1.5 km, groups of correlated factors, NASA MODIS by day and by night.
+6. Checks: the heat island with rings of 0.5 / 1 / 1.5 km, groups of correlated factors, NASA MODIS Terra and Aqua by day
+   and by night.
 7. Buildings for 3D: footprints from OpenStreetMap and Microsoft ML Building Footprints; height from OSM, otherwise modelled
    from shape, type, neighbours and GHSL Built-H. Mean error on held-out buildings: Tashkent 3.9 m, Samarkand 1.4 m, Bukhara 2.4 m.
 8. Each city model is exported as compact JSON for "what if"; the browser evaluates it exactly as XGBoost does
@@ -96,7 +112,7 @@ Measure effects come from published studies, linked in the cards.
 | Building footprints | [Microsoft ML Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) | 3D |
 | Building height | [GHSL Built-H](https://human-settlement.emergency.copernicus.eu/) | 3D height model |
 | Population | [WorldPop](https://www.worldpop.org) 2025 | people in the heat, planting ranking |
-| Validation | [NASA MODIS MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/), day and night | check |
+| Validation | NASA MODIS [MOD11A2](https://lpdaac.usgs.gov/products/mod11a2v061/) (Terra) and [MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/) (Aqua), day and night | check |
 | Weather context | ERA5 (Copernicus) via [Open-Meteo](https://open-meteo.com) | wind, humidity, sun |
 | Basemap | [OpenFreeMap](https://openfreemap.org) | map tiles |
 
@@ -115,7 +131,15 @@ npm run build      # output in web/dist
 ```
 
 The city JSON files and models are already in `web/public/data/`, so the site runs without the pipeline. Building files
-`.fgb` (about 140 MB) are not in git; without them 3D shows the basemap's buildings.
+`.fgb` (about 140 MB) are not in git; without them 3D shows the basemap's buildings. To get them without running the
+pipeline, download the published ones:
+
+```bash
+mkdir -p web/public/data/buildings
+for c in tashkent samarkand bukhara; do
+  curl -o web/public/data/buildings/$c.fgb https://uzha.mydevbox.xyz/data/buildings/$c.fgb
+done
+```
 
 **Data pipeline** (Python 3.10+, no keys):
 
@@ -124,8 +148,13 @@ pip install -r pipeline/requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
-python -m pytest pipeline/tests -q
+python -m pytest pipeline/tests -q                     # 92 tests, about a minute
 ```
+
+The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.
+A first run of Tashkent takes roughly 10–20 minutes, mostly Sentinel-2 reads; a rerun with the cache takes about a minute.
+`pipeline.buildings` downloads the Geofabrik extract of Uzbekistan (~130 MB), Microsoft footprints (~45 MB per tile) and a
+GHSL tile. Details: [pipeline/README.md](pipeline/README.md).
 
 Hosting: [docs/deploy.md](docs/deploy.md).
 
