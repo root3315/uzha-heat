@@ -6,8 +6,9 @@ import { heatIslandIntensity, insideMask, type HeatIsland } from './heatIsland';
 import { buildField, fieldAt, fineToSlot, type Field } from './field';
 import { buildCellGrid, cellAt, slotToLonLat, type CellGrid } from './grid';
 import { classShares, isothermGeometry, isothermLevels, type IsothermGeometry, type IsothermLevels } from './isotherms';
+import { hotPlacesByPeople } from './people';
 import { cityFactorMeans, dominantFactorPerCell, hotspotProfile, type FactorMeans, type PlaceProfile } from './places';
-import { pointInGeometry } from './stats';
+import { pointInGeometry, quantile } from './stats';
 import { defaultTransect, hottestPatch, type LonLat, type Transect, type TransectSource } from './transect';
 import { fromUtm, toUtm } from './utm';
 
@@ -32,8 +33,11 @@ export interface CityModel {
   island: HeatIsland | null;
   cityMeans: FactorMeans;
   defaultTransect: Transect;
-  /** Middle of the hottest neighbourhood inside the city: where the 3D view flies to. */
-  hotCenter: LonLat;
+  /**
+   * Where the 3D view flies to: the hot cell where most people live (crowded places are the ones drawn in OSM),
+   * else the hottest built-up cell, else the hottest neighbourhood.
+   */
+  threeDCenter: LonLat;
 }
 
 /** About a kilometre either way, in fine pixels, for finding the hottest neighbourhood. */
@@ -106,6 +110,34 @@ export function citySurface(detail: CityDetail, outline: Outline | null): CitySu
 }
 
 /** The light half: what needs the parsed data and functions over the surface. Cheap enough for the main thread. */
+/** A cell at least this built up (%, ESA WorldCover) counts as a neighbourhood with buildings. */
+const BUILT_UP_PERCENT = 40;
+/** And, where population is known, at least this crowded among the city's cells: crowded places are drawn in OSM. */
+const CROWDED_QUANTILE = 0.75;
+
+/**
+ * Where the 3D view flies: the hottest cell inside the outline that is built up, crowded (when population is known) and
+ * that the map can colour (`onMap`: the smoothed surface covers it). Null when there is no such cell.
+ */
+export function builtHotCenter(detail: CityDetail, inside: readonly boolean[], onMap: (point: LonLat) => boolean = () => true): LonLat | null {
+  const { lst, lon, lat, values, pop } = detail.cells;
+  const built = values.built;
+  if (!built) return null;
+  const crowded = pop ? quantile(pop.filter((_, i) => inside[i]), CROWDED_QUANTILE) : 0;
+  let best = -1;
+  lst.forEach((t, i) => {
+    if (!inside[i] || (built[i] ?? 0) < BUILT_UP_PERCENT || (pop && (pop[i] ?? 0) < crowded)) return;
+    if (best >= 0 && t <= (lst[best] ?? -Infinity)) return;
+    if (onMap([lon[i] ?? 0, lat[i] ?? 0])) best = i;
+  });
+  return best < 0 ? null : [lon[best] ?? 0, lat[best] ?? 0];
+}
+
+function threeDCenter(detail: CityDetail, inside: readonly boolean[], onMap: (point: LonLat) => boolean): LonLat | null {
+  const crowded = hotPlacesByPeople(detail, inside, 1)[0]?.point;
+  return crowded && onMap(crowded) ? crowded : builtHotCenter(detail, inside, onMap);
+}
+
 export function assembleCityModel(detail: CityDetail, outline: Outline | null, surface: CitySurface): CityModel {
   const { grid, field, levels, shares, isotherms, causeAreas: areas, inside, island } = surface;
   const source = transectSource(detail, grid, field, outline);
@@ -125,7 +157,7 @@ export function assembleCityModel(detail: CityDetail, outline: Outline | null, s
     island,
     cityMeans: cityFactorMeans(detail),
     defaultTransect: defaultTransect(source, surface.hotCenter),
-    hotCenter: surface.hotCenter,
+    threeDCenter: threeDCenter(detail, inside, (point) => Number.isFinite(source.temperatureAt(point))) ?? surface.hotCenter,
   };
 }
 

@@ -1,33 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { heatBuildings } from './heatBuildings';
+import { buildingClass } from './heatBuildings';
 
 const square = (x: number) => [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]];
 
-describe('heatBuildings', () => {
-  it('colours each building by the temperature at its centre and keeps its height', () => {
-    const out = heatBuildings(
-      [
-        { geometry: { type: 'Polygon', coordinates: square(0) }, properties: { render_height: 30, render_min_height: 3 } },
-        { geometry: { type: 'Polygon', coordinates: square(10) }, properties: {} },
-      ],
-      ([x]) => (x < 5 ? 50 : Number.NaN),
-      (t) => (t > 45 ? 6 : 0),
-    );
-    expect(out.features.map((f) => f.properties)).toEqual([
-      { h: 30, base: 3, k: 6 },
-      { h: 6, base: 0, k: -1 },
-    ]);
+describe('buildingClass', () => {
+  it('reads the temperature at the centre of the building', () => {
+    const at: [number, number][] = [];
+    const k = buildingClass({ type: 'Polygon', coordinates: square(0) }, (p) => (at.push(p), 50), (t) => (t > 45 ? 6 : 0));
+    expect(k).toBe(6);
+    expect(at).toEqual([[0.5, 0.5]]);
   });
 
-  it('splits a multipolygon into buildings and skips other geometry', () => {
-    const out = heatBuildings(
-      [
-        { geometry: { type: 'MultiPolygon', coordinates: [square(0), square(2)] }, properties: null },
-        { geometry: { type: 'Point', coordinates: [0, 0] }, properties: null },
-      ],
-      () => 40,
-      () => 2,
-    );
-    expect(out.features).toHaveLength(2);
+  it('is −1 outside the data and for anything that is not an area', () => {
+    expect(buildingClass({ type: 'MultiPolygon', coordinates: [square(0)] }, () => Number.NaN, () => 3)).toBe(-1);
+    expect(buildingClass({ type: 'Point', coordinates: [0, 0] }, () => 40, () => 3)).toBe(-1);
   });
 });

@@ -27,6 +27,8 @@ interface SectionProps {
   onPick(sample: Sample): void;
   /** While the page is still telling the story, the section is shown but not yet operated. */
   quiet?: boolean;
+  /** Draw the keys for causes and people here; off where the map carries them itself. */
+  keys?: boolean;
 }
 
 const CHART_H = 196;
@@ -77,7 +79,7 @@ export function PeopleKey({ model }: { model: CityModel }) {
 }
 
 /** The cross-section under the map: one sentence, a few quiet controls and the profile itself. */
-export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, people, onPeopleChange, onProbe, onPick, quiet = false }: SectionProps) {
+export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, people, onPeopleChange, onProbe, onPick, quiet = false, keys = true }: SectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>(900);
   const { detail } = model;
   return (
@@ -103,8 +105,8 @@ export function Section({ model, profile, isDefault, drawing, mode, onDraw, onRe
           )}
         </div>
       </div>
-      {mode === 'causes' && <CauseKey model={model} />}
-      {people && <PeopleKey model={model} />}
+      {keys && mode === 'causes' && <CauseKey model={model} />}
+      {keys && people && <PeopleKey model={model} />}
       <div ref={ref} className="section__chart">
         <ProfileChart
           profile={profile}

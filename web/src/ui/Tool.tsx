@@ -19,7 +19,7 @@ import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
 import { useReadout } from './readout';
 import { methodHref } from './routing';
-import { Section } from './Section';
+import { CauseKey, PeopleKey, Section } from './Section';
 
 interface ToolProps {
   model: CityModel;
@@ -46,6 +46,7 @@ const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 export function Tool({ model, cities, onCity }: ToolProps) {
   const mapRef = useRef<CityMapHandle>(null);
   const mapFrameRef = useRef<HTMLDivElement>(null);
+  const reportButtonRef = useRef<HTMLButtonElement>(null);
   const [transect, setTransect] = useState<Transect>(model.defaultTransect);
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
@@ -111,20 +112,26 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   };
 
   const switcher = <CitySwitcher cities={cities} currentId={detail.city.id} onChange={onCity} />;
+  // On a phone it sits in the chip row on the map, elsewhere as a third cell under the zoom buttons.
   const threeDButton = (
     <button
       type="button"
-      className="map-3d"
+      className={narrow ? 'pill pill--small' : 'map-3d'}
       aria-pressed={threeD}
       aria-label={threeD ? 'Вернуть плоскую карту' : 'Показать город в 3D'}
       title={threeD ? 'Плоская карта' : 'Город в 3D'}
       onClick={() => setThreeD(!threeD)}
     >
-      3D
+      {threeD ? '2D' : '3D'}
     </button>
   );
+  // Back to the button that opened it, so a keyboard reader is not left at the top of the page.
+  const closeReport = () => {
+    setReporting(false);
+    requestAnimationFrame(() => reportButtonRef.current?.focus());
+  };
   const reportButton = (
-    <button type="button" className="pill pill--small" onClick={() => setReporting(true)}>
+    <button ref={reportButtonRef} type="button" className="pill pill--small" onClick={() => setReporting(true)}>
       Отчёт
     </button>
   );
@@ -200,13 +207,18 @@ export function Tool({ model, cities, onCity }: ToolProps) {
                   Люди
                 </button>
               )}
-              <button type="button" className="pill pill--small" aria-pressed={threeD} onClick={() => setThreeD(!threeD)}>
-                3D
-              </button>
+              {threeDButton}
               {reportButton}
             </div>
           )}
           {!narrow && threeDButton}
+          {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. */}
+          {!narrow && (mode === 'causes' || people) && (
+            <div className="map-legend">
+              {mode === 'causes' && <CauseKey model={model} />}
+              {people && <PeopleKey model={model} />}
+            </div>
+          )}
           <MapHint touch={narrow || isTouch()} />
         </CityMap>
       </div>
@@ -223,13 +235,14 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           people={hasPeople ? people : undefined}
           onPeopleChange={setPeople}
           onProbe={setProbe}
+          keys={narrow}
           onPick={(sample) => pick(sample.point)}
         />
       </div>
       <aside className="tool__panel" aria-label="Что здесь происходит">
         <Panel model={model} content={content} header={header} footer={footer} />
       </aside>
-      {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={() => setReporting(false)} />}
+      {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
     </main>
   );
 }
