@@ -18,12 +18,15 @@ import type { FoundName } from '../domain/placeName';
 import type { Site } from '../domain/sites';
 import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
+import { prefersReducedMotion } from '../ui/hooks';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
+import { classOf } from '../domain/isotherms';
 import { facilityImage, facilityImageId } from './facilityImages';
+import { heatBuildings } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
-import { LAYER, SOURCE, bandOpacity, buildStyle } from './style';
+import { BUILDINGS_MIN_ZOOM, LAYER, SOURCE, bandOpacity, buildStyle } from './style';
 import { readTokens, type MapTokens } from './tokens';
 
 export type MapMode = 'temperature' | 'causes';
@@ -60,6 +63,8 @@ interface CityMapProps {
   mode: MapMode;
   /** People living on each cell as dots, and schools and clinics on the hottest cells. */
   people?: boolean;
+  /** Tilt the camera and raise the buildings over the temperature map. */
+  threeD?: boolean;
   /** Text of the small readout under the pointer, or null where there is nothing to say. */
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
@@ -67,6 +72,11 @@ interface CityMapProps {
   /** Overlays drawn over the map: chips, toolbars, hints. */
   children?: ReactNode;
 }
+
+/** The 3D view: tilted and turned a little, close enough for the buildings in the basemap tiles to show. */
+const THREE_D_PITCH = 60;
+const THREE_D_BEARING = -20;
+const THREE_D_ZOOM = BUILDINGS_MIN_ZOOM + 1;
 
 /** Below this pointer travel, px, a press is a click, not a drag. */
 const CLICK_SLOP_PX = 6;
@@ -134,7 +144,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -383,11 +393,11 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (!map) return;
     const apply = () => {
       map.setLayoutProperty(LAYER.causes, 'visibility', mode === 'causes' ? 'visible' : 'none');
-      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode));
+      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode, threeD));
     };
     if (map.getLayer(LAYER.causes)) apply();
     else map.once('load', apply);
-  }, [mode, model]);
+  }, [mode, model, threeD]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -399,6 +409,52 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (map.getLayer(LAYER.people)) apply();
     else map.once('load', apply);
   }, [people, model]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+    // The basemap tiles hold the buildings; ours is a copy of those in view, coloured by temperature, rebuilt as the view moves.
+    const refresh = () => {
+      if (map.getZoom() < BUILDINGS_MIN_ZOOM) return setData(map, SOURCE.buildings, EMPTY);
+      const buildings = map.querySourceFeatures(SOURCE.basemap, { sourceLayer: 'building' });
+      setData(map, SOURCE.buildings, heatBuildings(buildings, model.source.temperatureAt, (t) => classOf(model.levels, t)));
+    };
+    // Once per stop, after the tiles for the new view are in: refreshing on every idle would feed itself.
+    const afterMove = () => map.once('idle', refresh);
+    const apply = () => {
+      map.setLayoutProperty(LAYER.buildings, 'visibility', threeD ? 'visible' : 'none');
+      if (threeD) {
+        map.on('moveend', afterMove);
+        refresh();
+      } else {
+        map.off('moveend', afterMove);
+        setData(map, SOURCE.buildings, EMPTY);
+      }
+      const duration = prefersReducedMotion() ? 0 : 1200;
+      if (threeD) {
+        map.dragRotate.enable();
+        map.touchZoomRotate.enableRotation();
+        // From the whole-city view, fly to the hottest neighbourhood; if the reader has already come close, stay where they are.
+        const overview = map.getZoom() < THREE_D_ZOOM;
+        map.easeTo({
+          pitch: THREE_D_PITCH,
+          bearing: THREE_D_BEARING,
+          zoom: overview ? THREE_D_ZOOM : map.getZoom(),
+          ...(overview ? { center: model.hotCenter } : {}),
+          duration,
+        });
+      } else {
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+        map.easeTo({ pitch: 0, bearing: 0, duration });
+      }
+    };
+    if (map.getLayer(LAYER.buildings)) apply();
+    else map.once('load', apply);
+    return () => {
+      map.off('moveend', afterMove);
+    };
+  }, [threeD, model]);
 
   useEffect(() => {
     containerRef.current?.classList.toggle('is-drawing', drawing);

@@ -32,6 +32,8 @@ export interface CityModel {
   island: HeatIsland | null;
   cityMeans: FactorMeans;
   defaultTransect: Transect;
+  /** Middle of the hottest neighbourhood inside the city: where the 3D view flies to. */
+  hotCenter: LonLat;
 }
 
 /** About a kilometre either way, in fine pixels, for finding the hottest neighbourhood. */
@@ -123,6 +125,7 @@ export function assembleCityModel(detail: CityDetail, outline: Outline | null, s
     island,
     cityMeans: cityFactorMeans(detail),
     defaultTransect: defaultTransect(source, surface.hotCenter),
+    hotCenter: surface.hotCenter,
   };
 }
 

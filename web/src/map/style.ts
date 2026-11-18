@@ -19,6 +19,7 @@ export const SOURCE = {
   found: 'found',
   people: 'people',
   facilities: 'facilities',
+  buildings: 'buildings',
 } as const;
 
 export const LAYER = {
@@ -29,12 +30,16 @@ export const LAYER = {
   transectCasing: 'transect-casing',
   people: 'people',
   facilities: 'facilities',
+  buildings: 'buildings-3d',
 } as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';
 
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
+
+/** Buildings come in the basemap tiles from this zoom; below it the city is too small to read in 3D anyway. */
+export const BUILDINGS_MIN_ZOOM = 13;
 
 /** With causes hatched over it, the temperature recedes to half strength. */
 const CAUSES_DIM = 0.5;
@@ -69,8 +74,11 @@ function facilityData(model: CityModel) {
   };
 }
 
-export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes'): ExpressionSpecification {
-  const scale = mode === 'causes' ? CAUSES_DIM : 1;
+/** In 3D the buildings carry the colour; the ground under them steps back so they stand out. */
+const THREE_D_GROUND = 0.35;
+
+export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes', threeD = false): ExpressionSpecification {
+  const scale = (mode === 'causes' ? CAUSES_DIM : 1) * (threeD ? THREE_D_GROUND : 1);
   return ['match', ['get', 'k'], ...tokens.classOpacity.flatMap((o, k) => [k, o * scale]), scale] as unknown as ExpressionSpecification;
 }
 
@@ -107,6 +115,8 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       [SOURCE.found]: { type: 'geojson', data: EMPTY },
       [SOURCE.people]: { type: 'geojson', data: peopleData(model) },
       [SOURCE.facilities]: { type: 'geojson', data: facilityData(model) },
+      // Filled from the basemap's building layer only in 3D, each building coloured by the surface under it.
+      [SOURCE.buildings]: { type: 'geojson', data: EMPTY },
     },
     layers: [
       { id: 'ground', type: 'background', paint: { 'background-color': tokens.ground } },
@@ -165,6 +175,20 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         paint: { 'line-color': withAlpha(tokens.ink, 0.2), 'line-width': 0.6, 'line-dasharray': [3, 2] },
       },
       { id: 'outline', type: 'line', source: SOURCE.outline, paint: { 'line-color': tokens.ink, 'line-width': 1, 'line-opacity': 0.65 } },
+      // The city in 3D: every building in the colour of the surface under it, a heat model of the city.
+      {
+        id: LAYER.buildings,
+        type: 'fill-extrusion',
+        source: SOURCE.buildings,
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-extrusion-color': ['match', ['get', 'k'], ...tokens.classes.flatMap((color, k) => [k, color]), tokens.building] as unknown as ExpressionSpecification,
+          'fill-extrusion-height': ['get', 'h'],
+          'fill-extrusion-base': ['get', 'base'],
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      },
       {
         id: LAYER.facilities,
         type: 'symbol',

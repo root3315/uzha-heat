@@ -50,6 +50,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
+  const [threeD, setThreeD] = useState(false);
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
@@ -110,6 +111,18 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   };
 
   const switcher = <CitySwitcher cities={cities} currentId={detail.city.id} onChange={onCity} />;
+  const threeDButton = (
+    <button
+      type="button"
+      className="map-3d"
+      aria-pressed={threeD}
+      aria-label={threeD ? 'Вернуть плоскую карту' : 'Показать город в 3D'}
+      title={threeD ? 'Плоская карта' : 'Город в 3D'}
+      onClick={() => setThreeD(!threeD)}
+    >
+      3D
+    </button>
+  );
   const reportButton = (
     <button type="button" className="pill pill--small" onClick={() => setReporting(true)}>
       Отчёт
@@ -169,6 +182,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           found={[]}
           mode={mode}
           people={people}
+          threeD={threeD}
           describe={describe}
           onIdle={refineName}
         >
@@ -186,9 +200,13 @@ export function Tool({ model, cities, onCity }: ToolProps) {
                   Люди
                 </button>
               )}
+              <button type="button" className="pill pill--small" aria-pressed={threeD} onClick={() => setThreeD(!threeD)}>
+                3D
+              </button>
               {reportButton}
             </div>
           )}
+          {!narrow && threeDButton}
           <MapHint touch={narrow || isTouch()} />
         </CityMap>
       </div>
