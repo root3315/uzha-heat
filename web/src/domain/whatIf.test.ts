@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { factorRanges, leversFor, parseTreeModel, predict, predictRow, whatIf, type TreeModel } from './whatIf';
+import type { TreeModel } from '../data/contract';
+import { parseTreeModel } from '../data/parse';
+import { factorRanges, leversFor, predict, predictRow, whatIf } from './whatIf';
 
 /**
  * Two stumps by hand: tree < 10 → +2 else −1; ndvi < 0.3 → +1 else −0.5 (missing ndvi goes right).
@@ -62,13 +64,25 @@ describe('factorRanges', () => {
 describe('leversFor', () => {
   const ranges = { tree: [0, 60], ndvi: [0, 0.8], built: [0, 100] } as const;
 
+  /** TOY plus a tree on built-up: below 50 % it is 1° cooler. */
+  const WITH_BUILT: TreeModel = {
+    ...TOY,
+    trees: [...TOY.trees, { feature: [2, -1, -1], value: [50, -0.5, 0.5], left: [1, -1, -1], defaultLeft: [1, 0, 0] }],
+  };
+
   it('offers the factors that heat the cell most first, each in its sensible direction', () => {
-    const levers = leversFor(TOY, { tree: 0, ndvi: 0.1, built: 90 }, { tree: 0.4, ndvi: 1.5, built: 0.9 }, ranges);
+    const levers = leversFor(WITH_BUILT, { tree: 0, ndvi: 0.1, built: 90 }, { tree: 0.4, ndvi: 1.5, built: 0.9 }, ranges);
     expect(levers.map((l) => [l.lever.key, l.from, l.to])).toEqual([
       ['ndvi', 0.1, 0.8],
       ['built', 90, 0],
       ['tree', 0, 60],
     ]);
+  });
+
+  it('offers less built-up only where it heats the cell and its removal cools it by the model', () => {
+    const cell = { tree: 0, ndvi: 0.1, built: 90 };
+    expect(leversFor(TOY, cell, { built: 0.9 }, ranges).map((l) => l.lever.key)).not.toContain('built');
+    expect(leversFor(WITH_BUILT, cell, { built: -0.2 }, ranges).map((l) => l.lever.key)).not.toContain('built');
   });
 
   it('leaves out a lever with no room left and a factor the model lacks', () => {

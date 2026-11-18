@@ -1,26 +1,8 @@
 /**
  * "Что если": the city's own XGBoost model, evaluated in the browser on a cell with some factors changed.
- * The model file is written by the pipeline (pipeline/uzha/browser_model.py); see there for the layout.
+ * The model file is written by the pipeline (pipeline/uzha/browser_model.py); layout in docs/data-contract.md.
  */
-
-/** One regression tree as parallel arrays over its nodes. A leaf has feature −1 and its value in `value`. */
-export interface Tree {
-  feature: number[];
-  /** Split threshold (go left when x < value), or the leaf value. */
-  value: number[];
-  /** Left child; the right one is left + 1. −1 for a leaf. */
-  left: number[];
-  /** 1 when a missing value goes left. */
-  defaultLeft: number[];
-}
-
-export interface TreeModel {
-  features: string[];
-  baseScore: number;
-  trees: Tree[];
-  /** Sample rows with the booster's own predictions, written by the pipeline. */
-  check?: { rows: number[][]; prediction: number[] };
-}
+import type { Tree, TreeModel } from '../data/contract';
 
 /** Values of one cell, by factor key. */
 export type FactorValues = Record<string, number>;
@@ -122,10 +104,18 @@ export interface LeverRange {
 const MIN_ROOM = 0.05;
 /** At most this many sliders. */
 export const MAX_LEVERS = 3;
+/** Less built-up or fewer roads is offered only where that factor heats the cell by at least this much, °C… */
+const MIN_HEAT = 0.1;
+/** …and where taking it all the way down cools the cell by the model at least this much, °C. */
+const MIN_COOLING = 0.1;
 
 /**
  * The levers worth offering for a cell: present in the model, with room to move within the city's range,
- * those that heat this cell most (by its SHAP contribution) first. Built-up and roads only go down.
+ * those that heat this cell most (by its SHAP contribution) first.
+ *
+ * Built-up and roads only go down, and only where it makes sense. With everything else held, the model reads the
+ * freed land as bare ground, which in these cities is often hotter than asphalt; so a reduction is offered only
+ * where the factor heats this cell and its removal cools it. Greener and lighter are offered wherever there is room.
  */
 export function leversFor(model: TreeModel, cell: FactorValues, contributions: FactorValues, ranges: FactorRanges): LeverRange[] {
   const options: (LeverRange & { heat: number })[] = [];
@@ -136,25 +126,12 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     const from = clamp(here, range);
     const to = lever.direction === 'up' ? range[1] : range[0];
     if (Math.abs(to - from) < MIN_ROOM * (range[1] - range[0])) continue;
-    options.push({ lever, from, to, heat: contributions[lever.key] ?? 0 });
+    const heat = contributions[lever.key] ?? 0;
+    if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
+    options.push({ lever, from, to, heat });
   }
   return options
     .sort((a, b) => b.heat - a.heat)
     .slice(0, MAX_LEVERS)
     .map(({ lever, from, to }) => ({ lever, from, to }));
-}
-
-/** Basic shape check for the downloaded model file. */
-export function parseTreeModel(raw: unknown): TreeModel {
-  const model = raw as Partial<TreeModel> | null;
-  if (!model || !Array.isArray(model.features) || typeof model.baseScore !== 'number' || !Array.isArray(model.trees)) {
-    throw new Error('model file: expected features, baseScore and trees');
-  }
-  for (const tree of model.trees) {
-    const n = tree?.feature?.length;
-    if (!n || tree.value?.length !== n || tree.left?.length !== n || tree.defaultLeft?.length !== n) {
-      throw new Error('model file: a tree with mismatched arrays');
-    }
-  }
-  return model as TreeModel;
 }
