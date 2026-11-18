@@ -487,14 +487,30 @@ select {
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid var(--line);
 }
-.maplibregl-ctrl-group button/* Anchored sections stop below the fixed bar, not under it. */
-[id] {
-  scroll-margin-top: calc(var(--bar-h) + 8px);
-}
-:focus-visible {
+.maplibregl-ctrl-group button:focus-visible {
   box-shadow: none;
   outline: 2px solid var(--ink);
   outline-offset: -2px;
+}
+/* 3D: one more square under the zoom buttons, in the same card. */
+.map-3d {
+  position: absolute;
+  top: 116px;
+  right: 10px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink);
+  font: 600 0.8rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.map-3d[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--card);
 }
 .maplibregl-ctrl.maplibregl-ctrl-scale {
   background: transparent;
