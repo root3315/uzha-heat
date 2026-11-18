@@ -1,0 +1,150 @@
+import { useEffect, useMemo, useState } from 'react';
+import type { CityDetail, FeatureMeta, TreeModel } from '../data/contract';
+import { loadTreeModel } from '../data/load';
+import { formatDeg, formatDegSigned, formatFactorValue } from '../domain/format';
+import { factorRanges, leversFor, whatIf, type FactorValues, type LeverRange } from '../domain/whatIf';
+
+/** What each slider is called, and how its value is said aloud (screen readers get the unit in words). */
+const LEVER_TEXT: Record<string, { label: string; spoken: (value: string) => string }> = {
+  tree: { label: 'Деревья', spoken: (v) => `деревья на ${v} площади` },
+  ndvi: { label: 'Зелень, NDVI', spoken: (v) => `NDVI ${v}` },
+  albedo: { label: 'Светлые крыши и покрытия, альбедо', spoken: (v) => `альбедо ${v}` },
+  built: { label: 'Застройка', spoken: (v) => `застроено ${v} площади` },
+  roads: { label: 'Дороги', spoken: (v) => `${v} дорог` },
+};
+
+/** Changes smaller than this read as no change. */
+const NEGLIGIBLE_DEG = 0.05;
+
+type ModelState = { status: 'loading' } | { status: 'ready'; model: TreeModel } | { status: 'failed' };
+
+function useTreeModel(cityId: string): ModelState {
+  const [state, setState] = useState<ModelState>({ status: 'loading' });
+  useEffect(() => {
+    let alive = true;
+    setState({ status: 'loading' });
+    loadTreeModel(cityId).then(
+      (model) => alive && setState({ status: 'ready', model }),
+      () => alive && setState({ status: 'failed' }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [cityId]);
+  return state;
+}
+
+const column = (columns: Record<string, readonly number[]>, cell: number): FactorValues =>
+  Object.fromEntries(Object.entries(columns).map(([key, values]) => [key, values[cell] ?? Number.NaN]));
+
+interface SliderProps {
+  range: LeverRange;
+  feature: FeatureMeta;
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function LeverSlider({ range, feature, value, onChange }: SliderProps) {
+  const { lever, from, to } = range;
+  const text = LEVER_TEXT[lever.key] ?? { label: feature.label, spoken: (v: string) => `${feature.label} ${v}` };
+  const id = `whatif-${lever.key}`;
+  const say = (v: number) => formatFactorValue(feature, v);
+  const [min, max] = lever.direction === 'up' ? [from, to] : [to, from];
+  return (
+    <div className="whatif__lever">
+      <p className="whatif__head">
+        <label htmlFor={id}>{text.label}</label>
+        <span className="whatif__value num">{say(value)}</span>
+      </p>
+      <input
+        id={id}
+        className="whatif__range"
+        type="range"
+        min={min}
+        max={max}
+        step={lever.step}
+        value={value}
+        aria-valuetext={`${text.spoken(say(value))}, сейчас ${say(from)}`}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+      />
+      <p className="whatif__ends" aria-hidden="true">
+        <span>{lever.direction === 'up' ? `сейчас ${say(from)}` : `до ${say(to)}`}</span>
+        <span>{lever.direction === 'up' ? `до ${say(to)}` : `сейчас ${say(from)}`}</span>
+      </p>
+    </div>
+  );
+}
+
+function WhatIfBody({ detail, cell }: { detail: CityDetail; cell: number }) {
+  const state = useTreeModel(detail.city.id);
+  const ranges = useMemo(() => factorRanges(detail.cells.values), [detail]);
+  const values = useMemo(() => column(detail.cells.values, cell), [detail, cell]);
+  const contributions = useMemo(() => column(detail.cells.shap, cell), [detail, cell]);
+  const model = state.status === 'ready' ? state.model : null;
+  const levers = useMemo(() => (model ? leversFor(model, values, contributions, ranges) : []), [model, values, contributions, ranges]);
+  const [changes, setChanges] = useState<FactorValues>({});
+
+  if (state.status === 'loading') return <p className="whatif__status">Загружаю модель города…</p>;
+  if (state.status === 'failed' || !model) return <p className="whatif__status">Модель не загрузилась. Закройте и откройте блок ещё раз.</p>;
+  if (!levers.length) return <p className="whatif__status">Здесь нечего прибавить: деревьев, зелени и светлых покрытий уже столько, сколько бывает в городе.</p>;
+
+  const featureByKey = new Map(detail.features.map((f) => [f.key, f]));
+  const { delta } = whatIf(model, values, changes, ranges);
+  const shown = Math.abs(delta) < NEGLIGIBLE_DEG ? 0 : delta;
+  const tone = shown < 0 ? 'cool' : shown > 0 ? 'hot' : 'none';
+  const lst = detail.cells.lst[cell] ?? Number.NaN;
+  const changed = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      {levers.map((range) => {
+        const feature = featureByKey.get(range.lever.key);
+        if (!feature) return null;
+        return (
+          <LeverSlider
+            key={range.lever.key}
+            range={range}
+            feature={feature}
+            value={changes[range.lever.key] ?? range.from}
+            onChange={(value) => setChanges((current) => ({ ...current, [range.lever.key]: value }))}
+          />
+        );
+      })}
+      <div className="whatif__result">
+        <output className={`whatif__delta num${tone === 'none' ? '' : ` num--${tone}`}`} aria-live="polite">
+          {formatDegSigned(shown)}
+          <span className="visually-hidden"> к температуре поверхности здесь</span>
+        </output>
+        <p className="whatif__caption">
+          {changed ? `к поверхности здесь: около ${formatDeg(lst + shown)} вместо ${formatDeg(lst)}` : 'подвиньте ползунок, модель пересчитает температуру поверхности'}
+        </p>
+      </div>
+      {changed && (
+        <button type="button" className="whatif__reset" onClick={() => setChanges({})}>
+          Вернуть как есть
+        </button>
+      )}
+      <p className="whatif__caveat">По модели: связь в данных, не эксперимент; поверхность, не воздух.</p>
+    </>
+  );
+}
+
+/**
+ * "Что если" for one picked cell: two or three sliders for what can be changed here, and how the city's own model
+ * moves the surface temperature. The model file is fetched the first time the block is opened.
+ */
+export function WhatIfBlock({ detail, cell }: { detail: CityDetail; cell: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="whatif" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="whatif__summary">
+        Что если <span className="whatif__hint">пересчитать по модели</span>
+      </summary>
+      {open && (
+        <div className="whatif__body">
+          <WhatIfBody key={cell} detail={detail} cell={cell} />
+        </div>
+      )}
+    </details>
+  );
+}

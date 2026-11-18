@@ -952,6 +952,109 @@ summary.rest__summary:hover,
   min-width: 4.5ch;
 }
 
+/* Что если: sliders over the city's own model. Ink only; the one coloured thing is the change in temperature. */
+.whatif {
+  margin-top: 12px;
+}
+.whatif__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  font: 700 1rem/1 var(--font-display);
+  font-stretch: 85%;
+  list-style: none;
+  cursor: pointer;
+  transition: background-color var(--fast) var(--ease-out);
+}
+.whatif__summary::-webkit-details-marker {
+  display: none;
+}
+.whatif__summary:hover,
+.whatif[open] .whatif__summary {
+  background: var(--line);
+}
+.whatif__hint {
+  color: var(--ink-2);
+  font: 400 0.68rem/1 var(--font-mono);
+}
+.whatif__body {
+  margin-top: 4px;
+}
+.whatif__status {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 400 0.72rem/1.5 var(--font-mono);
+}
+.whatif__lever {
+  margin-top: 14px;
+}
+.whatif__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.88rem;
+}
+.whatif__value {
+  font: 500 0.75rem/1 var(--font-mono);
+}
+.whatif__range {
+  display: block;
+  width: 100%;
+  height: 32px;
+  margin: 2px 0 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+.whatif__ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-2);
+  font: 400 0.62rem/1.2 var(--font-mono);
+}
+.whatif__result {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 20px;
+}
+.whatif__delta {
+  flex: none;
+  font: 900 clamp(52px, 4.2vw, 68px)/0.82 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: -0.02em;
+}
+.whatif__caption {
+  max-width: 24ch;
+  padding-bottom: 2px;
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.whatif__reset {
+  min-height: 36px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font: 400 0.7rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.whatif__reset:hover {
+  background: var(--paper-2);
+}
+.whatif__caveat {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 400 0.68rem/1.5 var(--font-mono);
+}
+
 /* Физика участка: where the sunlight goes. Ink and hatch only, colour stays for temperature. */
 .energy {
   margin-top: 28px;

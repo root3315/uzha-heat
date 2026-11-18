@@ -26,6 +26,8 @@ export interface PanelContent {
   advice: Advice;
   /** Where the sunlight goes: the picked cell, or the hottest tenth for the city. Null without energy data. */
   energy: { title: string; view: EnergyView } | null;
+  /** The picked cell for "что если"; null for the whole city and on an airfield or a rail yard. */
+  whatIfCell: number | null;
 }
 
 /**
@@ -72,5 +74,6 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     rest,
     advice: place && site ? { kind: 'none', text: [siteNote(site)] } : advise(detail, subject, model.cityMeans),
     energy: energy && { title: place ? 'Физика участка' : 'Физика горячей десятой части', view: energy },
+    whatIfCell: place?.cell !== undefined && !site ? place.cell : null,
   };
 }
