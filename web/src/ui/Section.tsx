@@ -5,8 +5,8 @@ import { formatDeg, formatNumber } from '../domain/format';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
-import { formatPeople, hotFacilities, peopleInHeat, populationCaveat } from '../domain/people';
-import { CauseIcon, FacilityIcon } from './icons';
+import { formatPeople, hotFacilities, peopleInHeat, populationCaveat, sparseHeatNote } from '../domain/people';
+import { FacilityIcon } from './icons';
 import { HatchSwatch } from './patterns';
 import { Phrase } from './Phrase';
 import { ProfileChart } from './ProfileChart';
@@ -31,6 +31,7 @@ interface SectionProps {
 
 const CHART_H = 196;
 
+/** Every hatch on the map gets its swatch and name: an unexplained hatch is worse than a second row. */
 export function CauseKey({ model }: { model: CityModel }) {
   const byKey = new Map(model.detail.features.map((f) => [f.key, f]));
   return (
@@ -38,7 +39,6 @@ export function CauseKey({ model }: { model: CityModel }) {
       {model.causeAreas.features.map(({ properties: { key } }) => (
         <li key={key}>
           <HatchSwatch hatch={key} direction="heats" />
-          <CauseIcon cause={key} size={16} />
           {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort}
         </li>
       ))}
@@ -70,7 +70,7 @@ export function PeopleKey({ model }: { model: CityModel }) {
         </li>
       </ul>
       <p className="people-key__note">
-        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {detail.population ? populationCaveat(detail.population.year) : ''}
+        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {sparseHeatNote(inHeat) ?? ''} {detail.population ? populationCaveat(detail.population.year) : ''}
       </p>
     </div>
   );

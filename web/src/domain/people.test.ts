@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CityDetail, Facility } from '../data/contract';
-import { facilitiesNear, facilityTitle, formatPeople, hotFacilities, hotPlacesByPeople, peopleInHeat } from './people';
+import { facilitiesNear, facilityTitle, formatPeople, hotFacilities, hotPlacesByPeople, peopleInHeat, sparseHeatNote } from './people';
 
 /** Ten cells in a row along the equator, 0.01° (≈1.1 km) apart; the hottest tenth starts at 49°. */
 function city(lst: number[], pop?: number[], facilities: Facility[] = []): CityDetail {
@@ -18,12 +18,19 @@ const all = lst.map(() => true);
 
 describe('peopleInHeat', () => {
   it('sums the people on cells at or above the hottest-tenth threshold', () => {
-    expect(peopleInHeat(city(lst, pop), all)).toEqual({ people: 300 + 900 + 700 + 0, total: 8900, cells: 4 });
+    expect(peopleInHeat(city(lst, pop), all)).toEqual({ people: 300 + 900 + 700 + 0, total: 8900, cells: 4, insideCells: 10 });
   });
 
   it('counts only people inside the city outline, the ring around it is not the city', () => {
     const inside = lst.map((_, i) => i !== 1 && i !== 7);
-    expect(peopleInHeat(city(lst, pop), inside)).toEqual({ people: 300 + 700 + 0, total: 8900 - 900 - 2000, cells: 3 });
+    expect(peopleInHeat(city(lst, pop), inside)).toEqual({ people: 300 + 700 + 0, total: 8900 - 900 - 2000, cells: 3, insideCells: 8 });
+  });
+
+  it('explains a small figure when the hot cells are mostly empty', () => {
+    expect(sparseHeatNote({ people: 40, total: 22000, cells: 2, insideCells: 100 })).toBe(
+      'Самые горячие участки здесь почти без жилья: в среднем 20 человек на участок против 220 по городу.',
+    );
+    expect(sparseHeatNote({ people: 400, total: 22000, cells: 2, insideCells: 100 })).toBeNull();
   });
 
   it('says nothing without population data', () => {

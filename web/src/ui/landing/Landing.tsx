@@ -5,7 +5,7 @@ import type { CityModel } from '../../domain/cityModel';
 import { formatDeg, formatDegSigned, formatNumber, plural } from '../../domain/format';
 import { cityEnergy, cityEnergyLine, energyCaveat } from '../../domain/energy';
 import type { HeatIsland } from '../../domain/heatIsland';
-import { formatPeople, peopleFigure, peopleInHeat } from '../../domain/people';
+import { formatPeople, peopleFigure, peopleInHeat, sparseHeatNote } from '../../domain/people';
 import { findMessage, huntCell, leadingFactor, registerFind, type HuntCandidate, type HuntTarget } from '../../domain/hunt';
 import { recommend } from '../../domain/recommendations';
 import { sampleTransect, type LonLat } from '../../domain/transect';
@@ -106,9 +106,11 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
           onIdle={() => undefined}
         >
           <div className="hunt-chip" aria-live="polite">
-            <p>
-              найдено горячих участков <b>{formatNumber(hunt.found.size, 0)}</b> из&nbsp;{formatNumber(hunt.target.total, 0)}
-            </p>
+            {hunt.found.size > 0 && (
+              <p>
+                найдено горячих участков <b>{formatNumber(hunt.found.size, 0)}</b> из&nbsp;{formatNumber(hunt.target.total, 0)}
+              </p>
+            )}
             <p className="hunt-chip__log">{said ?? `найдите участок от ${formatDeg(hunt.target.threshold)}: он горячее 90 % города`}</p>
           </div>
         </CityMap>
@@ -222,6 +224,7 @@ function CityCard({ city }: { city: CitySummary }) {
   const detail = model?.detail;
   const failed = state.status === 'error';
   const inHeat = model ? peopleInHeat(model.detail, model.inside) : null;
+  const sparse = inHeat ? sparseHeatNote(inHeat) : null;
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
@@ -253,6 +256,7 @@ function CityCard({ city }: { city: CitySummary }) {
           </div>
         )}
       </dl>
+      {sparse && <p className="town__note">{sparse}</p>}
       <p className="tag town__meta">
         {detail
           ? `${detail.period.lstScenes} ${plural(detail.period.lstScenes, ['снимок', 'снимка', 'снимков'])} Landsat · R² ${formatNumber(detail.model.r2Cv, 2)}`
@@ -285,8 +289,8 @@ function Actions({ model }: { model: CityModel }) {
       <div className="acts__head">
         <h2 id="acts-title">Что делать</h2>
         <p>
-          Для горячей десятой части {genitive(detail.city.name)}. Число слева: сколько градусов поверхности эта причина даёт там по&nbsp;модели. Сколько снимет мера,
-          известно из&nbsp;обзоров по&nbsp;другим городам, ссылка у&nbsp;каждой. Причина здесь значит связь, которую нашла модель, а&nbsp;не&nbsp;результат эксперимента.
+          Для горячей десятой части {genitive(detail.city.name)}. Число слева: на&nbsp;сколько градусов поверхности этот фактор по&nbsp;модели связан с&nbsp;жарой
+          там. Это связь в&nbsp;данных, а&nbsp;не&nbsp;результат эксперимента. Сколько снимет мера, известно из&nbsp;обзоров по&nbsp;другим городам, ссылка у&nbsp;каждой.
         </p>
       </div>
       <ol className="acts__list">
@@ -294,7 +298,7 @@ function Actions({ model }: { model: CityModel }) {
           <li key={item.id} className="act">
             <p className="act__effect">
               <span>{formatDegSigned(item.heating)}</span>
-              <small>даёт эта причина</small>
+              <small>связано по модели</small>
             </p>
             <h3 className="act__title">{item.title}</h3>
             <p className="act__why">{item.reasons[0]?.text}.</p>
