@@ -1,120 +1,149 @@
-# UzHa: острова тепла городов Узбекистана
+# UzHa: urban heat islands of Uzbek cities
 
-Карта летнего перегрева Ташкента, Самарканда и Бухары по спутниковым снимкам Landsat 8/9 (NASA/USGS). Для каждого участка 200 × 200 м
-показывает, насколько там горячо, что именно греет это место и что с этим можно сделать, а в 3D показывает город, где каждый дом
-окрашен температурой поверхности под ним. Ползунки «что если» пересчитывают температуру участка той же моделью прямо в браузере.
+**English** · [Русский](README.ru.md)
 
-**Сайт:** https://uzha.mydevbox.xyz
+**Team:** UzHa · **Challenge:** Urban Heat Islands of Tashkent (Uzspace Hackathon 2026, GIS & AI)
 
-![Главная](docs/screenshots/00-landing.png)
+**Live demo:** https://uzha.mydevbox.xyz
 
-## Что получилось
+A map of summer surface overheating in Tashkent, with Samarkand and Bukhara as a check that the method transfers. For every
+200 × 200 m cell it shows how hot the surface is, which factors heat or cool that place and by how many degrees, and what
+can be done there. "What if" sliders recompute the temperature of a place with the city's own model right in the browser,
+"Where to plant first" ranks the places where trees cool the most people, and a 3D view colours about 660 thousand buildings
+by the surface temperature under them.
 
-Поверхность внутри черты города летом горячее, чем в кольце вокруг:
+![Landing page](docs/screenshots/00-landing.png)
 
-| | Остров тепла | При кольце 0,5 / 1 / 1,5 км | Средняя поверхность | Модель объясняет разброса (R² на блоках, которых не видела) |
+## Results
+
+Inside the city outline the surface is hotter in summer than in the ring around it:
+
+| | Heat island | With a ring of 0.5 / 1 / 1.5 km | Mean surface | Variance explained (R² on blocks the model never saw) |
 |---|---|---|---|---|
-| Ташкент | +1,8° | +1,3 / +1,5 / +1,8° | 43,6° | 79 % |
-| Самарканд | +1,4° | +1,2 / +1,2 / +1,4° | 42,7° | 77 % |
-| Бухара | +3,1° | +2,9 / +3,0 / +3,1° | 41,4° | 69 % |
+| Tashkent | +1.8 °C | +1.3 / +1.5 / +1.8 °C | 43.6 °C | 79 % |
+| Samarkand | +1.4 °C | +1.2 / +1.2 / +1.4 °C | 42.7 °C | 77 % |
+| Bukhara | +3.1 °C | +2.9 / +3.0 / +3.1 °C | 41.4 °C | 69 % |
 
-Остров тепла: медиана участков в черте города минус медиана кольца вокруг. Знак и порядок числа не зависят от ширины кольца.
+Heat island: median of the cells inside the outline minus the median of the ring around it. Its sign and size do not depend
+on the ring width.
 
-Везде сильнее всего с температурой связана зелень. Даже если сложить вклады связанных факторов в группы, на растительность
-и грунт приходится 39–64 % среднего вклада по участкам в черте города, на застройку 21–37 %. Но горячие места у городов разные. В Ташкенте это плотная
-застройка без деревьев. В Самарканде открытая, почти незастроенная земля. В Бухаре застройка вперемешку с голым грунтом.
+Greenery is the strongest factor everywhere. Grouping correlated factors, vegetation and bare soil take 39–64 % of the
+mean contribution inside the outline, built-up land 21–37 %. The hot places differ by city: dense building without trees in
+Tashkent, open nearly unbuilt land in Samarkand, building mixed with bare ground in Bukhara.
 
-Это температура самой поверхности по снимкам около 11 утра, а не температура воздуха.
+This is the temperature of the surface itself at about 11:00, from satellite images, not the air temperature.
 
-Сверка с NASA MODIS (MYD11A2, 1 км, то же лето): рисунок совпадает с r = 0,85 / 0,61 / 0,81, средняя разница
-+0,4 / −0,6 / −0,7°. Ночью (около 01:30) город по MODIS тоже теплее кольца 1,5 км: +2,4 / +1,2 / +1,8°.
-Команда: `python -m pipeline.validate --all --web`.
+**Check against NASA MODIS** (MYD11A2, 1 km, same summers): the pattern matches with r = 0.85 / 0.61 / 0.81, mean
+difference +0.4 / −0.6 / −0.7 °C. At night (about 01:30) MODIS also shows the city warmer than the 1.5 km ring:
++2.4 / +1.2 / +1.8 °C. Command: `python -m pipeline.validate --all --web`.
 
-На самых горячих участках, в горячей десятой части, в черте города живут около 313 тыс. человек в Ташкенте, 55 тыс. в Бухаре
-и около 7 тыс. в Самарканде. Кольцо вокруг города сюда не входит. В Самарканде самые горячие участки почти без жилья:
-это пустая открытая земля, поэтому цифра маленькая.
-Это оценка WorldPop 2025: модель по переписи и застройке, а не подсчёт людей.
+**People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
+in the hottest tenth of cells inside the outline. In Samarkand the hottest cells are mostly empty open land, hence the small
+figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
 
-## Как пользоваться
+**Where to plant first.** The same planting, +20 percentage points of tree crown and +0.1 NDVI on a 200 m cell (never past
+the city's greenest 5 %), run through the city model on every inhabited cell. In Tashkent the top five places cool the surface
+by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
 
-![Карта Ташкента: изотермы и разрез](docs/screenshots/01-city.png)
+## How to use it
 
-- Цвет означает только градусы, линии проведены через каждые 2°.
-- Щелчок по месту показывает его температуру, главную причину и меру, которая подходит именно здесь.
-- Линия А–Б строит разрез: профиль температуры и полосу причин под ним. Причины нарисованы штриховкой.
-- «Люди» показывает точками, сколько человек живёт на участке, и значками школы, детские сады и поликлиники
-  на самых горячих участках. Цвет при этом остаётся только температурой.
-- «3D» наклоняет карту и поднимает дома: около 660 тыс. зданий трёх городов, каждое в цвете температуры поверхности под ним.
-- «Что если» на панели участка: больше деревьев и зелени, светлые крыши, меньше застройки. Модель города пересчитывает
-  температуру поверхности этого места. Ползунки не выходят за то, что в городе уже есть (5–95 % участков), застройку можно
-  уменьшить не больше чем на 25 п.п.
-- «Отчёт» собирает страницу для печати. Данные города можно скачать в CSV или GeoJSON.
+![Tashkent: isotherms and a cross-section](docs/screenshots/01-city.png)
 
-![Разрез и причины](docs/screenshots/03-transect.png)
+- Colour means degrees only; isotherms every 2 °C.
+- Click a place: its temperature, the main cause and the measure that fits this place.
+- Line A–B draws a cross-section: the temperature profile and a band of causes under it (hatched).
+- "People" shows residents as dots, and schools, kindergartens and clinics on the hottest cells. Colour stays temperature.
+- "3D" tilts the map and raises the buildings, each coloured by the surface temperature under it.
+- "What if" on a place: more trees and greenery, lighter roofs, less built-up. The city model recomputes the surface
+  temperature of that place. Sliders stay within what the city already has (5–95 % of cells); built-up can drop by at most
+  25 percentage points.
+- "Where to plant first" on the city view: five places, each opens on the map with its own "what if".
+- "Share" puts the place and the 3D view into the link. "Report" builds a printable page; city data downloads as CSV or GeoJSON.
 
-На телефоне:
+![Cross-section and causes](docs/screenshots/03-transect.png)
 
-<img src="docs/screenshots/04-mobile.png" width="320" alt="Главная на телефоне">
+## Method
 
-## Как посчитано
+1. A 200 m grid in the city's UTM zone, the city outline from OpenStreetMap and a 1.5 km ring around it.
+2. Land surface temperature: median of cloud-free Landsat 8/9 scenes (NASA/USGS, Collection 2 Level-2), June–August 2023–2025.
+3. Factors: greenery (NDVI) and albedo from Sentinel-2; shares of trees, built-up and bare soil from ESA WorldCover;
+   elevation from Copernicus DEM; roads, buildings and water from OpenStreetMap.
+4. An XGBoost model per city. Accuracy is measured on whole 2 × 2 km blocks left out of training (spatial cross-validation).
+5. The contribution of every factor in every cell, in °C, from SHAP.
+6. Checks: the heat island with rings of 0.5 / 1 / 1.5 km, groups of correlated factors, NASA MODIS by day and by night.
+7. Buildings for 3D: footprints from OpenStreetMap and Microsoft ML Building Footprints; height from OSM, otherwise modelled
+   from shape, type, neighbours and GHSL Built-H. Mean error on held-out buildings: Tashkent 3.9 m, Samarkand 1.4 m, Bukhara 2.4 m.
+8. Each city model is exported as compact JSON for "what if"; the browser evaluates it exactly as XGBoost does
+   (difference below 0.0001 °C, tested).
 
-1. Сетка 200 м в зоне UTM города, граница города из OpenStreetMap и кольцо 1,5 км вокруг.
-2. Температура поверхности: медиана безоблачных снимков Landsat 8/9 (NASA/USGS, Collection 2 Level-2),
-   июнь–август 2023–2025.
-3. Факторы: зелень (NDVI) и альбедо по Sentinel-2, доли деревьев, застройки и голого грунта по ESA WorldCover,
-   высота по Copernicus DEM, дороги, здания и вода из OpenStreetMap.
-4. Модель XGBoost. Точность проверена на целых блоках 2 × 2 км, которых модель не видела.
-5. Вклад каждого фактора в каждом участке считается через SHAP, в градусах.
-6. Проверка: остров тепла при кольце 0,5 / 1 / 1,5 км, группы связанных факторов и сверка с NASA MODIS днём и ночью
-   (`python -m pipeline.validate --all --web`).
-7. Здания для 3D: контуры OpenStreetMap и Microsoft ML Building Footprints, высота из OSM, а где её нет, по модели
-   как в проекте Soya (форма, тип, соседи, GHSL Built-H). Средняя ошибка на отложенных зданиях: Ташкент 3,9 м, Самарканд 1,4 м,
-   Бухара 2,4 м (`python -m pipeline.buildings`, файлы `web/public/data/buildings/<город>.fgb`).
-8. Модель каждого города выгружена компактным JSON для «что если»; браузер считает так же, как XGBoost (расхождение меньше 0,0001°).
+More: [pipeline/README.md](pipeline/README.md), data format: [docs/data-contract.md](docs/data-contract.md),
+why this matters: [docs/problem.md](docs/problem.md).
 
-Подробнее: [pipeline/README.md](pipeline/README.md), формат данных: [docs/data-contract.md](docs/data-contract.md),
-зачем это нужно: [docs/problem.md](docs/problem.md).
+**Limitations.** Landsat passes at about 11:00; the night heat island is estimated only from MODIS at 1 km. Factor
+contributions and "what if" show an association found by the model, not the result of an experiment. Most building heights
+are modelled, so for a single house they are an estimate. Microsoft has no footprints for Bukhara, so only OSM buildings there.
+Measure effects come from published studies, linked in the cards.
 
-Ограничения. Landsat снимает около 11 утра; ночной остров тепла оценён только по MODIS с шагом 1 км. Вклад факторов
-и «что если» показывают связь, найденную моделью, а не результат эксперимента. Высоту большинства домов модель оценивает
-по форме и соседям, для отдельного дома это оценка. У Microsoft нет контуров по Бухаре, там дома только из OSM.
-Эффект мер оценён по опубликованным исследованиям, ссылки есть прямо в карточках.
+## Data sources
 
-## Запуск
+| Data | Source | Used for |
+|---|---|---|
+| Land surface temperature | [Landsat 8/9 Collection 2 Level-2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2), NASA/USGS | target |
+| NDVI, albedo | [Sentinel-2 L2A](https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a), ESA Copernicus | factors |
+| Land cover | [ESA WorldCover 10 m](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | trees, built-up, bare soil |
+| Elevation | [Copernicus DEM GLO-30](https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30) | factor |
+| Roads, buildings, water, outlines, facilities | [OpenStreetMap](https://www.openstreetmap.org) | factors, map |
+| Building footprints | [Microsoft ML Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) | 3D |
+| Building height | [GHSL Built-H](https://human-settlement.emergency.copernicus.eu/) | 3D height model |
+| Population | [WorldPop](https://www.worldpop.org) 2025 | people in the heat, planting ranking |
+| Validation | [NASA MODIS MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/), day and night | check |
+| Weather context | ERA5 (Copernicus) via [Open-Meteo](https://open-meteo.com) | wind, humidity, sun |
+| Basemap | [OpenFreeMap](https://openfreemap.org) | map tiles |
 
-Сайт (статический, без бэкенда):
+All sources are open; no API keys are needed.
+
+## Run it
+
+**Website** (static, no backend; Node 20+):
 
 ```bash
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test
-npm run build      # результат в web/dist
+npm test           # unit tests (Vitest)
+npm run build      # output in web/dist
 ```
 
-Пересчёт данных (Python 3.10+, ключи не нужны):
+The city JSON files and models are already in `web/public/data/`, so the site runs without the pipeline. Building files
+`.fgb` (about 140 MB) are not in git; without them 3D shows the basemap's buildings.
+
+**Data pipeline** (Python 3.10+, no keys):
 
 ```bash
 pip install -r pipeline/requirements.txt
-PYTHONUTF8=1 python -m pipeline.run --all        # карта, модель и model-<город>.json; или --city tashkent
-PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
-PYTHONUTF8=1 python -m pipeline.buildings        # здания для 3D (скачивает выгрузку OSM и контуры Microsoft)
+PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
+PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
+PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
 python -m pytest pipeline/tests -q
 ```
 
-Готовые JSON городов и модели лежат в `web/public/data/`, так что для сайта пайплайн запускать не обязательно. Файлы
-зданий `.fgb` (около 140 МБ) в git не входят: без них 3D показывает дома подложки OpenFreeMap.
-Хостинг описан в [docs/deploy.md](docs/deploy.md).
+Hosting: [docs/deploy.md](docs/deploy.md).
 
-## Стек
+## Dependencies
 
-Python, rasterio, XGBoost, scikit-learn, GDAL, Microsoft Planetary Computer · Vite, React, TypeScript, MapLibre GL,
-FlatGeobuf, d3-contour, Vitest · nginx и Cloudflare Tunnel.
+- **Pipeline:** Python 3.10+, numpy, pandas, scipy, rasterio, pyproj, shapely, pyogrio, pystac-client, planetary-computer,
+  xgboost, scikit-learn, requests, pytest (`pipeline/requirements.txt`).
+- **Web:** Node 20+, React 18, TypeScript 5.6, Vite 5, MapLibre GL 6, FlatGeobuf, d3-contour, Vitest (`web/package.json`).
+- **Hosting:** nginx and Cloudflare Tunnel.
 
-## Участие
+## Team
 
-Как устроена работа с кодом и git: [CONTRIBUTING.md](CONTRIBUTING.md).
+| Member | Role |
+|---|---|
+| Stepan | ROLE |
+| Amira | ROLE |
+| Oliya | ROLE |
+| Maksim | ROLE |
+| Shakhina | ROLE |
 
-## Команда
-
-Амира, Олия, Максим, Шахина, Степан.
+How we work with code and git: [CONTRIBUTING.md](CONTRIBUTING.md).
