@@ -307,7 +307,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
         />
       </div>
       <aside ref={panelRef} className="tool__panel" aria-label="Что здесь происходит">
-        <Panel model={model} content={content} header={header} footer={footer} />
+        <Panel model={model} content={content} header={header} footer={footer} onPick={pick} />
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
     </main>
