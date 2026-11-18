@@ -92,8 +92,14 @@ export function Section({ model, profile, isDefault, drawing, mode, onDraw, onRe
           <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={onDraw}>
             {drawing ? 'Ведите по карте' : 'Новый разрез'}
           </button>
-          <button type="button" className="pill pill--small" onClick={onReset} disabled={isDefault}>
-            Через самое жаркое
+          <button
+            type="button"
+            className="pill pill--small"
+            onClick={onReset}
+            disabled={isDefault}
+            title={isDefault ? 'Разрез уже идёт через самое жаркое место города' : 'Вернуть разрез через самое жаркое место'}
+          >
+            {isDefault ? 'Уже через самое жаркое' : 'Через самое жаркое'}
           </button>
           <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={() => onModeChange(mode === 'causes' ? 'temperature' : 'causes')}>
             Причины на карте
