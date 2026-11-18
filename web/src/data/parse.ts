@@ -17,6 +17,7 @@ import type {
   Period,
   Population,
   SurfaceMaterial,
+  TreeModel,
   Weather,
 } from './contract';
 import { FLUX_KEYS } from './contract';
@@ -324,4 +325,26 @@ export function parseCityDetail(raw: unknown): CityDetail {
     facilities: root.facilities === undefined ? [] : requireArray(root.facilities, 'facilities').map((f, i) => parseFacility(f, `facilities[${i}]`)),
     energy: energy.method,
   };
+}
+
+const isIndexArray = (value: unknown): value is number[] => Array.isArray(value) && value.every(Number.isInteger);
+
+/** `model-<id>.json`: every tree has its four arrays, of one length. */
+export function parseTreeModel(raw: unknown): TreeModel {
+  const root = requireObject(raw, 'model');
+  if (!isNumber(root.baseScore)) throw new DataContractError('model.baseScore должен быть числом');
+  const features = requireArray(root.features, 'model.features');
+  requireArray(root.trees, 'model.trees').forEach((tree, i) => {
+    const path = `model.trees[${i}]`;
+    const t = requireObject(tree, path);
+    if (!isIndexArray(t.feature) || !isIndexArray(t.left) || !isIndexArray(t.defaultLeft) || !Array.isArray(t.value) || !t.value.every(isNumber)) {
+      throw new DataContractError(`${path}: нет массивов feature, value, left, defaultLeft`);
+    }
+    const n = t.feature.length;
+    if (!n || t.value.length !== n || t.left.length !== n || t.defaultLeft.length !== n) {
+      throw new DataContractError(`${path}: массивы разной длины`);
+    }
+    if (t.feature.some((f) => f >= features.length)) throw new DataContractError(`${path}: признак вне model.features`);
+  });
+  return raw as TreeModel;
 }

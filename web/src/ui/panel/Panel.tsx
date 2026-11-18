@@ -8,6 +8,7 @@ import { EnergyBlock } from '../Energy';
 import { CauseIcon } from '../icons';
 import { directionOf, HatchSwatch, usePatternFill } from '../patterns';
 import { Phrase } from '../Phrase';
+import { WhatIfBlock } from '../WhatIf';
 import { Ramp } from './Ramp';
 
 interface PanelProps {
@@ -134,6 +135,7 @@ export function Panel({ model, content, header, footer, expanded = false }: Pane
             <RestRows rows={content.rest.rows} />
           </details>
         ))}
+      {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
       <AdviceBlock advice={content.advice} expanded={expanded} />

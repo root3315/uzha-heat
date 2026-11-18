@@ -1,7 +1,7 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
-import type { CityDetail, CitySummary } from './contract';
-import { parseCities, parseCityDetail } from './parse';
+import type { CityDetail, CitySummary, TreeModel } from './contract';
+import { parseCities, parseCityDetail, parseTreeModel } from './parse';
 import { parseValidation, type Validation } from './validation';
 
 const BASE = import.meta.env.BASE_URL;
@@ -77,6 +77,20 @@ let validation: Promise<Validation | null> | null = null;
 export function loadValidation(): Promise<Validation | null> {
   validation ??= fetchJson('validation.json').then(parseValidation, () => null);
   return validation;
+}
+
+const treeModels = new Map<string, Promise<TreeModel>>();
+
+/** The city's XGBoost model for "что если", `model-<id>.json`: fetched once, only when the reader opens the block. */
+export function loadTreeModel(id: string): Promise<TreeModel> {
+  let model = treeModels.get(id);
+  if (!model) {
+    model = fetchJson(`model-${encodeURIComponent(id)}.json`).then(parseTreeModel);
+    // A failed download may be retried on the next open.
+    model.catch(() => treeModels.delete(id));
+    treeModels.set(id, model);
+  }
+  return model;
 }
 
 export async function loadCities(): Promise<CitySummary[]> {

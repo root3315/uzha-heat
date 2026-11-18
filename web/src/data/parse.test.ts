@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DataContractError, parseCities, parseCityDetail } from './parse';
+import { DataContractError, parseCities, parseCityDetail, parseTreeModel } from './parse';
 
 const city = {
   id: 'test',
@@ -180,5 +180,20 @@ describe('energy balance', () => {
     expect(errorOf(() => parseCityDetail({ ...raw, cells: { ...raw.cells, energy: cellsEnergy }, energy: broken })).message).toContain(
       'energy.surfaces[0].conductivity',
     );
+  });
+});
+
+describe('model file', () => {
+  const tree = { feature: [0, -1, -1], value: [0.3, 1, -0.5], left: [1, -1, -1], defaultLeft: [1, 0, 0] };
+  const model = { features: ['ndvi'], baseScore: 40, trees: [tree] };
+
+  it('accepts trees whose four arrays have one length', () => {
+    expect(parseTreeModel(model).trees).toHaveLength(1);
+  });
+
+  it('rejects a tree with arrays of different lengths, a split on an unknown feature, or no base score', () => {
+    expect(() => parseTreeModel({ ...model, trees: [{ ...tree, left: [1, -1] }] })).toThrow(DataContractError);
+    expect(() => parseTreeModel({ ...model, trees: [{ ...tree, feature: [3, -1, -1] }] })).toThrow(DataContractError);
+    expect(() => parseTreeModel({ ...model, baseScore: 'x' })).toThrow(DataContractError);
   });
 });

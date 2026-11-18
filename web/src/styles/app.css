@@ -952,6 +952,200 @@ summary.rest__summary:hover,
   min-width: 4.5ch;
 }
 
+/* Что если: sliders over the city's own model. Ink only; the one coloured thing is the change in temperature. */
+.whatif {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+/* A section header like "Физика участка", that opens. */
+.whatif__summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding-top: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+.whatif__summary::-webkit-details-marker {
+  display: none;
+}
+.whatif__title {
+  font: 700 1.25rem/1.08 var(--font-display);
+  font-stretch: 85%;
+}
+.whatif__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font: 400 0.7rem/1 var(--font-mono);
+  transition: color var(--fast) var(--ease-out);
+}
+.whatif__summary:hover .whatif__hint {
+  color: var(--ink);
+}
+.whatif__chevron {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  transition: transform var(--fast) var(--ease-out);
+}
+.whatif[open] .whatif__chevron {
+  transform: rotate(180deg);
+}
+.whatif__status {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 400 0.72rem/1.5 var(--font-mono);
+}
+.whatif__lever {
+  margin-top: 16px;
+}
+.whatif__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font: 400 0.72rem/1.3 var(--font-mono);
+}
+.whatif__value {
+  font-weight: 600;
+}
+
+/*
+ * The slider: a hairline track, the stretch from "сейчас" to the chosen value as a 3 px line, a tick at "сейчас",
+ * a small round thumb. The native input stays on top, so keys and screen readers work as usual.
+ */
+.whatif__slider {
+  position: relative;
+  height: 28px;
+}
+.whatif__rail {
+  position: absolute;
+  /* Half the thumb on each side: the thumb's centre travels between these two points. */
+  inset: 0 7px;
+  pointer-events: none;
+}
+.whatif__rail::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--ink);
+  transform: translateY(-0.5px);
+}
+.whatif__fill {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  background: var(--ink);
+  transform: translateY(-1.5px);
+}
+.whatif__now {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 11px;
+  background: var(--ink);
+  transform: translate(-0.5px, -50%);
+}
+.whatif__range {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.whatif__range:focus-visible {
+  outline: none;
+}
+.whatif__range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+.whatif__range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+.whatif__range::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--card);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.whatif__range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--card);
+}
+.whatif__range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ink);
+}
+.whatif__range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ink);
+}
+.whatif__ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-2);
+  font: 400 0.66rem/1.3 var(--font-mono);
+}
+.whatif__ends--down {
+  flex-direction: row-reverse;
+}
+.whatif__result {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 20px;
+}
+.whatif__delta {
+  flex: none;
+  font: 900 clamp(52px, 4.2vw, 68px)/0.82 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: -0.02em;
+}
+.whatif__caption {
+  max-width: 24ch;
+  padding-bottom: 2px;
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.whatif__reset {
+  min-height: 36px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font: 400 0.7rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.whatif__reset:hover {
+  background: var(--paper-2);
+}
+.whatif__caveat {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font: 400 0.68rem/1.5 var(--font-mono);
+}
+
 /* Физика участка: where the sunlight goes. Ink and hatch only, colour stays for temperature. */
 .energy {
   margin-top: 28px;
