@@ -4,6 +4,8 @@ export interface MapTokens {
   /** Inside the city, no data. */
   shade: string;
   noon: string;
+  /** Buildings in 3D: paper models. */
+  building: string;
   ink: string;
   pencil: string;
   grid: string;
@@ -21,6 +23,7 @@ export function readTokens(element: Element = document.documentElement): MapToke
     ground: token('--map-ground'),
     shade: token('--shade'),
     noon: token('--noon'),
+    building: token('--card'),
     ink: token('--ink'),
     pencil: token('--pencil'),
     grid: token('--grid'),

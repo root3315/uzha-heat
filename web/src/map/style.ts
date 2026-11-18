@@ -29,12 +29,19 @@ export const LAYER = {
   transectCasing: 'transect-casing',
   people: 'people',
   facilities: 'facilities',
+  buildings: 'buildings-3d',
 } as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';
 
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
+
+/** Height when the basemap gives none, and the least we draw: one storey. */
+const DEFAULT_BUILDING_M = 6;
+const MIN_BUILDING_M = 3;
+/** Buildings come in the basemap tiles from this zoom; below it the city is too small to read in 3D anyway. */
+export const BUILDINGS_MIN_ZOOM = 13;
 
 /** With causes hatched over it, the temperature recedes to half strength. */
 const CAUSES_DIM = 0.5;
@@ -69,9 +76,26 @@ function facilityData(model: CityModel) {
   };
 }
 
-export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes'): ExpressionSpecification {
-  const scale = mode === 'causes' ? CAUSES_DIM : 1;
+/** In 3D the buildings carry the colour; the ground keeps only a trace of it, so no hot area lies over them as a slab. */
+const THREE_D_GROUND = 0.14;
+
+function classOpacity(tokens: MapTokens, scale: number): ExpressionSpecification {
   return ['match', ['get', 'k'], ...tokens.classOpacity.flatMap((o, k) => [k, o * scale]), scale] as unknown as ExpressionSpecification;
+}
+
+/** Ground colour strength. In 3D it fades only where buildings are drawn, so zooming out never leaves a washed-out map. */
+export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes', threeD = false): ExpressionSpecification {
+  const scale = mode === 'causes' ? CAUSES_DIM : 1;
+  if (!threeD) return classOpacity(tokens, scale);
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    BUILDINGS_MIN_ZOOM - 0.3,
+    classOpacity(tokens, scale),
+    BUILDINGS_MIN_ZOOM + 0.2,
+    classOpacity(tokens, scale * THREE_D_GROUND),
+  ] as unknown as ExpressionSpecification;
 }
 
 function roadLayer(id: string, classes: string[], width: number, color: string): LayerSpecification {
@@ -93,6 +117,8 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
 
   return {
     version: 8,
+    // Soft light from the south-west, high: walls facing it are lighter, the others darker, so 3D blocks read as volumes.
+    light: { anchor: 'map', position: [1.4, 210, 35], intensity: 0.45, color: '#ffffff' },
     sources: {
       [SOURCE.basemap]: { type: 'vector', url: BASEMAP_TILES, attribution: '© OpenStreetMap, OpenFreeMap' },
       [SOURCE.bands]: { type: 'geojson', data: model.isotherms.bands },
@@ -197,6 +223,28 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         type: 'circle',
         source: SOURCE.found,
         paint: { 'circle-radius': 5, 'circle-color': tokens.noon, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 1.5 },
+      },
+      // The city in 3D: the basemap's own buildings, each in the colour of the surface under it (feature state `k`, set by
+      // the map as buildings come into view). Last, so their walls hide what lies behind them.
+      {
+        id: LAYER.buildings,
+        type: 'fill-extrusion',
+        source: SOURCE.basemap,
+        'source-layer': 'building',
+        minzoom: BUILDINGS_MIN_ZOOM,
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-extrusion-color': [
+            'match',
+            ['coalesce', ['feature-state', 'k'], -1],
+            ...tokens.classes.flatMap((color, k) => [k, color]),
+            tokens.building,
+          ] as unknown as ExpressionSpecification,
+          'fill-extrusion-height': ['max', ['coalesce', ['get', 'render_height'], DEFAULT_BUILDING_M], MIN_BUILDING_M],
+          'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': true,
+        },
       },
     ],
   };
