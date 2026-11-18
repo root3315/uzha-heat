@@ -72,11 +72,16 @@ describe('leversFor', () => {
 
   it('offers the factors that heat the cell most first, each in its sensible direction', () => {
     const levers = leversFor(WITH_BUILT, { tree: 0, ndvi: 0.1, built: 90 }, { tree: 0.4, ndvi: 1.5, built: 0.9 }, ranges);
-    expect(levers.map((l) => [l.lever.key, l.from, l.to])).toEqual([
+    expect(levers.map((l) => [l.lever.key, l.from, Number(l.to.toFixed(6))])).toEqual([
       ['ndvi', 0.1, 0.8],
       ['built', 90, 0],
       ['tree', 0, 60],
     ]);
+  });
+
+  it('ends an upward slider on the last whole step from the cell, so its end is reachable', () => {
+    const [ndvi] = leversFor(TOY, { tree: 60, ndvi: 0.137, built: 0 }, { ndvi: 1 }, { ndvi: [0, 0.8715] });
+    expect(ndvi?.to).toBeCloseTo(0.867, 9);
   });
 
   it('offers less built-up only where it heats the cell and its removal cools it by the model', () => {

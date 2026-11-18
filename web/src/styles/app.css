@@ -1010,6 +1010,9 @@ summary.rest__summary:hover,
   accent-color: var(--ink);
   cursor: pointer;
 }
+.whatif__range:focus-visible {
+  outline-offset: 0;
+}
 .whatif__ends {
   display: flex;
   justify-content: space-between;

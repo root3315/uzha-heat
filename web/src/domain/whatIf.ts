@@ -124,7 +124,9 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     const here = cell[lever.key];
     if (!range || here === undefined || !model.features.includes(lever.key)) continue;
     const from = clamp(here, range);
-    const to = lever.direction === 'up' ? range[1] : range[0];
+    // A slider moves in whole steps from its low end: going up, that end is the cell itself, so the top is the last
+    // step that fits; going down, the low end is the city's minimum and is reached exactly.
+    const to = lever.direction === 'up' ? from + Math.floor((range[1] - from) / lever.step + 1e-9) * lever.step : range[0];
     if (Math.abs(to - from) < MIN_ROOM * (range[1] - range[0])) continue;
     const heat = contributions[lever.key] ?? 0;
     if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
