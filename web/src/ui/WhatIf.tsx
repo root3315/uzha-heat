@@ -5,6 +5,9 @@ import { formatDeg, formatDegSigned, formatFactorValue } from '../domain/format'
 import { factorRanges, leversFor, whatIf, type FactorValues, type LeverRange } from '../domain/whatIf';
 
 /** What each slider is called, and how its value is said aloud (screen readers get the unit in words). */
+/** How the end of a reduction lever reads when its cut, not the city, stops it. */
+const CUT_TEXT: Record<string, string> = { built: 'минус 25 п.п. застройки', roads: 'минус четверть дорог' };
+
 const LEVER_TEXT: Record<string, { label: string; spoken: (value: string) => string }> = {
   tree: { label: 'Деревья', spoken: (v) => `деревья на ${v} площади` },
   ndvi: { label: 'Зелень, NDVI', spoken: (v) => `NDVI ${v}` },
@@ -54,7 +57,8 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
   // Where the chosen value sits along the track, 0..1; "сейчас" is the left end going up, the right end going down.
   const at = Math.min(1, Math.max(0, (value - min) / (max - min)));
   const [fillFrom, fillTo] = up ? [0, at] : [at, 1];
-  const limit = `до ${say(to)} — ${up ? 'верхние' : 'нижние'} 5 % города`;
+  const reason = range.bound === 'cut' ? CUT_TEXT[lever.key] : undefined;
+  const limit = `до ${say(to)} — ${reason ?? `${up ? 'верхние' : 'нижние'} 5 % города`}`;
   return (
     <div className="whatif__lever">
       <p className="whatif__head">

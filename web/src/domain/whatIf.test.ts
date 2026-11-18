@@ -77,19 +77,26 @@ describe('factorRanges', () => {
 describe('leversFor', () => {
   const ranges = { tree: [0, 60], ndvi: [0, 0.8], built: [0, 100] } as const;
 
-  /** TOY plus a tree on built-up: below 50 % it is 1° cooler. */
+  /** TOY plus a tree on built-up: below 70 % it is 1° cooler. */
   const WITH_BUILT: TreeModel = {
     ...TOY,
-    trees: [...TOY.trees, { feature: [2, -1, -1], value: [50, -0.5, 0.5], left: [1, -1, -1], defaultLeft: [1, 0, 0] }],
+    trees: [...TOY.trees, { feature: [2, -1, -1], value: [70, -0.5, 0.5], left: [1, -1, -1], defaultLeft: [1, 0, 0] }],
   };
 
   it('offers the factors that heat the cell most first, each in its sensible direction', () => {
     const levers = leversFor(WITH_BUILT, { tree: 0, ndvi: 0.1, built: 90 }, { tree: 0.4, ndvi: 1.5, built: 0.9 }, ranges);
-    expect(levers.map((l) => [l.lever.key, l.from, Number(l.to.toFixed(6))])).toEqual([
-      ['ndvi', 0.1, 0.8],
-      ['built', 90, 0],
-      ['tree', 0, 60],
+    expect(levers.map((l) => [l.lever.key, l.from, Number(l.to.toFixed(6)), l.bound])).toEqual([
+      ['ndvi', 0.1, 0.8, 'city'],
+      ['built', 90, 65, 'cut'],
+      ['tree', 0, 60, 'city'],
     ]);
+  });
+
+  it('cuts built-up by at most 25 points, and not below the city range', () => {
+    const cell = { tree: 0, ndvi: 0.1, built: 80 };
+    const built = (range: readonly [number, number]) => leversFor(WITH_BUILT, cell, { built: 0.9 }, { ...ranges, built: range }).find((l) => l.lever.key === 'built');
+    expect(built([0, 100])).toMatchObject({ to: 55, bound: 'cut' });
+    expect(built([60, 100])).toMatchObject({ to: 60, bound: 'city' });
   });
 
   it('ends an upward slider on the last whole step from the cell, so its end is reachable', () => {

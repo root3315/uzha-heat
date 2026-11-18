@@ -86,22 +86,29 @@ export interface Lever {
   /** `up`: more of it (trees, greenery, lighter surfaces); `down`: only less of it (built-up, roads). */
   direction: 'up' | 'down';
   step: number;
+  /**
+   * For a reduction: how far below the cell's value it may go, so "less built-up" means a lighter block, not a demolished
+   * one. `points`: in the factor's own units (percentage points of built-up); `share`: a fraction of the cell's value.
+   */
+  cut?: { points: number } | { share: number };
 }
 
 export const LEVERS: readonly Lever[] = [
   { key: 'tree', direction: 'up', step: 1 },
   { key: 'ndvi', direction: 'up', step: 0.01 },
   { key: 'albedo', direction: 'up', step: 0.01 },
-  { key: 'built', direction: 'down', step: 1 },
-  { key: 'roads', direction: 'down', step: 0.5 },
+  { key: 'built', direction: 'down', step: 1, cut: { points: 25 } },
+  { key: 'roads', direction: 'down', step: 0.5, cut: { share: 0.25 } },
 ];
 
 export interface LeverRange {
   lever: Lever;
   /** Where the slider starts: the cell as it is. */
   from: number;
-  /** As far as the city goes in that direction. */
+  /** As far as the slider goes: the city's 5th or 95th percentile, or the end of the lever's cut. */
   to: number;
+  /** What stops it there. */
+  bound: 'city' | 'cut';
 }
 
 /** A lever needs at least this share of the city's range to move before it is worth a slider. */
@@ -131,15 +138,18 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     const from = here;
     // A slider moves in whole steps from its low end: going up, that end is the cell itself, so the top is the last
     // step that fits; going down, the low end is the range's own end and is reached exactly.
-    const to = lever.direction === 'up' ? from + Math.floor((range[1] - from) / lever.step + 1e-9) * lever.step : range[0];
+    const cutTo = lever.cut ? from - ('points' in lever.cut ? lever.cut.points : lever.cut.share * from) : -Infinity;
+    const bound: LeverRange['bound'] = lever.direction === 'down' && cutTo > range[0] ? 'cut' : 'city';
+    const to =
+      lever.direction === 'up' ? from + Math.floor((range[1] - from) / lever.step + 1e-9) * lever.step : Math.max(range[0], cutTo);
     const room = lever.direction === 'up' ? to - from : from - to;
     if (room < lever.step || room < MIN_ROOM * (range[1] - range[0])) continue;
     const heat = contributions[lever.key] ?? 0;
     if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
-    options.push({ lever, from, to, heat });
+    options.push({ lever, from, to, bound, heat });
   }
   return options
     .sort((a, b) => b.heat - a.heat)
     .slice(0, MAX_LEVERS)
-    .map(({ lever, from, to }) => ({ lever, from, to }));
+    .map(({ heat: _heat, ...range }) => range);
 }
