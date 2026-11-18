@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { LonLat } from '../../data/contract';
 import { capitalize, type Advice } from '../../domain/answers';
 import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
@@ -8,6 +9,7 @@ import { EnergyBlock } from '../Energy';
 import { CauseIcon } from '../icons';
 import { directionOf, HatchSwatch, usePatternFill } from '../patterns';
 import { Phrase } from '../Phrase';
+import { PlantingPlanBlock } from '../PlantingPlan';
 import { WhatIfBlock } from '../WhatIf';
 import { Ramp } from './Ramp';
 
@@ -19,6 +21,8 @@ interface PanelProps {
   footer?: ReactNode;
   /** In the report every cause is listed, nothing is folded. */
   expanded?: boolean;
+  /** Opens a place on the map; without it the city view has no "где сажать первым". */
+  onPick?: (point: LonLat) => void;
 }
 
 /** Bars share one scale, so a cause of +2° is visibly half of one of +4°. */
@@ -103,7 +107,7 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
   );
 }
 
-export function Panel({ model, content, header, footer, expanded = false }: PanelProps) {
+export function Panel({ model, content, header, footer, expanded = false, onPick }: PanelProps) {
   const { stats } = model.detail;
   const scale = Math.max(BAR_SCALE_MIN, Math.abs(content.cause?.value ?? 0) * 1.15);
   return (
@@ -137,6 +141,9 @@ export function Panel({ model, content, header, footer, expanded = false }: Pane
           </details>
         ))}
       {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
+      {content.isCity && !expanded && onPick && model.detail.cells.pop && (
+        <PlantingPlanBlock detail={model.detail} inside={model.inside} onPick={onPick} />
+      )}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
       <AdviceBlock advice={content.advice} expanded={expanded} />
