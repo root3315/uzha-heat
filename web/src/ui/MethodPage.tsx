@@ -1,7 +1,13 @@
+import { useMemo } from 'react';
 import type { EnergyMethod } from '../data/contract';
+import { loadValidation } from '../data/load';
+import type { CityValidation, ModisPlatform } from '../data/validation';
 import type { CityModel } from '../domain/cityModel';
 import { formatWatts } from '../domain/energy';
-import { formatDeg, formatNumber, plural } from '../domain/format';
+import { groupShares } from '../domain/factorGroups';
+import { formatDeg, formatDegSigned, formatNumber, formatPercent, plural } from '../domain/format';
+import { islandByRingWidth, ringSpread } from '../domain/ringSensitivity';
+import { useAsync } from './hooks';
 import { Link } from './Link';
 import { toolHref } from './routing';
 
@@ -141,12 +147,116 @@ function EnergySection({ energy }: { energy: EnergyMethod }) {
   );
 }
 
+const RING_WIDTHS_M = [500, 1000, 1500];
+
+/** Checks a judge would ask for: does the island hold for another ring, and what carries the heat once correlated factors are read together. */
+function Robustness({ model }: { model: CityModel }) {
+  const { detail, inside, outline } = model;
+  const rings = useMemo(
+    () => (outline ? islandByRingWidth(detail.cells.lst, detail.cells.lon, detail.cells.lat, inside, outline, RING_WIDTHS_M) : []),
+    [detail, inside, outline],
+  );
+  const groups = useMemo(() => groupShares(detail), [detail]);
+  const spread = ringSpread(rings);
+  return (
+    <>
+      <h2 className="method__subtitle">Насколько это устойчиво</h2>
+      {rings.length > 0 && (
+        <>
+          <p>
+            Остров тепла зависит от того, с чем сравнивать. Мы взяли кольцо разной ширины вокруг черты города: если знак и порядок числа держатся, это не
+            выбор кольца.{spread !== null && ` Разброс между кольцами ${formatDeg(spread)}.`}
+          </p>
+          <dl className="method__factors">
+            {rings.map((ring) => (
+              <div key={ring.widthM}>
+                <dt>кольцо до {formatNumber(ring.widthM / 1000, 1)} км</dt>
+                <dd>
+                  {ring.island
+                    ? `${formatDegSigned(ring.island.intensity)}: ${formatDeg(ring.island.inside)} в черте против ${formatDeg(ring.island.outside)} вокруг, ${formatNumber(ring.island.outsideCount, 0)} участков в кольце`
+                    : 'мало участков для сравнения'}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
+      {groups.length > 0 && (
+        <>
+          <p>
+            Зелень, деревья и голая земля связаны между собой, и модель может делить вклад между ними почти произвольно. Поэтому мы складываем вклады
+            связанных факторов в группы (SHAP это позволяет: вклады складываются) и смотрим, какая группа сильнее связана с температурой участков.
+          </p>
+          <dl className="method__factors">
+            {groups.map((group) => (
+              <div key={group.id}>
+                <dt>{group.label}</dt>
+                <dd>
+                  {formatPercent(group.share)} объяснённого разброса, в среднем ±{formatNumber(group.meanAbs, 1)}° на участок
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
+    </>
+  );
+}
+
+const ringLabel = (width: string) => width.replace('km', '').replace('.', ',') + ' км';
+
+function islandLine(platform: ModisPlatform, when: 'day' | 'night'): string {
+  const rings = Object.entries(platform.heatIsland[when]).filter((entry): entry is [string, number] => entry[1] !== null);
+  return rings.map(([width, value]) => `${formatDegSigned(value)} при кольце ${ringLabel(width)}`).join(', ');
+}
+
+/** Our Landsat surface against NASA MODIS, and the night the Landsat pass cannot see. */
+function ModisCheck({ check }: { check: CityValidation }) {
+  const { aqua, terra } = check;
+  const night = aqua ?? terra;
+  if (!aqua && !terra) return null;
+  return (
+    <>
+      <h2 className="method__subtitle">Сверка с MODIS и ночь</h2>
+      <p>
+        Наземных замеров температуры поверхности по Самарканду и Бухаре нет, поэтому сверяем со вторым спутником NASA, MODIS (участки около 1 км, то же
+        лето). Наши участки по 200 м усреднены до его пикселей.
+      </p>
+      <dl className="method__factors">
+        {[aqua, terra].flatMap((p) =>
+          p
+            ? [
+                <div key={p.product}>
+                  <dt>
+                    {p.product}, днём {p.overpassLocal.day}
+                  </dt>
+                  <dd>
+                    совпадение рисунка r = {formatNumber(p.day.r, 2)}, наша поверхность {p.day.bias >= 0 ? 'теплее' : 'холоднее'} на {formatDeg(Math.abs(p.day.bias))},
+                    разброс ±{formatNumber(p.day.rmse, 1)}°, {formatNumber(p.day.n, 0)} пикселей
+                  </dd>
+                </div>,
+              ]
+            : [],
+        )}
+      </dl>
+      {night && (
+        <p>
+          Ночью ({night.product}, {night.overpassLocal.night}) город тоже теплее окрестностей: {islandLine(night, 'night')}. Днём по нему же:{' '}
+          {islandLine(night, 'day')}. Landsat ночью не снимает, так что ночной остров тепла мы знаем только с разрешением 1 км.
+        </p>
+      )}
+    </>
+  );
+}
+
 /** How the map was made, in the same plain voice as the map. Every number comes from the city's data. */
 export function MethodPage({ model }: { model: CityModel }) {
   const { detail, levels } = model;
   const { grid, period, features, model: fit, city } = detail;
   const n = features.length;
   const step = (levels.thresholds[1] ?? 0) - (levels.thresholds[0] ?? 0);
+  const validation = useAsync(loadValidation, []);
+  const check = validation.status === 'ready' ? validation.data?.cities[city.id] : undefined;
   return (
     <main className="method">
       <h1 className="method__title">Как это посчитано</h1>
@@ -161,7 +271,8 @@ export function MethodPage({ model }: { model: CityModel }) {
       </p>
       <p>
         Модель {fit.type} учится предсказывать температуру участка по его факторам. Проверка пространственная: город режется на блоки, и модель
-        оценивают на тех, которых она не видела. На такой проверке R² {formatNumber(fit.r2Cv, 2)}, средняя ошибка {formatDeg(fit.maeCv)}.
+        оценивают на тех, которых она не видела. На такой проверке модель объясняет {formatPercent(fit.r2Cv)} разброса температуры между участками
+        (R² {formatNumber(fit.r2Cv, 2)}), средняя ошибка {formatDeg(fit.maeCv)}.
       </p>
       <p>
         Вклад каждого фактора в градусах считает метод SHAP: от средней оценки по городу, {formatDeg(fit.baseValue)}, до температуры конкретного
@@ -191,15 +302,19 @@ export function MethodPage({ model }: { model: CityModel }) {
         ))}
       </dl>
 
+      <Robustness model={model} />
+      {check && <ModisCheck check={check} />}
+
       {detail.energy && <EnergySection energy={detail.energy} />}
 
       <h2 className="method__subtitle">Чего карта не знает</h2>
       <ul className="method__limits">
         <li>Это температура поверхности, а не воздуха. Днём она выше и меняется резче.</li>
-        <li>Landsat снимает около 11 утра. Вечерний и ночной перегрев здесь не виден.</li>
+        <li>Landsat снимает около 11 утра. Вечерний и ночной перегрев на карте не виден; ночной остров тепла выше оценён по MODIS с шагом 1 км.</li>
         <li>Вклад фактора показывает связь в данных, а не эксперимент. Факторы связаны между собой: где мало зелени, там обычно плотнее застройка.</li>
         <li>Что дают меры, известно из обзоров по другим городам, ссылки у каждой меры. Там речь чаще о воздухе, а не о поверхности, это ориентир, а не прогноз для участка.</li>
         <li>Аэродромы и железнодорожные пути горячие из-за покрытия; там карта не советует деревья.</li>
+        <li>Слои разных лет: снимки 2023–2025, покрытие ESA WorldCover 2021, высоты зданий GHSL 2018, население WorldPop 2025.</li>
       </ul>
     </main>
   );

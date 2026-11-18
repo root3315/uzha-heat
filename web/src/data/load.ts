@@ -2,6 +2,7 @@ import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary } from './contract';
 import { parseCities, parseCityDetail } from './parse';
+import { parseValidation, type Validation } from './validation';
 
 const BASE = import.meta.env.BASE_URL;
 const DATA_ROOT = `${BASE}data`;
@@ -65,6 +66,15 @@ export async function readWithProgress(response: Response, total: number | null,
 
 async function fetchJson(path: string): Promise<unknown> {
   return (await fetchOk(path)).json();
+}
+
+/** The MODIS check, if the pipeline wrote one; null when it is missing or unreadable, the page goes on without it. */
+export async function loadValidation(): Promise<Validation | null> {
+  try {
+    return parseValidation(await fetchJson('validation.json'));
+  } catch {
+    return null;
+  }
 }
 
 export async function loadCities(): Promise<CitySummary[]> {
