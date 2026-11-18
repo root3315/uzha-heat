@@ -66,9 +66,10 @@ average block (43.5 °C; mean inside the outline 43.9 °C) with low NDVI (0.14) 
 NDVI only −3.1 °C, both −3.7 °C (surface 43.5 → 39.9 °C).
 
 On the surface most of it shows up as greenery (NDVI), not crowns. A survey of 30 green squares in Tashkent (Mukhamedjanov et al.,
-2024) found crown area cools most and lawns barely; that study measured air. We map the surface at about 11:00: watered
-grass cools the surface by evaporation, crowns cool the air by shade. And ESA WorldCover's 10 m tree class misses most
-street-tree canopy, so those leaves show up in NDVI rather than in the tree share.
+2024) found crown area cools most and lawns barely; that study measured air at 1.5 m, between 12:00 and 15:00. We map the
+surface at about 11:00: watered grass cools the surface by evaporation, crowns cool the air by shade. And ESA WorldCover
+labels each 10 m pixel by its main class, so narrow rows of street trees can end up as built-up; their leaves then show
+up in NDVI rather than in the tree share.
 
 ## How to use it
 
