@@ -52,7 +52,7 @@ select {
   scroll-margin-top: calc(var(--bar-h) + 8px);
 }
 :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -141,7 +141,7 @@ select {
 .text-link {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: var(--amber);
+  text-decoration-color: var(--ink-2);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
@@ -358,7 +358,7 @@ select {
   font-variant-numeric: tabular-nums;
 }
 .hunt-chip__log {
-  color: var(--amber-ink);
+  color: var(--ink-2);
 }
 .map__notice {
   position: absolute;
@@ -458,8 +458,8 @@ select {
   top: 50%;
   padding: 5px 9px;
   border-radius: 999px;
-  background: var(--amber);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
   font: 500 0.62rem/1 var(--font-mono);
   white-space: nowrap;
   pointer-events: none;
@@ -493,7 +493,7 @@ select {
 }
 :focus-visible {
   box-shadow: none;
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--ink);
   outline-offset: -2px;
 }
 .maplibregl-ctrl.maplibregl-ctrl-scale {
@@ -694,7 +694,7 @@ select {
   stroke-opacity: 0.5;
 }
 .profile__probe circle {
-  fill: var(--amber);
+  fill: var(--card);
   stroke: var(--ink);
   stroke-width: 1.5;
 }

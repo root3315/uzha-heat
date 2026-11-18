@@ -1,11 +1,13 @@
+import { useMemo } from 'react';
 import { sectionAnswer } from '../domain/answers';
 import { causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
+import { dominantFactorPerCell } from '../domain/places';
 import { formatDeg, formatNumber } from '../domain/format';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
-import { formatPeople, hotFacilities, peopleInHeat, populationCaveat } from '../domain/people';
+import { formatPeople, hotFacilities, peopleInHeat, populationCaveat, sparseHeatNote } from '../domain/people';
 import { CauseIcon, FacilityIcon } from './icons';
 import { HatchSwatch } from './patterns';
 import { Phrase } from './Phrase';
@@ -31,17 +33,30 @@ interface SectionProps {
 
 const CHART_H = 196;
 
+/** One row fits about this many causes; the rest are named in the last item. */
+const KEY_SHOWN = 4;
+
+/** The hatches on the map, the ones covering the most cells first, in one row. */
 export function CauseKey({ model }: { model: CityModel }) {
-  const byKey = new Map(model.detail.features.map((f) => [f.key, f]));
+  const { detail, causeAreas } = model;
+  const ordered = useMemo(() => {
+    const cells = new Map<string, number>();
+    for (const key of dominantFactorPerCell(detail)) if (key) cells.set(key, (cells.get(key) ?? 0) + 1);
+    return causeAreas.features.map((f) => f.properties.key).sort((a, b) => (cells.get(b) ?? 0) - (cells.get(a) ?? 0));
+  }, [detail, causeAreas]);
+  const byKey = new Map(detail.features.map((f) => [f.key, f]));
+  const name = (key: string) => causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort;
+  const rest = ordered.slice(KEY_SHOWN);
   return (
     <ul className="cause-key" aria-label="Что греет сильнее всего, по штриховке">
-      {model.causeAreas.features.map(({ properties: { key } }) => (
+      {ordered.slice(0, KEY_SHOWN).map((key) => (
         <li key={key}>
           <HatchSwatch hatch={key} direction="heats" />
           <CauseIcon cause={key} size={16} />
-          {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort}
+          {name(key)}
         </li>
       ))}
+      {rest.length > 0 && <li title={rest.map(name).join(', ')}>и ещё {rest.length}</li>}
     </ul>
   );
 }
@@ -70,7 +85,7 @@ export function PeopleKey({ model }: { model: CityModel }) {
         </li>
       </ul>
       <p className="people-key__note">
-        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {detail.population ? populationCaveat(detail.population.year) : ''}
+        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {sparseHeatNote(inHeat) ?? ''} {detail.population ? populationCaveat(detail.population.year) : ''}
       </p>
     </div>
   );
