@@ -22,6 +22,8 @@ import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
 import { classOf } from '../domain/isotherms';
 import { facilityImage, facilityImageId } from './facilityImages';
+import { buildingsUrl } from './buildingsData';
+import { followView, hasBuildingsFile } from './fileBuildings';
 import { buildingClass } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
@@ -100,6 +102,12 @@ const pointsOf = (points: LonLat[]) => ({
 
 function setData(map: MapLibreMap, source: string, data: Parameters<GeoJSONSource['setData']>[0]): void {
   (map.getSource(source) as GeoJSONSource | undefined)?.setData(data);
+}
+
+/** In 3D, our own buildings from the city's .fgb when it is there, else the basemap's; flat, neither. */
+function showBuildings(map: MapLibreMap, threeD: boolean, fromFile: boolean): void {
+  map.setLayoutProperty(LAYER.buildings, 'visibility', threeD && !fromFile ? 'visible' : 'none');
+  map.setLayoutProperty(LAYER.buildingsFile, 'visibility', threeD && fromFile ? 'visible' : 'none');
 }
 
 function boundsOf(model: CityModel): LngLatBoundsLike {
@@ -418,6 +426,50 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     else map.once('load', apply);
   }, [people, model]);
 
+  // In 3D, read the buildings of the view from the city's own file; the basemap's stay as the fallback.
+  const fromFile = useRef(false);
+  /** Colours the basemap's buildings now; set by the paint effect, called when the file fails and they take over. */
+  const paintBasemap = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !threeD) return undefined;
+    const url = buildingsUrl(import.meta.env.BASE_URL, model.detail.city.id);
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    const use = (on: boolean) => {
+      fromFile.current = on;
+      if (map.getLayer(LAYER.buildingsFile)) showBuildings(map, true, on);
+    };
+    const start = () => {
+      if (cancelled) return;
+      use(true);
+      stop = followView(map, {
+        url,
+        source: SOURCE.buildings,
+        minZoom: BUILDINGS_MIN_ZOOM,
+        temperatureAt: model.source.temperatureAt,
+        classOf: (t) => classOf(model.levels, t),
+        onFail: () => {
+          stop?.();
+          stop = null;
+          use(false);
+          paintBasemap.current?.();
+        },
+      });
+    };
+    void hasBuildingsFile(url).then((ok) => {
+      if (!ok || cancelled) return;
+      if (map.getLayer(LAYER.buildingsFile)) start();
+      else map.once('load', start);
+    });
+    return () => {
+      cancelled = true;
+      map.off('load', start);
+      stop?.();
+      fromFile.current = false;
+    };
+  }, [threeD, model]);
+
   // Colour the basemap's buildings as they come into view: one feature state per building id, never recomputed.
   useEffect(() => {
     const map = mapRef.current;
@@ -425,7 +477,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const painted = new Set<string | number>();
     const classOfT = (t: number) => classOf(model.levels, t);
     const paint = () => {
-      if (map.getZoom() < BUILDINGS_MIN_ZOOM) return;
+      if (map.getZoom() < BUILDINGS_MIN_ZOOM || fromFile.current) return;
       for (const feature of map.querySourceFeatures(SOURCE.basemap, { sourceLayer: 'building' })) {
         const { id } = feature;
         if (id === undefined || painted.has(id)) continue;
@@ -441,10 +493,12 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       timer = window.setTimeout(paint, PAINT_DELAY_MS);
     };
     map.on('sourcedata', onData);
+    paintBasemap.current = paint;
     if (map.isStyleLoaded()) paint();
     return () => {
       map.off('sourcedata', onData);
       window.clearTimeout(timer);
+      paintBasemap.current = null;
     };
   }, [threeD, model]);
 
@@ -455,7 +509,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const map = mapRef.current;
     if (!map) return undefined;
     const apply = () => {
-      map.setLayoutProperty(LAYER.buildings, 'visibility', threeD ? 'visible' : 'none');
+      showBuildings(map, threeD, fromFile.current);
       map.setPaintProperty(LAYER.transect, 'line-opacity', threeD ? THREE_D_TRANSECT_OPACITY : 1);
       // Isotherm labels are flat SVG over the map: in a tilted view they float over the buildings, so they rest.
       frameRef.current?.classList.toggle('is-3d', threeD);
