@@ -1117,9 +1117,6 @@ summary.rest__summary:hover,
   font-stretch: 75%;
   letter-spacing: -0.02em;
 }
-.whatif__delta--idle {
-  color: var(--line);
-}
 .whatif__caption {
   max-width: 24ch;
   padding-bottom: 2px;

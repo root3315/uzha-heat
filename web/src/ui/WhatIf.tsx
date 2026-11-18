@@ -131,10 +131,10 @@ function WhatIfBody({ detail, cell }: { detail: CityDetail; cell: number }) {
         );
       })}
       <div className="whatif__result">
-        <output className={`whatif__delta num${tone === 'none' ? ' whatif__delta--idle' : ` num--${tone}`}`} aria-live="polite">
-          {/* Before any move there is no change to state: a big "0,0°" would read as a temperature. */}
-          {changed ? formatDegSigned(shown) : '—'}
-          <span className="visually-hidden">{changed ? ' к температуре поверхности здесь' : ' пока без изменений'}</span>
+        {/* Before any move there is no change to state: a big "0,0°" would read as a temperature, so only the hint shows. */}
+        <output className={changed ? `whatif__delta num${tone === 'none' ? '' : ` num--${tone}`}` : 'visually-hidden'} aria-live="polite">
+          {changed ? formatDegSigned(shown) : 'пока без изменений'}
+          {changed && <span className="visually-hidden"> к температуре поверхности здесь</span>}
         </output>
         <p className="whatif__caption">
           {changed ? `к поверхности здесь: около ${formatDeg(lst + shown)} вместо ${formatDeg(lst)}` : 'подвиньте ползунок, модель пересчитает температуру поверхности'}

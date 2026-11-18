@@ -179,7 +179,8 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     const to =
       lever.direction === 'up' ? from + Math.floor((range[1] - from) / lever.step + 1e-9) * lever.step : Math.max(range[0], cutTo);
     const room = lever.direction === 'up' ? to - from : from - to;
-    if (room < lever.step || room < MIN_ROOM * (range[1] - range[0])) continue;
+    // One step of travel is no slider: at least two, and a real share of the city's range.
+    if (room < 2 * lever.step - 1e-9 || room < MIN_ROOM * (range[1] - range[0])) continue;
     const heat = contributions[lever.key] ?? 0;
     if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
     options.push({ lever, from, to, bound, heat });
