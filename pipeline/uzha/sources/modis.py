@@ -34,6 +34,8 @@ QC_OTHER = 0b01
 QC_DATA_QUALITY_SHIFT, QC_LST_ERROR_SHIFT = 2, 6  # bits 2-3: 00 good data; bits 6-7: LST error 00 <=1 K, 01 <=2 K
 MAX_LST_ERROR_CLASS = 1  # accept average LST error <= 2 K
 MIN_COMPOSITES = 5
+# Bump when the reading, QC or compositing logic changes: it is part of the cache key, so stale pickles are not reused.
+LOGIC_VERSION = 2
 COMPOSITE_DAYS = 8
 
 PLATFORMS = {"terra": "MOD11A2", "aqua": "MYD11A2"}

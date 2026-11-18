@@ -158,6 +158,8 @@ function Robustness({ model }: { model: CityModel }) {
   );
   const groups = useMemo(() => groupShares(detail, inside), [detail, inside]);
   const spread = ringSpread(rings);
+  // Without the outline there is no ring and no "inside": nothing here would mean what it says.
+  if (!outline) return null;
   return (
     <>
       <h2 className="method__subtitle">Насколько это устойчиво</h2>
@@ -229,14 +231,14 @@ function nightSentence(platform: ModisPlatform): string | null {
 /** Our Landsat surface against NASA MODIS, and the night the Landsat pass cannot see. */
 function ModisCheck({ check }: { check: CityValidation }) {
   const { aqua, terra } = check;
-  const night = aqua ?? terra;
   if (!aqua && !terra) return null;
+  const night = [aqua, terra].flatMap((p) => (p ? [nightSentence(p)] : [])).find((sentence) => sentence !== null) ?? null;
   return (
     <>
       <h2 className="method__subtitle">Сверка с MODIS и ночь</h2>
       <p>
-        Наземных замеров температуры поверхности по Самарканду и Бухаре нет, поэтому сверяем со вторым спутником NASA, MODIS (участки около 1 км, то же
-        лето). Наши участки по 200 м усреднены до его пикселей.
+        Замеров температуры поверхности на земле, с которыми можно сравнить всю карту, нет. Поэтому сверяем со вторым спутником NASA, MODIS
+        (участки около 1 км, то же лето). Наши участки по 200 м усреднены до его пикселей.
       </p>
       <dl className="method__factors">
         {[aqua, terra].flatMap((p) =>
@@ -255,9 +257,7 @@ function ModisCheck({ check }: { check: CityValidation }) {
             : [],
         )}
       </dl>
-      {night && nightSentence(night) && (
-        <p>{nightSentence(night)} Landsat ночью не снимает, так что ночной остров тепла мы знаем только с разрешением 1 км.</p>
-      )}
+      {night && <p>{night} Landsat ночью не снимает, так что ночной остров тепла мы знаем только с разрешением 1 км.</p>}
     </>
   );
 }
@@ -327,7 +327,10 @@ export function MethodPage({ model }: { model: CityModel }) {
         <li>Вклад фактора показывает связь в данных, а не эксперимент. Факторы связаны между собой: где мало зелени, там обычно плотнее застройка.</li>
         <li>Что дают меры, известно из обзоров по другим городам, ссылки у каждой меры. Там речь чаще о воздухе, а не о поверхности, это ориентир, а не прогноз для участка.</li>
         <li>Аэродромы и железнодорожные пути горячие из-за покрытия; там карта не советует деревья.</li>
-        <li>Слои разных лет: снимки 2023–2025, покрытие ESA WorldCover 2021, высоты зданий GHSL 2018, население WorldPop 2025.</li>
+        <li>
+          Слои разных лет: снимки {period.label}, покрытие ESA WorldCover 2021, высоты зданий GHSL 2018
+          {detail.population ? `, население WorldPop ${detail.population.year}` : ''}.
+        </li>
       </ul>
     </main>
   );

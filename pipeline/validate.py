@@ -54,9 +54,11 @@ def validate_city(city: City) -> dict:
     period = period_of(document)
     cells = document["cells"]
     lon, lat = np.asarray(cells["lon"], float), np.asarray(cells["lat"], float)
-    lst = np.array([np.nan if v is None else v for v in cells["lst"]], dtype=float)
+    lst = np.asarray(cells["lst"], dtype=float)
 
     outline = boundary.load(city.id)
+    if outline is None:
+        raise FileNotFoundError(f"no boundary for {city.id}: the heat island needs pipeline/boundaries/{city.id}.geojson")
     utm = utm_crs_for(*city.center)
     to_utm = Transformer.from_crs(WGS84, utm, always_xy=True).transform
     outline_utm = transform_geometry(to_utm, outline)
@@ -103,7 +105,7 @@ def validate_city(city: City) -> dict:
 
 def _key(bbox: tuple, period: Period) -> str:
     """Cache key: the area, the period and every rule that changes which MODIS pixels count."""
-    rules = (modis.MAX_LST_ERROR_CLASS, modis.MIN_COMPOSITES, modis.QC_OTHER)
+    rules = (modis.LOGIC_VERSION, modis.MAX_LST_ERROR_CLASS, modis.MIN_COMPOSITES, modis.QC_OTHER, modis.COMPOSITE_DAYS)
     return hashlib.sha1(repr((bbox, period.label, rules)).encode()).hexdigest()[:8]
 
 
@@ -137,7 +139,6 @@ def web_summary(report: dict) -> dict:
                 "day": p["dayVsLandsat"], "heatIsland": island}
     return {
         "period": ", ".join(report["period"]),
-        "bias": report["bias"],
         "cities": {city_id: {name: platform(p) for name, p in res["modis"].items()}
                    for city_id, res in report["cities"].items()},
     }

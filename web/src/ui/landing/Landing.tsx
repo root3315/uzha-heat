@@ -224,6 +224,7 @@ function CityCard({ city }: { city: CitySummary }) {
   const detail = model?.detail;
   const failed = state.status === 'error';
   const inHeat = model ? peopleInHeat(model.detail, model.inside) : null;
+  const sparse = inHeat ? sparseHeatNote(inHeat) : null;
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
@@ -255,7 +256,7 @@ function CityCard({ city }: { city: CitySummary }) {
           </div>
         )}
       </dl>
-      {inHeat && sparseHeatNote(inHeat) && <p className="town__note">{sparseHeatNote(inHeat)}</p>}
+      {sparse && <p className="town__note">{sparse}</p>}
       <p className="tag town__meta">
         {detail
           ? `${detail.period.lstScenes} ${plural(detail.period.lstScenes, ['снимок', 'снимка', 'снимков'])} Landsat · R² ${formatNumber(detail.model.r2Cv, 2)}`

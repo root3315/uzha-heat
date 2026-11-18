@@ -68,13 +68,15 @@ async function fetchJson(path: string): Promise<unknown> {
   return (await fetchOk(path)).json();
 }
 
-/** The MODIS check, if the pipeline wrote one; null when it is missing or unreadable, the page goes on without it. */
-export async function loadValidation(): Promise<Validation | null> {
-  try {
-    return parseValidation(await fetchJson('validation.json'));
-  } catch {
-    return null;
-  }
+let validation: Promise<Validation | null> | null = null;
+
+/**
+ * The MODIS check, if the pipeline wrote one; null when it is missing or unreadable, the page goes on without it.
+ * One file for every city, fetched once per session.
+ */
+export function loadValidation(): Promise<Validation | null> {
+  validation ??= fetchJson('validation.json').then(parseValidation, () => null);
+  return validation;
 }
 
 export async function loadCities(): Promise<CitySummary[]> {
