@@ -31,6 +31,7 @@ class ModelResult:
     base_value: float
     shap: pd.DataFrame  # one column per factor, °C
     prediction: np.ndarray
+    booster: xgb.Booster  # the final model, fit on all cells
 
 
 def spatial_blocks(x: np.ndarray, y: np.ndarray, block_size: float = BLOCK_SIZE_M) -> np.ndarray:
@@ -49,10 +50,14 @@ def cross_validate(features: pd.DataFrame, target: np.ndarray, groups: np.ndarra
     return r2_score(target, predicted), mean_absolute_error(target, predicted)
 
 
+def fit_booster(features: pd.DataFrame, target: np.ndarray) -> xgb.Booster:
+    """The final model, fit on all cells."""
+    return xgb.XGBRegressor(**PARAMS).fit(features, target).get_booster()
+
+
 def explain(features: pd.DataFrame, target: np.ndarray) -> tuple:
-    """Fit on all cells; return (prediction, SHAP frame, base value). SHAP + base = prediction."""
-    model = xgb.XGBRegressor(**PARAMS).fit(features, target)
-    booster = model.get_booster()
+    """Fit on all cells; return (prediction, SHAP frame, base value, booster). SHAP + base = prediction."""
+    booster = fit_booster(features, target)
     matrix = xgb.DMatrix(features)
     contributions = booster.predict(matrix, pred_contribs=True)
     prediction = booster.predict(matrix)
@@ -61,13 +66,13 @@ def explain(features: pd.DataFrame, target: np.ndarray) -> tuple:
     gap = np.abs(contributions.sum(axis=1) - prediction).max()
     if gap > ADDITIVITY_TOLERANCE:
         raise AssertionError(f"SHAP additivity violated by {gap:.4f} °C")
-    return prediction, shap, base_value
+    return prediction, shap, base_value, booster
 
 
 def fit(features: pd.DataFrame, target: np.ndarray, x: np.ndarray, y: np.ndarray) -> ModelResult:
     r2, mae = cross_validate(features, target, spatial_blocks(x, y))
-    prediction, shap, base_value = explain(features, target)
-    return ModelResult(float(r2), float(mae), base_value, shap, prediction)
+    prediction, shap, base_value, booster = explain(features, target)
+    return ModelResult(float(r2), float(mae), base_value, shap, prediction, booster)
 
 
 def global_importance(features: pd.DataFrame, target: np.ndarray, shap: pd.DataFrame) -> list:
