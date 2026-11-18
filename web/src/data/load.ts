@@ -10,7 +10,7 @@ const BOUNDARY_ROOT = `${BASE}boundaries`;
 
 export class MissingDataError extends Error {
   constructor(path: string) {
-    super(`Нет файла ${path}`);
+    super(`No file ${path}`);
     this.name = 'MissingDataError';
   }
 }
@@ -81,7 +81,7 @@ export function loadValidation(): Promise<Validation | null> {
 
 const treeModels = new Map<string, Promise<TreeModel>>();
 
-/** The city's XGBoost model for "что если", `model-<id>.json`: fetched once, only when the reader opens the block. */
+/** The city's XGBoost model for "what if", `model-<id>.json`: fetched once, only when the reader opens the block. */
 export function loadTreeModel(id: string): Promise<TreeModel> {
   let model = treeModels.get(id);
   if (!model) {

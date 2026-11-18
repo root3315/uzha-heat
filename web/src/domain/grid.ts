@@ -25,7 +25,7 @@ function offsetOf(value: number, cellSizeM: number): number {
 
 export function buildCellGrid(lon: readonly number[], lat: readonly number[], cellSizeM: number, pad = GRID_PAD): CellGrid {
   const n = lon.length;
-  if (n === 0) throw new Error('Нет ни одной ячейки');
+  if (n === 0) throw new Error('No cells');
   const zone = utmZone(lon[0] ?? 0);
   const xs = new Float64Array(n);
   const ys = new Float64Array(n);

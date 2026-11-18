@@ -1,5 +1,5 @@
 /**
- * "Где сажать первым": the whole city run through the "что если" model at once. Every inhabited cell inside the outline
+ * "Where to plant first": the whole city run through the "what if" model at once. Every inhabited cell inside the outline
  * gets a realistic planting (more crowns, more greenery), and places are ranked by degrees of cooling times the people there.
  */
 import type { CityDetail, LonLat, TreeModel } from '../data/contract';

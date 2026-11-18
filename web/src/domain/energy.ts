@@ -1,20 +1,18 @@
 import { FLUX_KEYS, type CityDetail, type EnergyMethod, type Fluxes, type SurfaceMaterial } from '../data/contract';
-import { genitive } from './answers';
-import { formatNumber, formatPercent } from './format';
+import type { Locale } from '../i18n/locale';
+import { ENERGY_TEXTS } from './energy.texts';
+import { formats } from './format';
 import { hottestTenth } from './places';
 import { meanAt, quantile } from './stats';
 
-const NBSP = ' ';
-export const WATT = `${NBSP}Вт/м²`;
-export const formatWatts = (value: number): string => `${formatNumber(value, 0)}${WATT}`;
+/** Whole watts per square metre: "640 W/m²". */
+export const formatWatts = (value: number, locale: Locale): string => `${formats(locale).formatNumber(value, 0)}${ENERGY_TEXTS[locale].watt}`;
 
 /** Where the net radiation goes, as the bar draws it left to right. */
-export const SINKS = [
-  { key: 'le', label: 'испарение' },
-  { key: 'h', label: 'нагрев воздуха' },
-  { key: 'g', label: 'в грунт' },
-] as const;
-export type Sink = (typeof SINKS)[number]['key'];
+export const SINKS = ['le', 'h', 'g'] as const;
+export type Sink = (typeof SINKS)[number];
+
+export const sinkLabel = (sink: Sink, locale: Locale): string => ENERGY_TEXTS[locale].sinks[sink];
 
 /** The balance of one cell, or null when the data has no energy step. */
 export function cellFluxes(detail: CityDetail, index: number): Fluxes | null {
@@ -48,24 +46,21 @@ export function sinkShares(f: Fluxes): Record<Sink, number> {
 export const evaporativeFraction = (f: Fluxes): number => (f.rn - f.g > 0 ? Math.max(0, f.le) / (f.rn - f.g) : 0);
 
 /** One plain sentence about where this place's sunlight goes. */
-export function fluxVerdict(f: Fluxes): string {
+export function fluxVerdict(f: Fluxes, locale: Locale): string {
+  const t = ENERGY_TEXTS[locale].verdict;
   const ef = evaporativeFraction(f);
-  if (ef < 0.15) return 'Здесь почти всё солнце уходит в нагрев: испаряться нечему.';
-  if (ef < 0.4) return 'Испаряется мало, большая часть тепла уходит в воздух.';
-  if (ef < 0.6) return 'Тепло делится почти поровну: часть уходит на испарение, часть греет воздух.';
-  return 'Здесь большая часть солнца уходит на испарение: зелень и влажная почва остужают сами себя.';
+  if (ef < 0.15) return t.dry;
+  if (ef < 0.4) return t.little;
+  if (ef < 0.6) return t.even;
+  return t.wet;
 }
 
 /** How much more this place heats the air than the city's greenest tenth. */
-export function greenComparison(here: Fluxes, green: Fluxes): string {
+export function greenComparison(here: Fluxes, green: Fluxes, locale: Locale): string {
+  const t = ENERGY_TEXTS[locale];
   const ratio = here.h / Math.max(1, green.h);
-  if (ratio >= 1.3) {
-    return (
-      `Воздух здесь греется в${NBSP}${formatNumber(ratio, 1)} раза сильнее, чем на самых зелёных участках города: ` +
-      `${formatWatts(here.h)} против ${formatWatts(green.h)}.`
-    );
-  }
-  return `Почти как на самых зелёных участках города: там на нагрев воздуха уходит ${formatWatts(green.h)}.`;
+  if (ratio >= 1.3) return t.greener(formats(locale).formatNumber(ratio, 1), formatWatts(here.h, locale), formatWatts(green.h, locale));
+  return t.asGreen(formatWatts(green.h, locale));
 }
 
 export type SurfaceKind = 'built' | 'bare' | 'green';
@@ -80,35 +75,26 @@ export function dominantSurface(values: Record<string, number>): SurfaceKind | n
   return bare >= green ? 'bare' : 'green';
 }
 
-const admittanceOf = (surfaces: readonly SurfaceMaterial[], key: string): string | null => {
-  const surface = surfaces.find((s) => s.key === key);
-  return surface ? formatNumber(surface.admittance, 0) : null;
-};
-
 /** Why the surface keeps or loses its heat into the evening, from the reference table (Oke 1987). */
-export function storageLine(kind: SurfaceKind, surfaces: readonly SurfaceMaterial[]): string | null {
-  const asphalt = admittanceOf(surfaces, 'asphalt');
-  const concrete = admittanceOf(surfaces, 'concrete');
-  const dry = admittanceOf(surfaces, 'dry_soil');
-  const wet = admittanceOf(surfaces, 'wet_soil');
-  if (kind === 'built' && asphalt && concrete && dry) {
-    return `Асфальт и бетон набирают тепло вглубь и отдают его вечером: тепловая активность ${asphalt} и ${concrete} против ${dry} у сухого грунта.`;
-  }
-  if (kind === 'bare' && dry && asphalt) {
-    return `Сухой грунт тепло вглубь почти не пускает, тепловая активность ${dry} против ${asphalt} у асфальта: днём он горячий сверху, но вечером остывает быстрее.`;
-  }
-  if (kind === 'green' && wet) {
-    return `Влажная почва запасает тепла больше всех, тепловая активность ${wet}, но днём солнце уходит на испарение, и к вечеру запасать почти нечего.`;
-  }
+export function storageLine(kind: SurfaceKind, surfaces: readonly SurfaceMaterial[], locale: Locale): string | null {
+  const t = ENERGY_TEXTS[locale].storage;
+  const admittanceOf = (key: string): string | null => {
+    const surface = surfaces.find((s) => s.key === key);
+    return surface ? formats(locale).formatNumber(surface.admittance, 0) : null;
+  };
+  const asphalt = admittanceOf('asphalt');
+  const concrete = admittanceOf('concrete');
+  const dry = admittanceOf('dry_soil');
+  const wet = admittanceOf('wet_soil');
+  if (kind === 'built' && asphalt && concrete && dry) return t.built(asphalt, concrete, dry);
+  if (kind === 'bare' && dry && asphalt) return t.bare(dry, asphalt);
+  if (kind === 'green' && wet) return t.green(wet);
   return null;
 }
 
 /** The simplifications, said once, next to the numbers. */
-export function energyCaveat(method: EnergyMethod): string {
-  return (
-    `Оценка по одной модели для ясного дня около ${method.localHour}:00. Солнце, ${formatWatts(method.solarWm2)}, и воздух по ERA5 одни на весь город; ` +
-    `сколько уходит на испарение, считаем по температуре участка между самым горячим и самым прохладным местом города.`
-  );
+export function energyCaveat(method: EnergyMethod, locale: Locale): string {
+  return ENERGY_TEXTS[locale].caveat(method.localHour, formatWatts(method.solarWm2, locale));
 }
 
 export interface EnergyView {
@@ -119,17 +105,17 @@ export interface EnergyView {
   caveat: string;
 }
 
-/** Everything the "Физика участка" block says about some cells, or null without energy data. */
-export function energyView(detail: CityDetail, fluxes: Fluxes | null, values: Record<string, number>): EnergyView | null {
+/** Everything the "Physics of the place" block says about some cells, or null without energy data. */
+export function energyView(detail: CityDetail, fluxes: Fluxes | null, values: Record<string, number>, locale: Locale): EnergyView | null {
   if (!fluxes || !detail.energy) return null;
   const green = meanFluxes(detail, greenestTenth(detail));
   const kind = dominantSurface(values);
   return {
     fluxes,
-    verdict: fluxVerdict(fluxes),
-    comparison: green ? greenComparison(fluxes, green) : null,
-    storage: kind ? storageLine(kind, detail.energy.surfaces) : null,
-    caveat: energyCaveat(detail.energy),
+    verdict: fluxVerdict(fluxes, locale),
+    comparison: green ? greenComparison(fluxes, green, locale) : null,
+    storage: kind ? storageLine(kind, detail.energy.surfaces, locale) : null,
+    caveat: energyCaveat(detail.energy, locale),
   };
 }
 
@@ -148,10 +134,14 @@ export function cityEnergy(detail: CityDetail): CityEnergy | null {
 }
 
 /** The city in one sentence: how much more the hottest places heat the air than the greenest. */
-export function cityEnergyLine(cityName: string, summary: CityEnergy): string {
+export function cityEnergyLine(cityName: string, summary: CityEnergy, locale: Locale): string {
   const { hot, green } = summary;
-  return (
-    `Самые горячие участки ${genitive(cityName)} отдают воздуху ${formatWatts(hot.h)}, самые зелёные ${formatWatts(green.h)}: ` +
-    `на испарение у первых уходит ${formatPercent(sinkShares(hot).le)} энергии, у вторых ${formatPercent(sinkShares(green).le)}.`
+  const { formatPercent } = formats(locale);
+  return ENERGY_TEXTS[locale].cityLine(
+    cityName,
+    formatWatts(hot.h, locale),
+    formatWatts(green.h, locale),
+    formatPercent(sinkShares(hot).le),
+    formatPercent(sinkShares(green).le),
   );
 }

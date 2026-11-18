@@ -1,55 +1,58 @@
 <!doctype html>
-<html lang="ru" style="background: #eceeeb">
+<html lang="en" style="background: #eceeeb">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eceeeb" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>UzHa: где город перегревается летом</title>
-    <meta name="description" content="Острова тепла Ташкента, Самарканда и Бухары по снимкам Landsat: где поверхность горячее всего летом и почему." />
+    <title>UzHa: where the city overheats in summer</title>
+    <meta name="description" content="Heat islands of Tashkent, Samarkand and Bukhara from Landsat imagery: where the surface is hottest in summer, and why." />
 
     <!-- Link previews (Telegram, WhatsApp, X). The image is made by `npm run og`. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="UzHa" />
-    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ru_RU" />
     <meta property="og:url" content="https://uzha.mydevbox.xyz/" />
-    <meta property="og:title" content="UzHa: где города Узбекистана перегреваются летом и почему" />
-    <meta property="og:description" content="Летом поверхность Ташкента на 1,8° горячее окрестностей, Самарканда на 1,4°, Бухары на 3,1°: карта по снимкам Landsat 2023–2025 и что греет каждый участок." />
+    <meta property="og:title" content="UzHa: where the cities of Uzbekistan overheat in summer, and why" />
+    <meta property="og:description" content="In summer the surface of Tashkent is 1.8° hotter than its surroundings, Samarkand 1.4°, Bukhara 3.1°: a map from Landsat imagery 2023–2025 and what heats each 200 m cell." />
     <meta property="og:image" content="https://uzha.mydevbox.xyz/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Изотермы поверхности Ташкента и надпись: Где Ташкент перегревается, +1,8°" />
+    <meta property="og:image:alt" content="Surface isotherms of Tashkent with the caption in Russian: where Tashkent overheats, +1.8°" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="UzHa: где города Узбекистана перегреваются летом и почему" />
-    <meta name="twitter:description" content="Летом поверхность Ташкента на 1,8° горячее окрестностей, Самарканда на 1,4°, Бухары на 3,1°: карта по снимкам Landsat 2023–2025 и что греет каждый участок." />
+    <meta name="twitter:title" content="UzHa: where the cities of Uzbekistan overheat in summer, and why" />
+    <meta name="twitter:description" content="In summer the surface of Tashkent is 1.8° hotter than its surroundings, Samarkand 1.4°, Bukhara 3.1°: a map from Landsat imagery 2023–2025 and what heats each 200 m cell." />
     <meta name="twitter:image" content="https://uzha.mydevbox.xyz/og.jpg" />
   </head>
   <body>
     <!--
       The first screen before the app runs, in the page's own classes: the bar, the headline and the map panel
       with the city outline. The app reports the download into it and removes it when the page is ready.
+      It is written in English; for a reader who chose Russian the app rewrites its text before the first paint.
     -->
-    <div id="boot" class="boot" data-city="__UZHA_CITY_ID__">
+    <div id="boot" class="boot" data-city="__UZHA_CITY_ID__" data-name-en="__UZHA_CITY_NAME__" data-name-ru="__UZHA_CITY_NAME_RU__">
       <header class="bar">
         <a href="/" class="bar__id">UzHa</a>
-        <nav class="bar__nav" aria-label="Разделы">
-          <a href="#problem">Проблема</a>
-          <a href="#why">Почему жарко</a>
-          <a href="#cities">Города</a>
-          <a href="#method">Как считали</a>
+        <nav class="bar__nav" aria-label="Sections">
+          <a href="#problem" data-boot-section="problem">Problem</a>
+          <a href="#why" data-boot-section="why">Why it is hot</a>
+          <a href="#cities" data-boot-section="cities">Cities</a>
+          <a href="#method" data-boot-section="method">Method</a>
         </nav>
+        <span class="pill pill--small bar__lang" lang="ru">RU</span>
         <a class="pill pill--ink bar__open" href="/map/__UZHA_CITY_ID__">
-          <span class="bar__open-long">Открыть карту</span>
-          <span class="bar__open-short" aria-hidden="true">Карта</span>
+          <span class="bar__open-long">Open the map</span>
+          <span class="bar__open-short" aria-hidden="true">Map</span>
         </a>
       </header>
       <main aria-busy="true">
         <section class="hero boot__hero">
-          <h1 class="hero__title">Где __UZHA_CITY_NAME__ перегревается летом и&nbsp;почему</h1>
+          <h1 class="hero__title">Where __UZHA_CITY_NAME__ overheats in summer, and&nbsp;why</h1>
           <div class="hero__island" aria-hidden="true">
-            <p class="hero__figure boot__figure">+0,0°</p>
+            <p class="hero__figure boot__figure">+0.0°</p>
             <div class="boot__lines"><i></i><i></i><i></i><i class="boot__short"></i><i></i><i class="boot__short"></i></div>
             <div class="boot__lines hero__people"><i></i><i class="boot__short"></i><i class="boot__short"></i></div>
           </div>
@@ -60,13 +63,13 @@
               <path d="__UZHA_OUTLINE_D__" />
             </svg>
             <div class="boot__progress">
-              <p role="status" data-boot-status>загружаю данные</p>
+              <p role="status" data-boot-status>loading data</p>
               <span class="boot__meter is-open"><span data-boot-meter></span></span>
             </div>
           </div>
           <aside class="live__side" aria-hidden="true">
             <div class="gauge">
-              <p class="gauge__label">температура поверхности, доля города</p>
+              <p class="gauge__label">surface temperature, share of the city</p>
               <span class="boot__ramp"></span>
               <div class="boot__lines gauge__hint"><i></i><i></i><i class="boot__short"></i></div>
             </div>

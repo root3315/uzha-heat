@@ -1,7 +1,9 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { formatNumber } from '../domain/format';
+import { formats } from '../domain/format';
 import type { LabelAnchor } from '../domain/isotherms';
 
+/** Whole degrees read the same in every language. */
+const { formatNumber } = formats('en');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** Labels closer than this on screen, px, are thinned out; majors are placed first. */
 const MIN_GAP_PX = 84;

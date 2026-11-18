@@ -1,10 +1,12 @@
 import { useId, useMemo, useState, type MouseEvent, type PointerEvent } from 'react';
 import { causeLabel, causeWords } from '../domain/causes';
-import { formatDeg, formatDegSigned, formatNumber } from '../domain/format';
 import { classOf, type IsothermLevels } from '../domain/isotherms';
 import { runsOf, sampleAt, type Profile, type Sample } from '../domain/transect';
 import type { FeatureMeta } from '../data/contract';
+import { MAP_TEXTS } from '../map/map.texts';
 import { CauseGlyph } from './icons';
+import { useFormats, useLocale } from './locale';
+import { PROFILE_TEXTS } from './ui.texts';
 import { usePatternFill } from './patterns';
 
 interface ProfileChartProps {
@@ -39,10 +41,14 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   const fill = usePatternFill();
   const [probe, setProbe] = useState<Sample | null>(null);
   const clipId = `profile-area-${useId().replace(/:/g, '')}`;
+  const locale = useLocale();
+  const t = PROFILE_TEXTS[locale];
+  const [endA, endB] = MAP_TEXTS[locale].ends;
+  const { formatDeg, formatDegSigned, formatNumber } = useFormats();
   const wordsOf = useMemo(() => {
-    const byKey = new Map(features.map((f) => [f.key, causeWords(f)]));
-    return (key: string) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' });
-  }, [features]);
+    const byKey = new Map(features.map((f) => [f.key, causeWords(f, locale)]));
+    return (key: string) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' }, locale);
+  }, [features, locale]);
 
   const inside = profile.samples.filter((s) => s.inside);
   const plotBottom = height - M.bottom - RIBBON_H - RIBBON_GAP;
@@ -115,12 +121,12 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   };
 
   const probeText = probe?.cause
-    ? `${formatNumber(probe.d / 1000, 1)} км · ${formatDeg(probe.t)} · ${causeLabel(wordsOf(probe.cause.key), probe.cause.value)} ${formatDegSigned(probe.cause.value)}`
+    ? `${formatNumber(probe.d / 1000, 1)} ${t.km} · ${formatDeg(probe.t)} · ${causeLabel(wordsOf(probe.cause.key), probe.cause.value)} ${formatDegSigned(probe.cause.value)}`
     : '';
   const probeAnchor = probe && x(probe.d) > width - 260 ? 'end' : 'start';
 
   return (
-    <svg className="profile" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Температура и причины вдоль разреза">
+    <svg className="profile" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t.label}>
       <defs>
         <clipPath id={clipId}>
           <path d={curve(true)} />
@@ -157,7 +163,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
       <g className="profile__mean">
         <line x1={M.left} x2={width - M.right} y1={y(cityMean)} y2={y(cityMean)} />
         <text x={width - M.right} y={y(cityMean) - 5} textAnchor="end">
-          среднее {formatDeg(cityMean)}
+          {t.mean(formatDeg(cityMean))}
         </text>
       </g>
       <path className="profile__curve" d={curve(false)} />
@@ -201,14 +207,14 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
       <g className="profile__axis">
         {kmTicks.map((d) => (
             <text key={d} x={x(d)} y={height - 6} textAnchor="middle">
-              {formatNumber(d / 1000, 0)} км
+              {formatNumber(d / 1000, 0)} {t.km}
             </text>
           ))}
         <text className="profile__end" x={x(0)} y={height - 6} textAnchor="middle">
-          А
+          {endA}
         </text>
         <text className="profile__end" x={x(length)} y={height - 6} textAnchor="middle">
-          Б
+          {endB}
         </text>
       </g>
 

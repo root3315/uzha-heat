@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import type { CitySummary, Facility } from '../data/contract';
-import { capitalize, genitive, hotTenthAnswer, islandAnswer, sectionAnswer, sourcesLine } from '../domain/answers';
+import { hotTenthAnswer, islandAnswer, sectionAnswer, sourcesLine } from '../domain/answers';
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
-import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, plural } from '../domain/format';
+import { cityName, periodText } from '../domain/dataTexts';
+import { formats } from '../domain/format';
 import { facilitiesNear, facilityTitle, formatPeople, hotPlacesByPeople, peopleFigure, peopleInHeat, peopleNoun, populationCaveat, sparseHeatNote } from '../domain/people';
 import { cityEnergy, cityEnergyLine, energyCaveat } from '../domain/energy';
 import { recommend } from '../domain/recommendations';
 import { distinctByName, hotTenthCauses, hottestPlaces, keyFigures, reportTransect } from '../domain/report';
+import { capitalize } from '../domain/phrase';
 import { siteTitle } from '../domain/sites';
 import type { Transect } from '../domain/transect';
 import { overpassLine } from '../domain/weather';
+import { MAP_TEXTS } from '../map/map.texts';
 import { renderReportMap, type ReportMap } from '../map/snapshot';
 import { readTokens } from '../map/tokens';
 import { useAsync, useWidth } from '../ui/hooks';
 import { CityPhoto } from '../ui/CityPhoto';
 import { EnergyBlock, EnergySummary } from '../ui/Energy';
 import { CauseIcon, FacilityIcon } from '../ui/icons';
+import { useFormats, useLocale, useTexts } from '../ui/locale';
 import { cityModel } from '../ui/models';
 import { Evidence } from '../ui/panel/Panel';
 import { Ramp } from '../ui/panel/Ramp';
@@ -26,6 +30,7 @@ import { PatternScopeProvider, directionOf, usePatternFill } from '../ui/pattern
 import { Phrase } from '../ui/Phrase';
 import { WeatherCompare } from '../ui/Weather';
 import { ProfileChart } from '../ui/ProfileChart';
+import { REPORT_TEXTS } from './report.texts';
 
 interface ReportProps {
   model: CityModel;
@@ -42,7 +47,6 @@ const SHEET_W = 694;
 const PROFILE_H = 210;
 const SITE = 'uzha.mydevbox.xyz';
 const SITE_URL = `https://${SITE}/`;
-const UNNAMED = 'Участок без названия';
 /** Hottest places listed, and how many candidates are named to find that many different ones. */
 const PLACES = 5;
 const CANDIDATES = 10;
@@ -51,9 +55,9 @@ const NEAR_M = 500;
 const NEAR_MAX = 3;
 /** Fewer people than this on a 200 m cell is not housing. */
 const FEW_PEOPLE = 5;
+const RESIDENTS = { en: ['resident', 'residents'], ru: ['житель', 'жителя', 'жителей'] } as const;
 
-const today = () => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-const coords = ([lon, lat]: [number, number]) => `${formatNumber(lat, 3)}° с.ш., ${formatNumber(lon, 3)}° в.д.`;
+const today = (locale: string) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
 
 function Part({ n, title, children, className = '' }: { n: number; title: string; children: ReactNode; className?: string }) {
   return (
@@ -77,6 +81,7 @@ interface CauseRowData {
 /** Causes as hatched bars on one scale: the hatch says which, the icon says what, the number says how much. */
 function CauseRows({ rows }: { rows: CauseRowData[] }) {
   const fill = usePatternFill();
+  const { formatDegSigned } = useFormats();
   const scale = Math.max(0.5, ...rows.map((r) => Math.abs(r.value)));
   return (
     <ul className="rp-causes">
@@ -103,20 +108,23 @@ function CauseRows({ rows }: { rows: CauseRowData[] }) {
 
 /** Who lives on the cell and which schools and clinics stand near it. */
 function PlacePeople({ people, near }: { people?: number; near: Facility[] }) {
+  const locale = useLocale();
+  const t = REPORT_TEXTS[locale];
+  const { formatNumber } = formats(locale);
   return (
     <>
       {people !== undefined && (
-        <p className="rp-place__people">{people < FEW_PEOPLE ? 'жилья на участке почти нет' : `живёт ~${formatPeople(people)}`}</p>
+        <p className="rp-place__people">{people < FEW_PEOPLE ? t.noHousing : t.lives(formatPeople(people, locale))}</p>
       )}
       {near.length > 0 && (
-        <ul className="rp-place__near" aria-label={`Рядом, до ${NEAR_M} м`}>
+        <ul className="rp-place__near" aria-label={t.near(NEAR_M)}>
           {near.slice(0, NEAR_MAX).map((f) => (
             <li key={`${f.lon},${f.lat}`}>
               <FacilityIcon type={f.type} size={16} />
-              {facilityTitle(f)}
+              {facilityTitle(f, locale)}
             </li>
           ))}
-          {near.length > NEAR_MAX && <li>и ещё {formatNumber(near.length - NEAR_MAX, 0)}</li>}
+          {near.length > NEAR_MAX && <li>{t.andMore(formatNumber(near.length - NEAR_MAX, 0))}</li>}
         </ul>
       )}
     </>
@@ -166,8 +174,13 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const locale = useLocale();
+  const t = useTexts(REPORT_TEXTS);
+  const { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent } = formats(locale);
+  const [endA, endB] = MAP_TEXTS[locale].ends;
   const { detail } = model;
   const { stats, features } = detail;
+  const name = cityName(detail.city, locale);
   const [sectionRef, screenWidth] = useWidth<HTMLDivElement>(SHEET_W);
   const printing = usePrinting();
   const width = printing ? SHEET_W : screenWidth;
@@ -176,12 +189,13 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
   const places = useMemo(() => hottestPlaces(detail, model.inside, CANDIDATES), [detail, model.inside]);
   const crowded = useMemo(() => hotPlacesByPeople(detail, model.inside, PLACES), [detail, model.inside]);
   const inHeat = peopleInHeat(detail, model.inside);
+  const coords = ([lon, lat]: [number, number]) => t.coords(formatNumber(lat, 3), formatNumber(lon, 3));
   const pop = detail.cells.pop;
   const causes = useMemo(() => hotTenthCauses(detail, model.hotspot), [detail, model.hotspot]);
   const energy = useMemo(() => cityEnergy(detail), [detail]);
   const measures = useMemo(
-    () => recommend({ features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }).slice(0, 3),
-    [features, model],
+    () => recommend({ features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }, locale).slice(0, 3),
+    [features, model, locale],
   );
   const figures = keyFigures(stats);
   const all = useCityModels(cities, model);
@@ -190,11 +204,11 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
   useEffect(() => {
     let live = true;
     const points = [...places, ...crowded].map((p) => p.point);
-    renderReportMap(model, transect, readTokens(), points).then((result) => live && setMap(result));
+    renderReportMap(model, transect, readTokens(), locale, points).then((result) => live && setMap(result));
     return () => {
       live = false;
     };
-  }, [model, transect, places, crowded]);
+  }, [model, transect, places, crowded, locale]);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -207,13 +221,13 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
     };
   }, []);
 
-  const wordsOf = (key: string) => causeWords(features.find((f) => f.key === key) ?? { key, label: key, unit: '' });
+  const wordsOf = (key: string) => causeWords(features.find((f) => f.key === key) ?? { key, label: key, unit: '' }, locale);
   const { island } = model;
-  const date = today();
-  const cells = (count: number) => `${formatNumber(count, 0)} ${plural(count, ['участка', 'участков', 'участков'])}`;
+  const date = today(t.dateLocale);
+  const cells = (count: number) => t.cells(count, formatNumber(count, 0));
   const placeName = (i: number): string | null => {
     const site = map?.sites[i] ?? null;
-    return site ? siteTitle(site) : (map?.names[i]?.name ?? null);
+    return site ? siteTitle(site, locale) : (map?.names[i]?.name ?? null);
   };
   /** The crowded places were named after the hottest ones. */
   const crowdedName = (i: number) => placeName(places.length + i);
@@ -221,71 +235,71 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
   let n = 0;
 
   return createPortal(
-    <div className="report" role="dialog" aria-modal="true" aria-label={`Отчёт: ${detail.city.name}`}>
+    <div className="report" role="dialog" aria-modal="true" aria-label={t.dialog(name)}>
       <PatternScopeProvider scope="report-">
       <div className="report__bar no-print">
         <button type="button" className="pill pill--ink" onClick={() => window.print()}>
-          <span className="report__print-long">Распечатать или сохранить в PDF</span>
-          <span className="report__print-short">Сохранить PDF</span>
+          <span className="report__print-long">{t.printLong}</span>
+          <span className="report__print-short">{t.printShort}</span>
         </button>
         <button type="button" className="pill" ref={closeRef} onClick={onClose}>
-          Закрыть
+          {t.close}
         </button>
       </div>
 
       <article className="report__sheet">
         <header className="rp-head">
           <p className="rp-kicker">
-            <span>UzHa · отчёт</span>
+            <span>{t.kicker}</span>
             <span>{date}</span>
           </p>
-          <h1 className="rp-title">{detail.city.name}</h1>
-          <p className="rp-subtitle">Где поверхность перегревается летом и&nbsp;почему</p>
+          <h1 className="rp-title">{name}</h1>
+          <p className="rp-subtitle">{t.subtitle}</p>
           <p className="rp-meta">
-            Снимки Landsat, {detail.period.label} · участки {detail.grid.cellSizeM}&nbsp;×&nbsp;{detail.grid.cellSizeM}&nbsp;м · {SITE}
+            {t.meta(periodText(detail.period.label, locale), detail.grid.cellSizeM)}
+            {SITE}
           </p>
           <CityPhoto city={detail.city} className="rp-photo" eager />
         </header>
 
-        <Part n={++n} title="Главное">
+        <Part n={++n} title={t.parts.main}>
           {island && (
             <div className="rp-island">
               <p className={`rp-island__value ${island.intensity >= 0 ? 'is-hot' : 'is-cool'}`}>{formatDegSigned(island.intensity)}</p>
               <p className="rp-island__text">
-                <Phrase spans={islandAnswer(detail.city.name, island)} /> Это остров тепла: медиана температуры поверхности {cells(island.insideCount)} внутри черты
-                города, {formatDeg(island.inside)}, минус медиана {cells(island.outsideCount)} в&nbsp;кольце вокруг, {formatDeg(island.outside)}.
+                <Phrase spans={islandAnswer(name, island, locale)} />
+                {t.island(cells(island.insideCount), formatDeg(island.inside), cells(island.outsideCount), formatDeg(island.outside))}
               </p>
             </div>
           )}
           <p className="rp-lead">
-            <Phrase spans={hotTenthAnswer(detail, model.facts)} />
+            <Phrase spans={hotTenthAnswer(detail, model.facts, locale)} />
           </p>
           {inHeat && (
             <p className="rp-people">
-              <span className="rp-people__value">{formatPeople(inHeat.people)}</span> в&nbsp;черте города живут на&nbsp;самых горячих участках, это{' '}
-              {formatPercent(inHeat.people / (inHeat.total || 1))} его жителей. {sparseHeatNote(inHeat) ?? ''}
+              <span className="rp-people__value">{formatPeople(inHeat.people, locale)}</span>
+              {t.peopleInHeat(formatPercent(inHeat.people / (inHeat.total || 1)), sparseHeatNote(inHeat, locale) ?? '')}
             </p>
           )}
         </Part>
 
-        <Part n={++n} title="Ключевые цифры">
+        <Part n={++n} title={t.parts.figures}>
           <dl className="rp-figs">
-            <Figure label="в среднем по городу" value={formatDeg(figures.mean)} />
-            <Figure label="горячая десятая часть, от" value={formatDeg(figures.hot)} hot />
-            <Figure label="прохладная десятая часть, до" value={formatDeg(figures.cool)} />
-            <Figure label="разброс между ними" value={formatDeg(figures.spread)} />
+            <Figure label={t.figures.mean} value={formatDeg(figures.mean)} />
+            <Figure label={t.figures.hot} value={formatDeg(figures.hot)} hot />
+            <Figure label={t.figures.cool} value={formatDeg(figures.cool)} />
+            <Figure label={t.figures.spread} value={formatDeg(figures.spread)} />
           </dl>
           <div className="rp-ramp">
             <Ramp levels={model.levels} shares={model.shares} min={stats.lstMin} max={stats.lstMax} value={stats.lstMean} meanMark={null} />
             <p className="rp-note">
-              Шкала: доля площади города в&nbsp;каждом классе температуры, от&nbsp;{formatDeg(stats.lstMin, 0)} до&nbsp;{formatDeg(stats.lstMax, 0)}, отмечено среднее.
-              Это температура поверхности, а&nbsp;не&nbsp;воздуха.
+              {t.scale(formatDeg(stats.lstMin, 0), formatDeg(stats.lstMax, 0))}
             </p>
           </div>
         </Part>
 
         {place && (
-          <Part n={++n} title={`Выбранное место: ${place.title}`}>
+          <Part n={++n} title={t.parts.place(place.title)}>
             <p className="rp-lead">
               <Phrase spans={place.answer} />
             </p>
@@ -304,20 +318,19 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           </Part>
         )}
 
-        <Part n={++n} title="Самые горячие места">
+        <Part n={++n} title={t.parts.hottest}>
           <p className="rp-note rp-note--lead">
-            Пять самых горячих участков {detail.grid.cellSizeM}&nbsp;м внутри черты города, не&nbsp;ближе 1,5&nbsp;км друг к&nbsp;другу. Причина: фактор, который по&nbsp;модели
-            греет участок сильнее всего.
+            {t.hottestLead(detail.grid.cellSizeM)}
           </p>
           <ol className="rp-places">
             {distinctByName(places, (_, i) => placeName(i), PLACES).map(({ item: p, index: i }, rank) => {
-              const name = placeName(i) ?? (map ? UNNAMED : '…');
+              const title = placeName(i) ?? (map ? t.unnamed : '…');
               const words = p.cause ? wordsOf(p.cause.key) : null;
               return (
                 <li key={p.cell} className="rp-place">
                   <span className="rp-place__rank">{rank + 1}</span>
                   <div className="rp-place__body">
-                    <p className="rp-place__name">{name}</p>
+                    <p className="rp-place__name">{title}</p>
                     {p.cause && words && (
                       <p className="rp-place__cause">
                         <CauseIcon cause={p.cause.key} size={18} />
@@ -329,7 +342,9 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
                   </div>
                   <p className="rp-place__t">
                     <span>{formatDeg(p.lst)}</span>
-                    <small>{formatDegSigned(p.lst - stats.lstMean)} к&nbsp;среднему</small>
+                    <small>
+                      {formatDegSigned(p.lst - stats.lstMean)} {t.vsMean}
+                    </small>
                   </p>
                 </li>
               );
@@ -338,64 +353,60 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
         </Part>
 
         {inHeat && crowded.length > 0 && (
-          <Part n={++n} title="Где в жаре живёт больше всего людей">
+          <Part n={++n} title={t.parts.crowded}>
             <p className="rp-note rp-note--lead">
-              Участки горячей десятой части, где живёт больше всего людей, не&nbsp;ближе 1&nbsp;км друг к&nbsp;другу. Рядом: школы, детские сады и&nbsp;поликлиники
-              до&nbsp;{NEAR_M}&nbsp;м по&nbsp;OpenStreetMap.
+              {t.crowdedLead(NEAR_M)}
             </p>
             <ol className="rp-places">
               {crowded.map((p, i) => (
                 <li key={p.cell} className="rp-place">
                   <span className="rp-place__rank">{i + 1}</span>
                   <div className="rp-place__body">
-                    <p className="rp-place__name">{crowdedName(i) ?? (map ? UNNAMED : '…')}</p>
+                    <p className="rp-place__name">{crowdedName(i) ?? (map ? t.unnamed : '…')}</p>
                     <PlacePeople near={facilitiesNear(detail.facilities, p.point, NEAR_M)} />
                     <p className="rp-place__where">{coords(p.point)}</p>
                   </div>
                   <p className="rp-place__t rp-place__t--people">
-                    <span>~{peopleFigure(p.people)}</span>
+                    <span>~{peopleFigure(p.people, locale)}</span>
                     <small>
-                      {peopleNoun(p.people, ['житель', 'жителя', 'жителей'])} · {formatDeg(p.lst)}
+                      {peopleNoun(p.people, RESIDENTS, locale)} · {formatDeg(p.lst)}
                     </small>
                   </p>
                 </li>
               ))}
             </ol>
-            {detail.population && <p className="rp-note">{populationCaveat(detail.population.year)}</p>}
+            {detail.population && <p className="rp-note">{populationCaveat(detail.population.year, locale)}</p>}
           </Part>
         )}
 
-        <Part n={++n} title="Что греет горячую десятую часть">
+        <Part n={++n} title={t.parts.causes}>
           <p className="rp-note rp-note--lead">
-            {formatNumber(model.hotspot.cellCount, 0)} {plural(model.hotspot.cellCount, ['участок', 'участка', 'участков'])} горячее {formatDeg(stats.lstP90)}, в&nbsp;среднем{' '}
-            {formatDeg(model.hotspot.lst)}. Полоса: сколько градусов фактор добавляет там в&nbsp;среднем по&nbsp;модели; под ней: значение фактора и&nbsp;в&nbsp;какой доле
-            участков он главный.
+            {t.causesLead(model.hotspot.cellCount, formatNumber(model.hotspot.cellCount, 0), formatDeg(stats.lstP90), formatDeg(model.hotspot.lst))}
           </p>
           <CauseRows
             rows={causes.map((c) => ({
               key: c.key,
               label: capitalize(c.value >= 0 ? wordsOf(c.key).heats : wordsOf(c.key).cools),
               value: c.value,
-              note: `${wordsOf(c.key).measure(model.hotspot.values[c.key] ?? Number.NaN)}${c.leads >= 0.005 ? ` · главный в ${formatPercent(c.leads)}` : ''}`,
+              note: `${wordsOf(c.key).measure(model.hotspot.values[c.key] ?? Number.NaN)}${c.leads >= 0.005 ? t.leads(formatPercent(c.leads)) : ''}`,
             }))}
           />
         </Part>
 
         {energy && detail.energy && (
-          <Part n={++n} title="Физика: куда уходит солнце">
-            <p className="rp-lead rp-lead--small">{cityEnergyLine(detail.city.name, energy)}</p>
+          <Part n={++n} title={t.parts.physics}>
+            <p className="rp-lead rp-lead--small">{cityEnergyLine(name, energy, locale)}</p>
             <EnergySummary summary={energy} />
             <p className="rp-note">
-              Полоса: куда уходит солнечная энергия, оставшаяся после теплового излучения поверхности, в&nbsp;среднем по&nbsp;участкам. {energyCaveat(detail.energy)}
+              {t.physicsNote(energyCaveat(detail.energy, locale))}
             </p>
           </Part>
         )}
 
         {measures.length > 0 && (
-          <Part n={++n} title="Что делать">
+          <Part n={++n} title={t.parts.measures}>
             <p className="rp-note rp-note--lead">
-              Меры для горячей десятой части {genitive(detail.city.name)}, по&nbsp;тому, что её греет. Сколько снимет мера, известно из&nbsp;обзоров по&nbsp;другим
-              городам, ссылка у&nbsp;каждой.
+              {t.measuresLead(name)}
             </p>
             <ol className="rp-measures">
               {measures.map((m, i) => (
@@ -410,7 +421,9 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
                       <li key={r.key}>
                         <CauseIcon cause={r.key} size={18} />
                         <span>
-                          {capitalize(r.text)}; по&nbsp;модели это <span className="num num--hot">{formatDegSigned(r.contribution)}</span>
+                          {capitalize(r.text)}
+                          {t.byModel}
+                          <span className="num num--hot">{formatDegSigned(r.contribution)}</span>
                         </span>
                       </li>
                     ))}
@@ -427,35 +440,35 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           </Part>
         )}
 
-        <Part n={++n} title="Карта и разрез" className="rp-part--map">
+        <Part n={++n} title={t.parts.map} className="rp-part--map">
           <figure className="rp-map">
             {map?.image ? (
-              <img src={map.image} alt={`Изотермы поверхности: ${detail.city.name}, линия разреза от А до Б`} />
+              <img src={map.image} alt={t.mapAlt(name, endA, endB)} />
             ) : (
-              <p className="rp-note">{map ? 'Карта не нарисовалась, разрез ниже.' : 'Рисую карту…'}</p>
+              <p className="rp-note">{map ? t.mapFailed : t.mapDrawing}</p>
             )}
             <figcaption className="rp-note">
-              Изотермы поверхности через {formatNumber(isoStep, 0)}°, цвет: класс температуры. Линия А–Б: разрез длиной {formatKm(profile.length)}.
+              {t.mapCaption(formatNumber(isoStep, 0), endA, endB, formatKm(profile.length))}
             </figcaption>
           </figure>
           <div className="rp-section" ref={sectionRef}>
             <p className="rp-lead rp-lead--small">
-              <Phrase spans={sectionAnswer(profile, stats.lstMean, features)} />
+              <Phrase spans={sectionAnswer(profile, stats.lstMean, features, locale)} />
             </p>
             <ProfileChart profile={profile} levels={model.levels} cityMean={stats.lstMean} features={features} width={width} height={PROFILE_H} />
-            <p className="rp-note">Полоса под кривой: что сильнее всего меняет температуру на&nbsp;каждом отрезке.</p>
+            <p className="rp-note">{t.sectionNote}</p>
           </div>
         </Part>
 
         {cities.length > 1 && (
-          <Part n={++n} title="Города рядом">
+          <Part n={++n} title={t.parts.cities}>
             <table className="rp-table">
               <thead>
                 <tr>
-                  <th scope="col">Город</th>
-                  <th scope="col">Остров тепла</th>
-                  <th scope="col">Среднее</th>
-                  <th scope="col">Горячая 1/10</th>
+                  <th scope="col">{t.table.city}</th>
+                  <th scope="col">{t.table.island}</th>
+                  <th scope="col">{t.table.mean}</th>
+                  <th scope="col">{t.table.hot}</th>
                   <th scope="col">R²</th>
                 </tr>
               </thead>
@@ -465,10 +478,10 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
                   const isl = m?.island ?? null;
                   return (
                     <tr key={city.id} className={city.id === detail.city.id ? 'is-current' : undefined}>
-                      <th scope="row">{city.name}</th>
+                      <th scope="row">{cityName(city, locale)}</th>
                       <td className={`num ${isl && isl.intensity < 0 ? 'num--cool' : 'num--hot'}`}>{isl ? formatDegSigned(isl.intensity) : '…'}</td>
                       <td className="num">{formatDeg(m?.detail.stats.lstMean ?? city.lstMean)}</td>
-                      <td className="num">{m ? `от ${formatDeg(m.detail.stats.lstP90)}` : '…'}</td>
+                      <td className="num">{m ? t.table.from(formatDeg(m.detail.stats.lstP90)) : '…'}</td>
                       <td className="num">{formatNumber(m?.detail.model.r2Cv ?? city.r2, 2)}</td>
                     </tr>
                   );
@@ -476,16 +489,15 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
               </tbody>
             </table>
             <p className="rp-note">
-              Остров тепла: поверхность в&nbsp;черте города против кольца вокруг. R²: какую долю разницы температур модель объясняет на&nbsp;кусках города, которых
-              не&nbsp;видела.
+              {t.tableNote}
             </p>
             {detail.city.weather && (
               <div className="rp-weather">
-                <h3 className="rp-sub">Погода летом</h3>
+                <h3 className="rp-sub">{t.weather}</h3>
                 <WeatherCompare cities={cities} currentId={detail.city.id} className="rp-table rp-table--wx" />
-                {overpassLine(detail.city.weather) && (
+                {overpassLine(detail.city.weather, locale) && (
                   <p className="rp-note">
-                    {detail.city.name}. {overpassLine(detail.city.weather)}
+                    {name}. {overpassLine(detail.city.weather, locale)}
                   </p>
                 )}
               </div>
@@ -493,25 +505,25 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           </Part>
         )}
 
-        <Part n={++n} title="Как посчитано и чего карта не знает">
+        <Part n={++n} title={t.parts.method}>
           <p className="rp-text">
-            {detail.city.name} разбит на&nbsp;{formatNumber(detail.grid.count, 0)} участков {detail.grid.cellSizeM}&nbsp;×&nbsp;{detail.grid.cellSizeM}&nbsp;м. Температура
-            поверхности: медиана {detail.period.lstScenes} {plural(detail.period.lstScenes, ['снимка', 'снимков', 'снимков'])} Landsat 8/9 без облаков. Модель{' '}
-            {detail.model.type} предсказывает её по&nbsp;{features.length} факторам, вклад каждого в&nbsp;градусах считает SHAP.
+            {t.method(name, formatNumber(detail.grid.count, 0), detail.grid.cellSizeM, detail.period.lstScenes, detail.model.type, features.length)}
           </p>
           <ul className="rp-limits">
-            <li>Это температура поверхности, а&nbsp;не&nbsp;воздуха. Днём она выше и&nbsp;меняется резче.</li>
-            <li>Landsat снимает около 11 утра. Вечерний и&nbsp;ночной перегрев здесь не&nbsp;виден.</li>
-            <li>Вклад фактора показывает связь в&nbsp;данных, а&nbsp;не&nbsp;эксперимент. Где мало зелени, там обычно плотнее застройка.</li>
-            <li>Эффект мер взят из&nbsp;обзоров по&nbsp;другим городам: это ориентир, а&nbsp;не&nbsp;прогноз для участка.</li>
-            {detail.population && <li>{populationCaveat(detail.population.year)} Она показывает, где люди живут, а&nbsp;не&nbsp;где они днём.</li>}
+            {t.limits.map((limit) => (
+              <li key={limit}>{limit}</li>
+            ))}
+            {detail.population && <li>{t.popLimit(populationCaveat(detail.population.year, locale))}</li>}
           </ul>
-          <p className="rp-sources">{sourcesLine(detail)} Подложка: © OpenStreetMap, OpenFreeMap.</p>
+          <p className="rp-sources">
+            {sourcesLine(detail, locale)}
+            {t.basemap}
+          </p>
         </Part>
 
         <footer className="rp-foot">
           <span>
-            UzHa · {detail.city.name} · {date}
+            UzHa · {name} · {date}
           </span>
           <a href={SITE_URL}>{SITE}</a>
         </footer>

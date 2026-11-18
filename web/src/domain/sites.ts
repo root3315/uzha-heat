@@ -1,3 +1,5 @@
+import type { Locale } from '../i18n/locale';
+import { SITE_TEXTS } from './small.texts';
 import type { LonLat } from './transect';
 import { distanceM, distanceToLineM } from './placeName';
 import { pointInGeometry, type AreaGeometry } from './stats';
@@ -47,15 +49,14 @@ export function siteAt(point: LonLat, features: readonly SiteFeature[]): Site | 
   return onRailLand || yardTracks >= YARD_MIN_TRACKS ? { kind: 'rail', name: null } : null;
 }
 
-/** "Аэродром: Ташкент", "Железнодорожные пути и станция". */
-export function siteTitle(site: Site): string {
-  if (site.kind === 'airport') return site.name ? `Аэродром: ${site.name}` : 'Аэродром';
-  return 'Железнодорожные пути и станция';
+/** "Airfield: Tashkent", "Railway tracks and station". */
+export function siteTitle(site: Site, locale: Locale): string {
+  const t = SITE_TEXTS[locale];
+  return site.kind === 'airport' ? t.airport(site.name) : t.rail;
 }
 
 /** Why the usual advice does not apply here, in one plain sentence. */
-export function siteNote(site: Site): string {
-  return site.kind === 'airport'
-    ? 'Это аэродром: жара идёт от полос и перронов, деревья на них не сажают. Для города это не мера, а фон.'
-    : 'Это железнодорожные пути: жара идёт от щебня и рельсов, деревья вдоль путей не сажают. Для города это не мера, а фон.';
+export function siteNote(site: Site, locale: Locale): string {
+  const t = SITE_TEXTS[locale];
+  return site.kind === 'airport' ? t.airportNote : t.railNote;
 }

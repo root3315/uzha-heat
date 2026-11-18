@@ -1,8 +1,10 @@
 /**
- * "Что если": the city's own XGBoost model, evaluated in the browser on a cell with some factors changed.
+ * "What if": the city's own XGBoost model, evaluated in the browser on a cell with some factors changed.
  * The model file is written by the pipeline (pipeline/uzha/browser_model.py); layout in docs/data-contract.md.
  */
 import type { Tree, TreeModel } from '../data/contract';
+import type { Locale } from '../i18n/locale';
+import { CUT_TEXTS } from './small.texts';
 
 /** Values of one cell, by factor key. */
 export type FactorValues = Record<string, number>;
@@ -82,18 +84,19 @@ export function cityRanges(columns: Record<string, readonly number[]>): FactorRa
   return ranges;
 }
 
-/** How much a reduction lever may take, said from the lever itself ("25 п.п.", "четверть"), so no text drifts from it. */
-export function cutAmount(lever: Lever | undefined): string | undefined {
+/** How much a reduction lever may take, said from the lever itself ("25 pp", "a quarter"), so no text drifts from it. */
+export function cutAmount(lever: Lever | undefined, locale: Locale): string | undefined {
   const cut = lever?.cut;
   if (!cut) return undefined;
-  if ('points' in cut) return `${cut.points} п.п.`;
-  return cut.share === 0.25 ? 'четверть' : `${Math.round(cut.share * 100)} %`;
+  const t = CUT_TEXTS[locale];
+  if ('points' in cut) return t.points(cut.points);
+  return cut.share === 0.25 ? t.quarter : t.percent(Math.round(cut.share * 100));
 }
 
-/** The end of a reduction lever when its cut stops it: "минус 25 п.п.". */
-export const cutText = (lever: Lever): string | undefined => {
-  const amount = cutAmount(lever);
-  return amount && `минус ${amount}`;
+/** The end of a reduction lever when its cut stops it: "minus 25 pp". */
+export const cutText = (lever: Lever, locale: Locale): string | undefined => {
+  const amount = cutAmount(lever, locale);
+  return amount && CUT_TEXTS[locale].minus(amount);
 };
 
 export const leverByKey = (key: string): Lever | undefined => LEVERS.find((lever) => lever.key === key);

@@ -27,10 +27,10 @@ describe('peopleInHeat', () => {
   });
 
   it('explains a small figure when the hot cells are mostly empty', () => {
-    expect(sparseHeatNote({ people: 40, total: 22000, cells: 2, insideCells: 100 })).toBe(
+    expect(sparseHeatNote({ people: 40, total: 22000, cells: 2, insideCells: 100 }, 'ru')).toBe(
       'Самые горячие участки здесь почти без жилья: в среднем 20 человек на участок против 220 по городу.',
     );
-    expect(sparseHeatNote({ people: 400, total: 22000, cells: 2, insideCells: 100 })).toBeNull();
+    expect(sparseHeatNote({ people: 400, total: 22000, cells: 2, insideCells: 100 }, 'ru')).toBeNull();
   });
 
   it('says nothing without population data', () => {
@@ -78,17 +78,21 @@ describe('facilities', () => {
   });
 
   it('falls back to the kind of place when OSM has no name', () => {
-    expect(facilityTitle(school)).toBe('Школа № 5');
-    expect(facilityTitle(clinic)).toBe('Поликлиника');
+    expect(facilityTitle(school, 'ru')).toBe('Школа № 5');
+    expect(facilityTitle(clinic, 'ru')).toBe('Поликлиника');
   });
 });
 
 describe('formatPeople', () => {
   it('rounds to what a model estimate can say', () => {
-    expect(formatPeople(323_341)).toBe('323 тыс. человек');
-    expect(formatPeople(1373)).toBe('1,4 тыс. человек');
-    expect(formatPeople(417)).toBe('420 человек');
-    expect(formatPeople(22)).toBe('22 человека');
-    expect(formatPeople(1)).toBe('1 человек');
+    expect(formatPeople(323_341, 'ru')).toBe('323 тыс. человек');
+    expect(formatPeople(1373, 'ru')).toBe('1,4 тыс. человек');
+    expect(formatPeople(417, 'ru')).toBe('420 человек');
+    expect(formatPeople(22, 'ru')).toBe('22 человека');
+    expect(formatPeople(1, 'ru')).toBe('1 человек');
+    expect(formatPeople(323_341, 'en')).toBe('323 thousand people');
+    expect(formatPeople(1373, 'en')).toBe('1.4 thousand people');
+    expect(formatPeople(417, 'en')).toBe('420 people');
+    expect(formatPeople(1, 'en')).toBe('1 person');
   });
 });
