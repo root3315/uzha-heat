@@ -4,11 +4,14 @@ import math
 from pathlib import Path
 
 import numpy as np
+import rasterio
 import requests
 from rasterio.enums import Resampling
+from rasterio.transform import rowcol
+from rasterio.windows import Window
 
 from ..grid import Raster
-from ..stac import mosaic_to_raster
+from ..stac import GDAL_ENV, mosaic_to_raster
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +67,28 @@ def _read(product: str, bbox: tuple, raster: Raster, cache_dir: Path) -> np.ndar
         path = download(product, tile, cache_dir)
         hrefs.append(f"/vsizip/{path.as_posix()}/{path.stem}.tif")
     return mosaic_to_raster(hrefs, raster, Resampling.nearest)
+
+
+def height_at(lon: np.ndarray, lat: np.ndarray, cache_dir: Path) -> np.ndarray:
+    """GHSL building height (m) of the 3″ pixel under each point; NaN outside the tiles."""
+    lon, lat = np.asarray(lon, dtype=float), np.asarray(lat, dtype=float)
+    out = np.full(lon.shape, np.nan, dtype=np.float32)
+    if lon.size == 0:
+        return out
+    tiles = np.array([tile_name(x, y) for x, y in zip(lon, lat)])
+    for tile in np.unique(tiles):
+        path = download(HEIGHT, tile, cache_dir)
+        here = tiles == tile
+        with rasterio.Env(**GDAL_ENV), rasterio.open(f"/vsizip/{path.as_posix()}/{path.stem}.tif") as src:
+            rows, cols = rowcol(src.transform, lon[here], lat[here])
+            rows, cols = np.asarray(rows), np.asarray(cols)
+            window = Window(cols.min(), rows.min(), cols.max() - cols.min() + 1, rows.max() - rows.min() + 1)
+            data = src.read(1, window=window).astype(np.float32)
+            values = data[rows - rows.min(), cols - cols.min()]
+            if src.nodata is not None:
+                values[values == src.nodata] = np.nan
+        out[here] = values
+    return out
 
 
 def pixel_area_m2(lat: float) -> float:
