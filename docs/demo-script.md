@@ -120,9 +120,9 @@ The measure is greening as a whole: tree crowns plus grass and watering, which s
 experiment. The next step is a pilot: green one block and measure before and after.
 
 **Your own source (Mukhamedjanov 2024) says crowns cool most and lawns barely. Your model says NDVI. Which is it?**
-Both, for different things. That study measured air in Tashkent squares; we map the surface at about 11:00. Watered grass
-cools the surface by evaporation; crowns cool the air by shade. And ESA WorldCover's 10 m tree layer misses most street-tree
-canopy, so those leaves show up in NDVI rather than in the tree share.
+Both, for different things. That study measured air at 1.5 m in 30 Tashkent squares, at midday; we map the surface at about
+11:00. Watered grass cools the surface by evaporation; crowns cool the air by shade. And ESA WorldCover labels each 10 m pixel
+by its main class, so narrow rows of street trees can end up as built-up; their leaves then show up in NDVI.
 
 **Place 1 is not hot: 43.5 °C, about the city mean. Why is it first?**
 The ranking is cooling × residents, not how hot the cell is today. NDVI there is 0.14, in the lowest fifth of inhabited
@@ -136,8 +136,8 @@ can run. The list is ranked by people × cooling, which is why a low-NDVI, dense
 **Why compare with Aqua, when Terra passes closer to Landsat's time?**
 We show both. The pattern matches for both: r = 0.87 with Terra, 0.85 with Aqua in Tashkent. The absolute offset is a known
 difference between products (emissivity, 30 m against 1 km, view angle, time of day); Terra reads 4.4 °C cooler than our
-Landsat surface, Aqua 0.4 °C. MOD11A2 is an 8-day clear-sky mean at 1 km with wide view angles; the Landsat Collection 2
-surface temperature product is known to run warm over dry bright land. We never quote the absolute level as truth, only
+Landsat surface, Aqua 0.4 °C. MOD11A2 is an 8-day clear-sky mean at 1 km with wide view angles, Landsat a 30 m median of single
+clear scenes. We never quote the absolute level as truth, only
 where it is hot (r) and the city-vs-ring sign. Both hold with either satellite.
 
 **What did you write yourselves?**
