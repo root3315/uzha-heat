@@ -83,12 +83,12 @@ describe('leversFor', () => {
     trees: [...TOY.trees, { feature: [2, -1, -1], value: [70, -0.5, 0.5], left: [1, -1, -1], defaultLeft: [1, 0, 0] }],
   };
 
-  it('offers the factors that heat the cell most first, each in its sensible direction', () => {
+  it('offers each factor in its sensible direction, always in the same order', () => {
     const levers = leversFor(WITH_BUILT, { tree: 0, ndvi: 0.1, built: 90 }, { tree: 0.4, ndvi: 1.5, built: 0.9 }, ranges);
     expect(levers.map((l) => [l.lever.key, l.from, Number(l.to.toFixed(6)), l.bound])).toEqual([
+      ['tree', 0, 60, 'city'],
       ['ndvi', 0.1, 0.8, 'city'],
       ['built', 90, 65, 'cut'],
-      ['tree', 0, 60, 'city'],
     ]);
   });
 

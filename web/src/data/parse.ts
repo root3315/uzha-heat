@@ -345,6 +345,11 @@ export function parseTreeModel(raw: unknown): TreeModel {
       throw new DataContractError(`${path}: массивы разной длины`);
     }
     if (t.feature.some((f) => f >= features.length)) throw new DataContractError(`${path}: признак вне model.features`);
+    // Leaves have feature −1; a split's left child is left[i], its right child left[i] + 1. Both must lie after the
+    // node and inside the tree, or a walk from the root could loop forever.
+    const left = t.left as number[];
+    const badChild = t.feature.some((f, node) => f >= 0 && !((left[node] ?? -1) > node && (left[node] ?? -1) + 1 < n));
+    if (badChild) throw new DataContractError(`${path}: ссылка на дочерний узел вне дерева или назад`);
   });
   return raw as TreeModel;
 }

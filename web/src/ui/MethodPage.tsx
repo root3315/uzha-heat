@@ -6,6 +6,7 @@ import type { CityModel } from '../domain/cityModel';
 import { formatWatts } from '../domain/energy';
 import { groupShares } from '../domain/factorGroups';
 import { formatDeg, formatDegSigned, formatNumber, formatPercent, plural } from '../domain/format';
+import { cutAmount, leverByKey } from '../domain/whatIf';
 import { islandByRingWidth, ringSpread } from '../domain/ringSensitivity';
 import { useAsync } from './hooks';
 import { Link } from './Link';
@@ -302,7 +303,8 @@ export function MethodPage({ model }: { model: CityModel }) {
       </p>
       <p>
         Блок «Что если» на панели участка считает ту же модель прямо в браузере: можно добавить деревьев, зелени или светлых покрытий, а где это по
-        модели охлаждает, убрать до 25 п.п. застройки или до четверти дорог; дальше 5 % крайних участков города ползунки не идут, чтобы модель не гадала о небывалых сочетаниях. Это связь в данных, а не эксперимент, и речь о
+        модели охлаждает, уменьшить застройку не больше чем на {cutAmount(leverByKey('built'))}, а дороги не больше чем на {cutAmount(leverByKey('roads'))}; дальше
+        5 % крайних участков города ползунки не идут, чтобы модель не гадала о небывалых сочетаниях. Это связь в данных, а не эксперимент, и речь о
         поверхности, не о воздухе; альбедо там меняется при тех же зелени и грунте, и тогда светлее значит холоднее, хотя по городу в целом светлое
         чаще горячее.
       </p>

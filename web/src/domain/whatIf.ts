@@ -3,7 +3,6 @@
  * The model file is written by the pipeline (pipeline/uzha/browser_model.py); layout in docs/data-contract.md.
  */
 import type { Tree, TreeModel } from '../data/contract';
-import { quantile } from './stats';
 
 /** Values of one cell, by factor key. */
 export type FactorValues = Record<string, number>;
@@ -56,11 +55,48 @@ export const RANGE_QUANTILES = [0.05, 0.95] as const;
 export function factorRanges(columns: Record<string, readonly number[]>, [lo, hi]: readonly [number, number] = RANGE_QUANTILES): FactorRanges {
   const ranges: FactorRanges = {};
   for (const [key, column] of Object.entries(columns)) {
-    const finite = column.filter(Number.isFinite);
-    if (finite.length) ranges[key] = [quantile(finite, lo), quantile(finite, hi)];
+    const sorted = column.filter(Number.isFinite).sort((x, y) => x - y);
+    if (sorted.length) ranges[key] = [sortedQuantile(sorted, lo), sortedQuantile(sorted, hi)];
   }
   return ranges;
 }
+
+/** Quantile of an already sorted array, linear between neighbours, as `quantile` does after its own sort. */
+function sortedQuantile(sorted: readonly number[], q: number): number {
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const a = sorted[lo] ?? 0;
+  const b = sorted[Math.ceil(pos)] ?? a;
+  return a + (b - a) * (pos - lo);
+}
+
+const rangesByColumns = new WeakMap<object, FactorRanges>();
+
+/** The city's slider ranges, computed once per city (the columns object is the city's own, never rebuilt). */
+export function cityRanges(columns: Record<string, readonly number[]>): FactorRanges {
+  let ranges = rangesByColumns.get(columns);
+  if (!ranges) {
+    ranges = factorRanges(columns);
+    rangesByColumns.set(columns, ranges);
+  }
+  return ranges;
+}
+
+/** How much a reduction lever may take, said from the lever itself ("25 п.п.", "четверть"), so no text drifts from it. */
+export function cutAmount(lever: Lever | undefined): string | undefined {
+  const cut = lever?.cut;
+  if (!cut) return undefined;
+  if ('points' in cut) return `${cut.points} п.п.`;
+  return cut.share === 0.25 ? 'четверть' : `${Math.round(cut.share * 100)} %`;
+}
+
+/** The end of a reduction lever when its cut stops it: "минус 25 п.п.". */
+export const cutText = (lever: Lever): string | undefined => {
+  const amount = cutAmount(lever);
+  return amount && `минус ${amount}`;
+};
+
+export const leverByKey = (key: string): Lever | undefined => LEVERS.find((lever) => lever.key === key);
 
 /**
  * The cell as it is and with `changes` (new values), by the model. A change is clamped to the city's range, widened
@@ -114,7 +150,7 @@ export interface LeverRange {
 /** A lever needs at least this share of the city's range to move before it is worth a slider. */
 const MIN_ROOM = 0.05;
 /** At most this many sliders. */
-export const MAX_LEVERS = 3;
+export const MAX_LEVERS = 4;
 /** Less built-up or fewer roads is offered only where that factor heats the cell by at least this much, °C… */
 const MIN_HEAT = 0.1;
 /** …and where taking it all the way down cools the cell by the model at least this much, °C. */
@@ -148,8 +184,12 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
     options.push({ lever, from, to, bound, heat });
   }
+  // The ones that heat this cell most are kept, then shown in one fixed order, so the sliders stay where the hand
+  // expects them from one place to the next.
+  const order = (range: LeverRange) => LEVERS.indexOf(range.lever);
   return options
     .sort((a, b) => b.heat - a.heat)
     .slice(0, MAX_LEVERS)
+    .sort((a, b) => order(a) - order(b))
     .map(({ heat: _heat, ...range }) => range);
 }
