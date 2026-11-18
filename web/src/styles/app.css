@@ -287,7 +287,8 @@ select {
 .map-hint {
   position: absolute;
   left: 10px;
-  bottom: 62px;
+  /* Top-left on a wide map: the bottom-left belongs to the keys. */
+  top: 10px;
   z-index: 4;
   display: flex;
   align-items: center;
@@ -487,14 +488,54 @@ select {
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid var(--line);
 }
-.maplibregl-ctrl-group button/* Anchored sections stop below the fixed bar, not under it. */
-[id] {
-  scroll-margin-top: calc(var(--bar-h) + 8px);
-}
-:focus-visible {
+.maplibregl-ctrl-group button:focus-visible {
   box-shadow: none;
   outline: 2px solid var(--ink);
   outline-offset: -2px;
+}
+/* 3D: a third cell joined to the zoom card under it, so the view controls read as one group. */
+.map-3d {
+  position: absolute;
+  top: 99px;
+  right: 10px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 14px 14px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink);
+  font: 600 0.8rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.map-3d[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--card);
+}
+.map.is-3d .map__labels {
+  display: none;
+}
+/* Keys for causes and people, on the map above the scale, clear of the attribution on the right. */
+.map-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 48px;
+  z-index: 3;
+  max-width: min(620px, calc(100% - 290px));
+  max-height: 45%;
+  overflow: auto;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.map-legend .cause-key {
+  margin: 0;
+}
+.map-legend .cause-key + .people-key {
+  margin-top: 10px;
 }
 .maplibregl-ctrl.maplibregl-ctrl-scale {
   background: transparent;
@@ -1172,6 +1213,11 @@ summary.rest__summary:hover,
 
 /* ---------- Narrow screens: map, then the answer, then the section ---------- */
 @media (max-width: 860px) {
+  /* On a phone the chips own the top of the map; the keys live under it. */
+  .map-hint {
+    top: auto;
+    bottom: 62px;
+  }
   /* The sections become a row of chips that scrolls sideways. */
   .bar {
     gap: 8px;

@@ -20,10 +20,12 @@ import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
+import { classOf } from '../domain/isotherms';
 import { facilityImage, facilityImageId } from './facilityImages';
+import { buildingClass } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
-import { LAYER, SOURCE, bandOpacity, buildStyle } from './style';
+import { BUILDINGS_MIN_ZOOM, LAYER, SOURCE, bandOpacity, buildStyle } from './style';
 import { readTokens, type MapTokens } from './tokens';
 
 export type MapMode = 'temperature' | 'causes';
@@ -60,6 +62,8 @@ interface CityMapProps {
   mode: MapMode;
   /** People living on each cell as dots, and schools and clinics on the hottest cells. */
   people?: boolean;
+  /** Tilt the camera and raise the buildings over the temperature map. */
+  threeD?: boolean;
   /** Text of the small readout under the pointer, or null where there is nothing to say. */
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
@@ -67,6 +71,17 @@ interface CityMapProps {
   /** Overlays drawn over the map: chips, toolbars, hints. */
   children?: ReactNode;
 }
+
+/** The 3D view: tilted and turned a little, close enough for the buildings in the basemap tiles to show. */
+const THREE_D_PITCH = 52;
+const THREE_D_BEARING = -20;
+const THREE_D_ZOOM = BUILDINGS_MIN_ZOOM + 0.4;
+/** Cause hatching under the 3D buildings. */
+const THREE_D_HATCH_OPACITY = 0.45;
+/** Basemap tiles come in bursts; buildings are coloured once the burst settles. */
+const PAINT_DELAY_MS = 150;
+/** The section line steps back in 3D, the buildings are the subject there. */
+const THREE_D_TRANSECT_OPACITY = 0.55;
 
 /** Below this pointer travel, px, a press is a click, not a drag. */
 const CLICK_SLOP_PX = 6;
@@ -134,7 +149,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -328,6 +343,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       firstFit.current = false;
       return;
     }
+    if (latest.current.threeD) return;
     map.fitBounds(boundsOf(model), { padding: latest.current.padding, duration: reducedMotion() ? 0 : 1100, essential: false });
   }, [paddingKey, model]);
 
@@ -383,11 +399,13 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (!map) return;
     const apply = () => {
       map.setLayoutProperty(LAYER.causes, 'visibility', mode === 'causes' ? 'visible' : 'none');
-      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode));
+      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode, threeD));
+      // Under the buildings the hatching only has to say which cause; at full strength it fights the walls.
+      map.setPaintProperty(LAYER.causes, 'fill-opacity', threeD ? THREE_D_HATCH_OPACITY : 1);
     };
     if (map.getLayer(LAYER.causes)) apply();
     else map.once('load', apply);
-  }, [mode, model]);
+  }, [mode, model, threeD]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -399,6 +417,69 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (map.getLayer(LAYER.people)) apply();
     else map.once('load', apply);
   }, [people, model]);
+
+  // Colour the basemap's buildings as they come into view: one feature state per building id, never recomputed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !threeD) return undefined;
+    const painted = new Set<string | number>();
+    const classOfT = (t: number) => classOf(model.levels, t);
+    const paint = () => {
+      if (map.getZoom() < BUILDINGS_MIN_ZOOM) return;
+      for (const feature of map.querySourceFeatures(SOURCE.basemap, { sourceLayer: 'building' })) {
+        const { id } = feature;
+        if (id === undefined || painted.has(id)) continue;
+        painted.add(id);
+        map.setFeatureState({ source: SOURCE.basemap, sourceLayer: 'building', id }, { k: buildingClass(feature.geometry, model.source.temperatureAt, classOfT) });
+      }
+    };
+    // Whenever the basemap has finished loading the tiles for the view, a moment later, so a burst is painted once.
+    let timer = 0;
+    const onData = (event: { sourceId?: string; isSourceLoaded?: boolean }) => {
+      if (event.sourceId !== SOURCE.basemap || !event.isSourceLoaded) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(paint, PAINT_DELAY_MS);
+    };
+    map.on('sourcedata', onData);
+    if (map.isStyleLoaded()) paint();
+    return () => {
+      map.off('sourcedata', onData);
+      window.clearTimeout(timer);
+    };
+  }, [threeD, model]);
+
+  // Tilt into 3D and back. Only on a real change for this map: a flat map's first render must not start a camera
+  // animation, and a new map (another city) opened in 3D must tilt again.
+  const tiltedMap = useRef<MapLibreMap | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+    const apply = () => {
+      map.setLayoutProperty(LAYER.buildings, 'visibility', threeD ? 'visible' : 'none');
+      map.setPaintProperty(LAYER.transect, 'line-opacity', threeD ? THREE_D_TRANSECT_OPACITY : 1);
+      // Isotherm labels are flat SVG over the map: in a tilted view they float over the buildings, so they rest.
+      frameRef.current?.classList.toggle('is-3d', threeD);
+      if (threeD === (tiltedMap.current === map)) return;
+      tiltedMap.current = threeD ? map : null;
+      const duration = reducedMotion() ? 0 : 1200;
+      if (threeD) {
+        map.dragRotate.enable();
+        map.touchZoomRotate.enableRotation();
+        // From the whole-city view, fly to the hottest neighbourhood; if the reader has already come close, stay there.
+        const overview = map.getZoom() < THREE_D_ZOOM;
+        map.easeTo({ pitch: THREE_D_PITCH, bearing: THREE_D_BEARING, zoom: overview ? THREE_D_ZOOM : map.getZoom(), ...(overview ? { center: model.threeDCenter } : {}), duration });
+      } else {
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+        map.easeTo({ pitch: 0, bearing: 0, duration });
+      }
+    };
+    if (map.getLayer(LAYER.buildings)) apply();
+    else map.once('load', apply);
+    return () => {
+      map.off('load', apply);
+    };
+  }, [threeD, model]);
 
   useEffect(() => {
     containerRef.current?.classList.toggle('is-drawing', drawing);

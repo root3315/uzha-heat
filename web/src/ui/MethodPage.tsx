@@ -175,7 +175,7 @@ function Robustness({ model }: { model: CityModel }) {
                 <dt>кольцо до {formatNumber(ring.widthM / 1000, 1)} км</dt>
                 <dd>
                   {ring.island
-                    ? `${formatDegSigned(ring.island.intensity)}: ${formatDeg(ring.island.inside)} в черте против ${formatDeg(ring.island.outside)} вокруг, ${formatNumber(ring.island.outsideCount, 0)} участков в кольце`
+                    ? `${formatDegSigned(ring.island.intensity)}: медиана ${formatDeg(ring.island.inside)} в черте против ${formatDeg(ring.island.outside)} вокруг, ${formatNumber(ring.island.outsideCount, 0)} участков в кольце`
                     : 'мало участков для сравнения'}
                 </dd>
               </div>
