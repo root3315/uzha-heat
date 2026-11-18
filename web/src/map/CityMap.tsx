@@ -14,10 +14,12 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './worker';
 import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import type { CityModel } from '../domain/cityModel';
+import { cityName } from '../domain/dataTexts';
 import type { FoundName } from '../domain/placeName';
 import type { Site } from '../domain/sites';
 import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
+import { useLocale } from '../ui/locale';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
 import { classOf } from '../domain/isotherms';
@@ -26,6 +28,7 @@ import { buildingsUrl } from './buildingsData';
 import { followView, hasBuildingsFile } from './fileBuildings';
 import { buildingClass } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
+import { MAP_TEXTS, type MapTexts } from './map.texts';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
 import { BUILDINGS_MIN_ZOOM, LAYER, SOURCE, bandOpacity, buildStyle } from './style';
 import { readTokens, type MapTokens } from './tokens';
@@ -53,7 +56,7 @@ interface CityMapProps {
   padding: PaddingOptions;
   transect: Transect;
   onTransectChange(transect: Transect): void;
-  /** "Новый разрез" is armed: the next drag draws a line instead of panning. */
+  /** "New section" is armed: the next drag draws a line instead of panning. */
   drawing: boolean;
   onDrawingEnd(): void;
   place: LonLat | null;
@@ -133,17 +136,17 @@ function rememberHinted(): void {
   }
 }
 
-function handleElement(letter: string): HTMLDivElement {
+function handleElement(letter: string, t: MapTexts): HTMLDivElement {
   const element = document.createElement('div');
   element.className = 'handle';
   element.setAttribute('role', 'img');
-  element.setAttribute('aria-label', `Конец разреза ${letter}`);
+  element.setAttribute('aria-label', t.handle(letter));
   const mark = document.createElement('span');
   mark.className = 'handle__mark';
   mark.textContent = letter;
   const hint = document.createElement('span');
   hint.className = 'handle__hint';
-  hint.textContent = 'тяните';
+  hint.textContent = t.drag;
   element.append(mark, hint);
   return element;
 }
@@ -166,15 +169,17 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const tokensRef = useRef<MapTokens | null>(null);
+  const locale = useLocale();
+  const t = MAP_TEXTS[locale];
   const latest = useRef(props);
   latest.current = props;
 
   useImperativeHandle(ref, () => ({
     nameAt(point, district) {
-      return mapRef.current ? nameFromBasemap(mapRef.current, point, district) : null;
+      return mapRef.current ? nameFromBasemap(mapRef.current, point, district, locale) : null;
     },
     siteAt(point) {
-      return mapRef.current ? siteFromBasemap(mapRef.current, point) : null;
+      return mapRef.current ? siteFromBasemap(mapRef.current, point, locale) : null;
     },
   }));
 
@@ -197,16 +202,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       cooperativeGestures: true,
       maxZoom: 16,
       minZoom: 8,
-      locale: {
-        'NavigationControl.ZoomIn': 'Приблизить',
-        'NavigationControl.ZoomOut': 'Отдалить',
-        'ScaleControl.Meters': 'м',
-        'ScaleControl.Kilometers': 'км',
-        'AttributionControl.ToggleAttribution': 'Источники карты',
-        'CooperativeGesturesHandler.WindowsHelpText': 'Чтобы приблизить карту, крутите колесо с зажатым Ctrl',
-        'CooperativeGesturesHandler.MacHelpText': 'Чтобы приблизить карту, крутите колесо с зажатым ⌘',
-        'CooperativeGesturesHandler.MobileHelpText': 'Двигайте карту двумя пальцами',
-      },
+      locale: t.controls,
     });
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
@@ -237,8 +233,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     map.on('resize', updateLabels);
     map.on('idle', () => latest.current.onIdle());
 
-    const handles = ['А', 'Б'].map((letter, i) => {
-      const element = handleElement(letter);
+    const handles = t.ends.map((letter, i) => {
+      const element = handleElement(letter, t);
       const marker = new Marker({ element, draggable: true }).setLngLat(latest.current.transect[i] ?? [0, 0]).addTo(map);
       marker.on('drag', () => {
         const [a, b] = markersRef.current.map((m) => m.getLngLat().toArray() as LonLat);
@@ -544,12 +540,12 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   }, [drawing]);
 
   return (
-    <div ref={frameRef} className="map" role="region" aria-label={`Карта температуры поверхности: ${model.detail.city.name}`}>
+    <div ref={frameRef} className="map" role="region" aria-label={t.region(cityName(model.detail.city, locale))}>
       <div ref={containerRef} className="map__canvas" />
       <svg ref={labelsRef} className="map__labels" aria-hidden="true" />
       <p ref={tipRef} className="map__tip" aria-hidden="true" />
       <p ref={noticeRef} className="map__notice" role="status">
-        Подложка карты загрузилась не вся, изотермы на месте.
+        {t.basemapFailed}
       </p>
       {props.children}
     </div>

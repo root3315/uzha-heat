@@ -6,6 +6,8 @@ import type { Site } from '../domain/sites';
 import { geometryBounds } from '../domain/stats';
 import type { LonLat, Transect } from '../domain/transect';
 import { placeLabels } from './isothermLabels';
+import type { Locale } from '../i18n/locale';
+import { MAP_TEXTS } from './map.texts';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
 import { LAYER, buildStyle } from './style';
 import type { MapTokens } from './tokens';
@@ -52,8 +54,8 @@ function whenIdle(map: MapLibreMap): Promise<void> {
   });
 }
 
-/** Isotherm labels in the page's mono and the section А–Б, drawn over the map image. */
-function drawOverlay(ctx: CanvasRenderingContext2D, map: MapLibreMap, model: CityModel, transect: Transect, tokens: MapTokens): void {
+/** Isotherm labels in the page's mono and the section A–B, drawn over the map image. */
+function drawOverlay(ctx: CanvasRenderingContext2D, map: MapLibreMap, model: CityModel, transect: Transect, tokens: MapTokens, locale: Locale): void {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
@@ -94,7 +96,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, map: MapLibreMap, model: Cit
     ctx.fill();
     ctx.fillStyle = tokens.ground;
     ctx.font = "600 11px 'Martian Mono Variable'";
-    ctx.fillText(i === 0 ? 'А' : 'Б', end.x, end.y + 0.5);
+    ctx.fillText(MAP_TEXTS[locale].ends[i === 0 ? 0 : 1], end.x, end.y + 0.5);
   });
 }
 
@@ -102,10 +104,16 @@ const nothing = (points: readonly LonLat[]): ReportMap => ({ image: null, names:
 
 /**
  * The map for the report, drawn on its own off-screen map so the screen keeps its zoom and mode:
- * temperature only (no cause hatching), framed tightly on the city, with the section А–Б on it.
+ * temperature only (no cause hatching), framed tightly on the city, with the section A–B on it.
  * The same basemap names the given points, so the report's places read like the map's.
  */
-export async function renderReportMap(model: CityModel, transect: Transect, tokens: MapTokens, points: readonly LonLat[] = []): Promise<ReportMap> {
+export async function renderReportMap(
+  model: CityModel,
+  transect: Transect,
+  tokens: MapTokens,
+  locale: Locale,
+  points: readonly LonLat[] = [],
+): Promise<ReportMap> {
   const frame = frameOf(model, transect);
   const height = heightFor(frame);
   const container = document.createElement('div');
@@ -139,12 +147,12 @@ export async function renderReportMap(model: CityModel, transect: Transect, toke
     if (!ctx) return nothing(points);
     ctx.drawImage(source, 0, 0);
     ctx.scale(canvas.width / WIDTH, canvas.height / height);
-    drawOverlay(ctx, created, model, transect, tokens);
+    drawOverlay(ctx, created, model, transect, tokens, locale);
 
     return {
       image: canvas.toDataURL('image/png'),
-      names: points.map((point) => nameFromBasemap(created, point, districtAt(model.detail, point))),
-      sites: points.map((point) => siteFromBasemap(created, point)),
+      names: points.map((point) => nameFromBasemap(created, point, districtAt(model.detail, point), locale)),
+      sites: points.map((point) => siteFromBasemap(created, point, locale)),
     };
   } catch {
     return nothing(points);

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import type { LonLat } from '../../data/contract';
-import { capitalize, type Advice } from '../../domain/answers';
+import type { Advice } from '../../domain/answers';
+import { capitalize } from '../../domain/phrase';
 import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
-import { formatDeg, formatDegSigned } from '../../domain/format';
+import { useFormats } from '../locale';
 import type { CauseRow, PanelContent } from '../panelContent';
 import { EnergyBlock } from '../Energy';
 import { CauseIcon } from '../icons';
@@ -16,12 +17,12 @@ import { Ramp } from './Ramp';
 interface PanelProps {
   model: CityModel;
   content: PanelContent;
-  /** Small controls above the title: the city switcher, "весь город", the report link. */
+  /** Small controls above the title: the city switcher, "whole city", the report link. */
   header: ReactNode;
   footer?: ReactNode;
   /** In the report every cause is listed, nothing is folded. */
   expanded?: boolean;
-  /** Opens a place on the map; without it the city view has no "где сажать первым". */
+  /** Opens a place on the map; without it the city view has no "where to plant first". */
   onPick?: (point: LonLat) => void;
 }
 
@@ -30,6 +31,7 @@ const BAR_SCALE_MIN = 6;
 
 function CauseBar({ row, scale }: { row: CauseRow & { note: string }; scale: number }) {
   const fill = usePatternFill();
+  const { formatDegSigned } = useFormats();
   const direction = directionOf(row.value);
   const share = Math.min(1, Math.abs(row.value) / scale);
   return (
@@ -51,6 +53,7 @@ function CauseBar({ row, scale }: { row: CauseRow & { note: string }; scale: num
 }
 
 function RestRows({ rows }: { rows: CauseRow[] }) {
+  const { formatDegSigned } = useFormats();
   return (
     <ul className="rest__list">
       {rows.map((row) => (
@@ -109,6 +112,7 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
 
 export function Panel({ model, content, header, footer, expanded = false, onPick }: PanelProps) {
   const { stats } = model.detail;
+  const { formatDeg } = useFormats();
   const scale = Math.max(BAR_SCALE_MIN, Math.abs(content.cause?.value ?? 0) * 1.15);
   return (
     <div className="panel">

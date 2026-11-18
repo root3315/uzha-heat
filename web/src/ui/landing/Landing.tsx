@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CitySummary } from '../../data/contract';
-import { genitive, hotTenthAnswer, plainText, sectionAnswer } from '../../domain/answers';
+import { hotTenthAnswer, sectionAnswer } from '../../domain/answers';
 import type { CityModel } from '../../domain/cityModel';
-import { formatDeg, formatDegSigned, formatNumber, plural } from '../../domain/format';
+import { cityName, featureLabel, periodText } from '../../domain/dataTexts';
+import type { Formats } from '../../domain/format';
 import { cityEnergy, cityEnergyLine, energyCaveat } from '../../domain/energy';
 import type { HeatIsland } from '../../domain/heatIsland';
 import { formatPeople, peopleFigure, peopleInHeat, sparseHeatNote } from '../../domain/people';
 import { findMessage, huntCell, leadingFactor, registerFind, type HuntCandidate, type HuntTarget } from '../../domain/hunt';
+import { plainText } from '../../domain/phrase';
 import { recommend } from '../../domain/recommendations';
 import { sampleTransect, type LonLat } from '../../domain/transect';
 import { CityMap } from '../../map/CityMap';
@@ -14,6 +16,7 @@ import { useAsync, useNear, useWidth } from '../hooks';
 import { CityPhoto } from '../CityPhoto';
 import { EnergySummary } from '../Energy';
 import { Link } from '../Link';
+import { useFormats, useLocale, useTexts } from '../locale';
 import { cityModel } from '../models';
 import { Evidence } from '../panel/Panel';
 import { Ramp } from '../panel/Ramp';
@@ -22,8 +25,9 @@ import { ProfileChart } from '../ProfileChart';
 import { useReadout } from '../readout';
 import { methodHref, toolHref } from '../routing';
 import { CauseKey } from '../Section';
+import { LANDING_TEXTS } from './landing.texts';
 import { MiniMap } from './MiniMap';
-import { PROBLEM_FACTS } from './problem';
+import { PROBLEM_FACTS } from './problem.texts';
 import { WeatherCompare } from '../Weather';
 
 export interface Hunt {
@@ -40,7 +44,6 @@ interface LandingProps {
 }
 
 export const REPO = 'https://github.com/root3315/uzha-heat';
-const TEAM = ['Амира', 'Олия', 'Максим', 'Шахина', 'Степан'];
 const HERO_VIEW = { isolines: true, transect: false, interactive: false };
 const HERO_PADDING = { top: 64, right: 20, bottom: 20, left: 20 };
 const NO_TRANSECT: [LonLat, LonLat] = [
@@ -60,12 +63,15 @@ const AROUND = [
   [-1, -1],
 ] as const;
 
-/** "+1,3°" for the heat island, or an ellipsis while there is nothing to compare. */
-const islandFigure = (island: HeatIsland | null) => (island ? formatDegSigned(island.intensity) : '…');
+/** "+1.3°" for the heat island, or an ellipsis while there is nothing to compare. */
+const islandFigure = (island: HeatIsland | null, { formatDegSigned }: Formats) => (island ? formatDegSigned(island.intensity) : '…');
 
 /** The opening map: the real isotherms, a readout under the pointer and the optional hunt for hot places. */
 function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt(found: ReadonlySet<number>): void }) {
   const { detail } = model;
+  const locale = useLocale();
+  const { formatDeg, formatNumber } = useFormats();
+  const t = useTexts(LANDING_TEXTS).map;
   const { cellUnder, describe } = useReadout(model);
   const [said, setSaid] = useState<string | null>(null);
   const found = useMemo(() => [...hunt.found].map((cell): LonLat => [detail.cells.lon[cell] ?? 0, detail.cells.lat[cell] ?? 0]), [hunt.found, detail]);
@@ -80,14 +86,14 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
       const hit = huntCell(candidates, hunt.found, hunt.target);
       if (!hit) return;
       const result = registerFind(hunt.found, hit.cell, hit.t, hunt.target);
-      setSaid(findMessage(result.outcome, hit.t, hunt.target, detail.stats.lstMean));
+      setSaid(findMessage(result.outcome, hit.t, hunt.target, detail.stats.lstMean, locale));
       if (result.found !== hunt.found) onHunt(result.found);
     },
-    [cellUnder, detail, hunt, onHunt],
+    [cellUnder, detail, hunt, onHunt, locale],
   );
 
   return (
-    <section className="live" aria-label={`Карта температуры поверхности: ${detail.city.name}`}>
+    <section className="live" aria-label={t.region(cityName(detail.city, locale))}>
       <div className="live__face">
         <CityMap
           model={model}
@@ -108,24 +114,24 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
           <div className="hunt-chip" aria-live="polite">
             {hunt.found.size > 0 && (
               <p>
-                найдено горячих участков <b>{formatNumber(hunt.found.size, 0)}</b> из&nbsp;{formatNumber(hunt.target.total, 0)}
+                {t.foundBefore}
+                <b>{formatNumber(hunt.found.size, 0)}</b>
+                {t.foundOf(formatNumber(hunt.target.total, 0))}
               </p>
             )}
-            <p className="hunt-chip__log">{said ?? `найдите участок от ${formatDeg(hunt.target.threshold)}: он горячее 90 % города`}</p>
+            <p className="hunt-chip__log">{said ?? t.prompt(formatDeg(hunt.target.threshold))}</p>
           </div>
         </CityMap>
       </div>
 
       <aside className="live__side">
         <div className="gauge">
-          <p className="gauge__label">температура поверхности, доля города</p>
+          <p className="gauge__label">{t.gaugeLabel}</p>
           <Ramp levels={model.levels} shares={model.shares} min={detail.stats.lstMin} max={detail.stats.lstMax} value={detail.stats.lstMean} meanMark={null} />
-          <p className="gauge__hint">
-            Цвет значит только градусы, линии через каждые 2°, как горизонтали на&nbsp;карте гор. Наведите или коснитесь: карта скажет градусы и&nbsp;причину.
-          </p>
+          <p className="gauge__hint">{t.gaugeHint}</p>
         </div>
         <Link className="pill pill--ink pill--big live__open" href={toolHref(detail.city.id)}>
-          Открыть карту целиком
+          {t.openFull}
         </Link>
       </aside>
     </section>
@@ -134,14 +140,16 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
 
 /** Four sourced facts: why urban heat matters here at all. */
 function Problem() {
+  const facts = useTexts(PROBLEM_FACTS);
+  const title = useTexts(LANDING_TEXTS).problemTitle;
   return (
     <section className="problem" id="problem" aria-labelledby="problem-title">
       <h2 id="problem-title" className="problem__title">
-        Почему это важно
+        {title}
       </h2>
       <ul className="problem__list">
-        {PROBLEM_FACTS.map((fact) => (
-          <li key={fact.figure} className="fact">
+        {facts.map((fact) => (
+          <li key={fact.url} className="fact">
             <p className="fact__figure">{fact.figure}</p>
             <p className="fact__text">
               {fact.text}{' '}
@@ -159,10 +167,14 @@ function Problem() {
 /** Why it is hot: the honest headline number and the section through the hottest place, live. */
 function Why({ model }: { model: CityModel }) {
   const { detail } = model;
+  const locale = useLocale();
+  const { formatNumber } = useFormats();
+  const t = useTexts(LANDING_TEXTS).why;
   const [ref, width] = useWidth<HTMLDivElement>(800);
   const profile = useMemo(() => sampleTransect(model.source, model.defaultTransect), [model]);
   const leading = leadingFactor(detail.globalImportance);
   const leadingFeature = detail.features.find((f) => f.key === leading?.key);
+  const leadingLabel = leadingFeature ? featureLabel(leadingFeature, locale) : '';
   const energy = useMemo(() => cityEnergy(detail), [detail]);
 
   return (
@@ -172,25 +184,21 @@ function Why({ model }: { model: CityModel }) {
           <div className="why__count">
             <h2 id="why-title">
               <span className="why__num">{formatNumber(leading.share * 100, 0)}%</span>
-              <span className="why__cap">того, что объясняет модель, приходится на&nbsp;{leadingFeature.label.toLowerCase()}</span>
+              <span className="why__cap">{t.caption(leadingLabel)}</span>
             </h2>
-            <p>
-              Модель предсказывает температуру каждого участка 200&nbsp;м по&nbsp;{detail.features.length} факторам. {leadingFeature.label}{' '}
-              {leading.share > 0.5 ? 'весит больше, чем все остальные вместе' : 'весит больше любого другого'}. Зелень меряем индексом NDVI со&nbsp;спутника: около 0
-              у&nbsp;асфальта и&nbsp;голой земли, ближе к&nbsp;1 у&nbsp;густой листвы.
-            </p>
+            <p>{t.body(detail.features.length, leadingLabel, leading.share > 0.5)}</p>
           </div>
         )}
         <p className="why__answer">
-          <Phrase spans={hotTenthAnswer(detail, model.facts)} />
+          <Phrase spans={hotTenthAnswer(detail, model.facts, locale)} />
         </p>
       </div>
 
-      <article className="why__panel" aria-label="Разрез через самое жаркое место">
+      <article className="why__panel" aria-label={t.sectionTitle}>
         <header className="why__head">
-          <h3>Разрез через самое жаркое место</h3>
+          <h3>{t.sectionTitle}</h3>
           <p className="why__line">
-            <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features)} />
+            <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features, locale)} />
           </p>
         </header>
         <div ref={ref} className="why__chart">
@@ -198,18 +206,18 @@ function Why({ model }: { model: CityModel }) {
         </div>
         <footer className="why__foot">
           <CauseKey model={model} />
-          <p className="why__hint">Полоса внизу: что греет каждый отрезок сильнее всего.</p>
+          <p className="why__hint">{t.sectionHint}</p>
         </footer>
       </article>
 
       {energy && detail.energy && (
         <article className="why__panel why__energy" aria-labelledby="why-energy-title">
           <header className="why__head">
-            <h3 id="why-energy-title">Куда уходит солнце</h3>
-            <p className="why__line">{cityEnergyLine(detail.city.name, energy)}</p>
+            <h3 id="why-energy-title">{t.energyTitle}</h3>
+            <p className="why__line">{cityEnergyLine(cityName(detail.city, locale), energy, locale)}</p>
           </header>
           <EnergySummary summary={energy} />
-          <p className="why__hint">{energyCaveat(detail.energy)}</p>
+          <p className="why__hint">{energyCaveat(detail.energy, locale)}</p>
         </article>
       )}
     </section>
@@ -218,52 +226,57 @@ function Why({ model }: { model: CityModel }) {
 
 /** One city as a card: its heat island first, then what its hottest tenth is, and its own small map. */
 function CityCard({ city }: { city: CitySummary }) {
+  const locale = useLocale();
+  const f = useFormats();
+  const { formatDeg, formatNumber } = f;
+  const t = useTexts(LANDING_TEXTS).town;
+  const name = cityName(city, locale);
   const [ref, near] = useNear<HTMLElement>();
   const state = useAsync(() => (near ? cityModel(city.id) : new Promise<null>(() => undefined)), [near, city.id]);
   const model = state.status === 'ready' ? state.data : null;
   const detail = model?.detail;
   const failed = state.status === 'error';
   const inHeat = model ? peopleInHeat(model.detail, model.inside) : null;
-  const sparse = inHeat ? sparseHeatNote(inHeat) : null;
+  const sparse = inHeat ? sparseHeatNote(inHeat, locale) : null;
 
   return (
     <article ref={ref} className="town" aria-labelledby={`town-${city.id}`}>
       <CityPhoto city={city} className="town__photo" />
       <header className="town__head">
-        <h3 id={`town-${city.id}`}>{city.name}</h3>
+        <h3 id={`town-${city.id}`}>{name}</h3>
         <p className="town__island">
-          <span className="town__figure">{model ? islandFigure(model.island) : '…'}</span>
-          <span className="town__caption">поверхность в&nbsp;черте против кольца вокруг</span>
+          <span className="town__figure">{model ? islandFigure(model.island, f) : '…'}</span>
+          <span className="town__caption">{t.islandCaption}</span>
         </p>
       </header>
-      <p className="town__line">{model ? plainText(hotTenthAnswer(model.detail, model.facts)) : failed ? 'Данные не загрузились.' : 'Считаю изотермы.'}</p>
-      <Link className="town__face" href={toolHref(city.id)} aria-label={`Открыть карту: ${city.name}`}>
-        {model ? <MiniMap model={model} label={`Изотермы поверхности: ${city.name}`} /> : <span className="town__wait">{failed ? 'Нет данных' : 'Считаю изотермы'}</span>}
+      <p className="town__line">{model ? plainText(hotTenthAnswer(model.detail, model.facts, locale)) : failed ? t.failed : t.computing}</p>
+      <Link className="town__face" href={toolHref(city.id)} aria-label={t.openMap(name)}>
+        {model ? <MiniMap model={model} label={t.isotherms(name)} /> : <span className="town__wait">{failed ? t.noData : t.computingShort}</span>}
       </Link>
       <dl className="nums">
         <div>
-          <dt>средняя поверхность</dt>
+          <dt>{t.meanSurface}</dt>
           <dd>{formatDeg(detail?.stats.lstMean ?? city.lstMean)}</dd>
         </div>
         <div>
-          <dt>горячая десятая часть</dt>
-          <dd>{detail ? `от ${formatDeg(detail.stats.lstP90)}` : '…'}</dd>
+          <dt>{t.hotTenth}</dt>
+          <dd>{detail ? t.from(formatDeg(detail.stats.lstP90)) : '…'}</dd>
         </div>
         {inHeat && (
           <div>
-            <dt>живут на самых горячих участках в черте</dt>
-            <dd>{peopleFigure(inHeat.people)}</dd>
+            <dt>{t.livingHot}</dt>
+            <dd>{peopleFigure(inHeat.people, locale)}</dd>
           </div>
         )}
       </dl>
       {sparse && <p className="town__note">{sparse}</p>}
       <p className="tag town__meta">
         {detail
-          ? `${detail.period.lstScenes} ${plural(detail.period.lstScenes, ['снимок', 'снимка', 'снимков'])} Landsat · R² ${formatNumber(detail.model.r2Cv, 2)}`
+          ? t.scenes(detail.period.lstScenes, formatNumber(detail.model.r2Cv, 2))
           : `R² ${formatNumber(city.r2, 2)}`}
       </p>
       <Link className="pill town__open" href={toolHref(city.id)}>
-        Карта {genitive(city.name)} ↗
+        {t.cityMap(name)}
       </Link>
     </article>
   );
@@ -271,10 +284,11 @@ function CityCard({ city }: { city: CitySummary }) {
 
 /** The three summers side by side, under the cards: the weather the surface heats in. */
 function TownsWeather({ cities }: { cities: CitySummary[] }) {
+  const title = useTexts(LANDING_TEXTS).towns.weather;
   if (cities.filter((c) => c.weather).length < 2) return null;
   return (
     <div className="towns__weather" aria-labelledby="towns-weather-title">
-      <h3 id="towns-weather-title">Погода летом</h3>
+      <h3 id="towns-weather-title">{title}</h3>
       <WeatherCompare cities={cities} currentId={null} />
     </div>
   );
@@ -282,23 +296,26 @@ function TownsWeather({ cities }: { cities: CitySummary[] }) {
 
 function Actions({ model }: { model: CityModel }) {
   const { detail } = model;
-  const items = recommend({ features: detail.features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans }).slice(0, 3);
+  const locale = useLocale();
+  const { formatDegSigned } = useFormats();
+  const t = useTexts(LANDING_TEXTS).actions;
+  const items = recommend(
+    { features: detail.features, values: model.hotspot.values, contributions: model.hotspot.contributions, cityMeans: model.cityMeans },
+    locale,
+  ).slice(0, 3);
   if (items.length === 0) return null;
   return (
     <section className="acts" id="actions" aria-labelledby="acts-title">
       <div className="acts__head">
-        <h2 id="acts-title">Что делать</h2>
-        <p>
-          Для горячей десятой части {genitive(detail.city.name)}. Число слева: на&nbsp;сколько градусов поверхности этот фактор по&nbsp;модели связан с&nbsp;жарой
-          там. Это связь в&nbsp;данных, а&nbsp;не&nbsp;результат эксперимента. Сколько снимет мера, известно из&nbsp;обзоров по&nbsp;другим городам, ссылка у&nbsp;каждой.
-        </p>
+        <h2 id="acts-title">{t.title}</h2>
+        <p>{t.intro(cityName(detail.city, locale))}</p>
       </div>
       <ol className="acts__list">
         {items.map((item) => (
           <li key={item.id} className="act">
             <p className="act__effect">
               <span>{formatDegSigned(item.heating)}</span>
-              <small>связано по модели</small>
+              <small>{t.effectNote}</small>
             </p>
             <h3 className="act__title">{item.title}</h3>
             <p className="act__why">{item.reasons[0]?.text}.</p>
@@ -317,55 +334,43 @@ function Actions({ model }: { model: CityModel }) {
 function Closing({ model }: { model: CityModel }) {
   const { detail } = model;
   const { period, grid, model: fit } = detail;
+  const locale = useLocale();
+  const { formatDeg, formatNumber } = useFormats();
+  const t = useTexts(LANDING_TEXTS).closing;
   return (
     <footer className="close" id="method" aria-labelledby="how-title">
       <div className="close__how">
-        <h2 id="how-title">Как посчитали</h2>
-        <p>
-          Город режем на&nbsp;участки {grid.cellSizeM} на&nbsp;{grid.cellSizeM}&nbsp;м. Для каждого берём температуру поверхности со&nbsp;спутников NASA/USGS Landsat 8
-          и&nbsp;9: медиана безоблачных снимков за&nbsp;{period.label}. Рядом {detail.features.length} факторов: зелень и&nbsp;альбедо по&nbsp;Sentinel-2, застройка
-          и&nbsp;грунт по&nbsp;ESA WorldCover, дороги и&nbsp;вода по&nbsp;OpenStreetMap, высота и&nbsp;объём зданий по&nbsp;OpenStreetMap и&nbsp;GHSL, рельеф по&nbsp;Copernicus DEM.
-        </p>
-        <p>
-          Модель {fit.type} предсказывает температуру по&nbsp;факторам, проверяем её на&nbsp;кусках города, которых она не&nbsp;видела. Вклад фактора в&nbsp;градусах
-          считает SHAP: это связь в&nbsp;данных, а&nbsp;не&nbsp;эксперимент. Остров тепла: медиана участков внутри черты города минус медиана кольца вокруг.
-        </p>
-        {detail.population && (
-          <p>
-            Жителей участка берём из&nbsp;WorldPop {detail.population.year}: это модель, которая раскладывает перепись по&nbsp;застройке на&nbsp;снимках, а&nbsp;не&nbsp;подсчёт
-            людей. Школы, детские сады и&nbsp;поликлиники взяты из&nbsp;OpenStreetMap.
-          </p>
-        )}
+        <h2 id="how-title">{t.title}</h2>
+        <p>{t.data(grid.cellSizeM, periodText(period.label, locale), detail.features.length)}</p>
+        <p>{t.model(fit.type)}</p>
+        {detail.population && <p>{t.people(detail.population.year)}</p>}
         <p className="close__data">
-          [{detail.city.nameEn.toLowerCase()}] {period.lstScenes} сцен Landsat · {period.s2Scenes} сцен Sentinel-2 · {formatNumber(grid.count, 0)} участков · R²{' '}
-          {formatNumber(fit.r2Cv, 2)} · MAE {formatDeg(fit.maeCv)}
+          [{detail.city.nameEn.toLowerCase()}] {t.figures(period.lstScenes, period.s2Scenes, formatNumber(grid.count, 0), formatNumber(fit.r2Cv, 2), formatDeg(fit.maeCv))}
         </p>
         <Link className="pill" href={methodHref(detail.city.id)}>
-          Весь метод и&nbsp;факторы
+          {t.method}
         </Link>
       </div>
       <div className="close__team" id="team">
-        <h2 className="close__label">Команда</h2>
+        <h2 className="close__label">{t.team}</h2>
         <ul className="close__names">
-          {TEAM.map((name) => (
+          {t.names.map((name) => (
             <li key={name}>{name}</li>
           ))}
         </ul>
         <ul className="links">
           <li>
             <a className="pill pill--ink" href={REPO} target="_blank" rel="noopener">
-              Код на&nbsp;GitHub ↗
+              {t.github}
             </a>
           </li>
           <li>
             <Link className="pill" href={toolHref(detail.city.id)}>
-              Открыть карту
+              {t.openMap}
             </Link>
           </li>
         </ul>
-        <p className="close__credit">
-          Снимки NASA/USGS Landsat и&nbsp;ESA Sentinel-2, покрытие ESA WorldCover, здания GHSL (JRC), население WorldPop, погода ERA5 (Copernicus) через Open-Meteo, подложка © OpenStreetMap, OpenFreeMap. © 2026 UzHa
-        </p>
+        <p className="close__credit">{t.credit}</p>
       </div>
     </footer>
   );
@@ -374,24 +379,28 @@ function Closing({ model }: { model: CityModel }) {
 /** The landing: what UzHa shows, live, before the full map. */
 export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
   const { detail, island } = model;
-  const name = genitive(detail.city.name);
+  const locale = useLocale();
+  const f = useFormats();
+  const t = useTexts(LANDING_TEXTS);
+  const name = cityName(detail.city, locale);
   const inHeat = peopleInHeat(detail, model.inside);
   return (
     <main>
       <section className="hero" id="top">
-        <h1 className="hero__title">Где {detail.city.name} перегревается летом и&nbsp;почему</h1>
+        <h1 className="hero__title">{t.hero.title(name)}</h1>
         <div className="hero__island">
-          <p className="hero__figure">{islandFigure(island)}</p>
+          <p className="hero__figure">{islandFigure(island, f)}</p>
           <p className="hero__caption">
             {island && island.intensity < 0
-              ? `Поверхность в черте ${name} прохладнее, чем вокруг: голая земля за чертой нагревается сильнее.`
-              : `Поверхность в черте ${name} горячее, чем в кольце вокруг: медианы участков 200 м, ${detail.period.label}.`}{' '}
-            <span className="hero__note">Это температура поверхности по&nbsp;снимкам Landsat 8/9 (NASA/USGS) около 11 утра, не&nbsp;воздуха.</span>
+              ? t.hero.cooler(name)
+              : t.hero.hotter(name, periodText(detail.period.label, locale))}{' '}
+            <span className="hero__note">{t.hero.surfaceNote}</span>
           </p>
           {inHeat && (
             <p className="hero__people">
-              <b>{formatPeople(inHeat.people)}</b> живут в&nbsp;черте {name} на&nbsp;самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}.{' '}
-              <span className="hero__note">По&nbsp;оценке WorldPop {detail.population?.year}: это модель, а&nbsp;не&nbsp;перепись.</span>
+              <b>{formatPeople(inHeat.people, locale)}</b>
+              {t.hero.peopleRest(name, f.formatDeg(detail.stats.lstP90))}{' '}
+              <span className="hero__note">{t.hero.peopleNote(detail.population?.year)}</span>
             </p>
           )}
         </div>
@@ -403,8 +412,8 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
 
       <section className="towns" id="cities" aria-labelledby="towns-title">
         <div className="towns__head">
-          <h2 id="towns-title">Три города</h2>
-          <p>Одна методика, одни и&nbsp;те&nbsp;же спутники. Мини-карты отвечают на&nbsp;наведение и&nbsp;касание, по&nbsp;клику открываются целиком.</p>
+          <h2 id="towns-title">{t.towns.title}</h2>
+          <p>{t.towns.intro}</p>
         </div>
         <div className="towns__list">
           {cities.map((city) => (
