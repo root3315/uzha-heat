@@ -22,7 +22,7 @@ def test_spatial_blocks_group_by_2km_squares():
 
 def test_shap_plus_base_equals_prediction():
     features, lst, _, _ = _synthetic()
-    prediction, shap, base = explain(features, lst)
+    prediction, shap, base, _ = explain(features, lst)
     np.testing.assert_allclose(shap.sum(axis=1).to_numpy() + base, prediction, atol=1e-3)
 
 

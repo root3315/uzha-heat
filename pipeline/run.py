@@ -6,6 +6,7 @@ Usage (from the project root):
     python -m pipeline.run --city tashkent --only population   # enrich an existing <id>.json
     python -m pipeline.run --city tashkent --only weather
     python -m pipeline.run --all --only energy                 # needs weather at the overpass
+    python -m pipeline.run --all --only model                  # refit model-<id>.json from <id>.json
 """
 import argparse
 import logging
@@ -13,7 +14,7 @@ from pathlib import Path
 
 import shapely
 
-from .uzha import boundary, energy, export, features, model, population, weather
+from .uzha import boundary, browser_model, energy, export, features, model, population, weather
 from .uzha.cache import Cache
 from .uzha.cities import CITIES, City, get_city
 from .uzha.grid import Grid, half_size_deg
@@ -65,6 +66,7 @@ def process_city(city: City, out_dir: Path) -> dict:
     if "overpass" in document["city"].get("weather", {}):
         energy.enrich(document)
     export.write_json(out_dir / f"{city.id}.json", document)
+    browser_model.write(out_dir / f"model-{city.id}.json", browser_model.document(fitted.booster, factors))
     export.update_cities_index(out_dir / "cities.json", entry, list(CITIES))
     _log_summary(city, table, fitted, importance, stats, document)
     return document
@@ -125,13 +127,21 @@ def _log_energy(document: dict) -> None:
              info["hotAnchorC"], info["coldAnchorC"], info["mean"])
 
 
+def _refit_model(city_id: str, out_dir: Path) -> None:
+    document, gap_max, gap_mean = browser_model.refit_from_city_file(out_dir / f"{city_id}.json")
+    path = out_dir / f"model-{city_id}.json"
+    browser_model.write(path, document)
+    log.info("%s: %s, %d trees, %.0f KB; refit vs published prediction: max %.3f °C, mean %.3f °C", city_id,
+             path.name, len(document["trees"]), path.stat().st_size / 1024, gap_max, gap_mean)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--city", choices=list(CITIES))
     target.add_argument("--all", action="store_true")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--only", choices=["population", "weather", "energy"],
+    parser.add_argument("--only", choices=["population", "weather", "energy", "model"],
                         help="run one light step over the existing <id>.json instead of the whole pipeline")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -146,6 +156,8 @@ def main() -> None:
                 _log_weather(weather.enrich_file(args.out / f"{city_id}.json", CACHE_ROOT))
             elif args.only == "energy":
                 _log_energy(energy.enrich_file(args.out / f"{city_id}.json"))
+            elif args.only == "model":
+                _refit_model(city_id, args.out)
             else:
                 process_city(get_city(city_id), args.out)
         except Exception:

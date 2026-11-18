@@ -40,6 +40,15 @@ PYTHONUTF8=1 python -m pipeline.run --all --only energy
 
 A full run does all three steps too, at the end.
 
+A full run also writes `model-<id>.json`: the final booster as a compact JSON the web app evaluates in
+the browser for "что если" (`uzha/browser_model.py`). When the raw downloads are no longer cached, refit it
+from the cell table already in `<id>.json` (same params and seed; the log prints how far the refit's
+predictions are from the published `baseValue + ΣSHAP`, since the JSON values are rounded):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.run --all --only model
+```
+
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
 Downloads are cached in `pipeline/cache/<city>_<grid-hash>/` (gitignored); a rerun with the same
@@ -91,6 +100,10 @@ so rerunning the city retries them.
    `booster.predict(..., pred_contribs=True)` (TreeSHAP, exact for trees). The bias column is
    `baseValue`; the pipeline asserts `sum(shap) + baseValue == prediction`. `globalImportance`
    is mean |SHAP| per factor, plus the Pearson correlation of the raw factor with LST.
+6. **Model for the browser.** The same booster is written to `model-<id>.json`: per tree, parallel
+   arrays of split feature, threshold or leaf value (float32, shortest round-trip decimal), left child
+   (right = left + 1) and the missing-value direction, plus `baseScore`. `check` carries 12 cells with
+   the booster's own predictions; the pytest and the web tests both reproduce them to 1e-4.
 
 ## Surface energy balance
 
@@ -174,6 +187,7 @@ uzha/cache.py       per-layer pickle cache
 uzha/sources/       landsat, sentinel, worldcover, dem, osm, wiki, worldpop, era5
 uzha/features.py    assemble the cell table, factor catalogue (labels/units)
 uzha/model.py       XGBoost, spatial CV, SHAP, global importance
+uzha/browser_model.py  the booster as compact JSON for the browser (model-<id>.json), reference evaluator
 uzha/population.py  light step: people per cell and facilities into an existing city JSON
 uzha/weather.py     light step: summer weather (ERA5) into an existing city JSON and cities.json
 uzha/energy.py      light step: surface energy balance per cell from LST, albedo, NDVI and the overpass weather
