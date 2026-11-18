@@ -5,7 +5,7 @@ import { capitalize, genitive, hotTenthAnswer, islandAnswer, sectionAnswer, sour
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, plural } from '../domain/format';
-import { facilitiesNear, facilityTitle, formatPeople, hotPlacesByPeople, peopleFigure, peopleInHeat, peopleNoun, populationCaveat } from '../domain/people';
+import { facilitiesNear, facilityTitle, formatPeople, hotPlacesByPeople, peopleFigure, peopleInHeat, peopleNoun, populationCaveat, sparseHeatNote } from '../domain/people';
 import { cityEnergy, cityEnergyLine, energyCaveat } from '../domain/energy';
 import { recommend } from '../domain/recommendations';
 import { distinctByName, hotTenthCauses, hottestPlaces, keyFigures, reportTransect } from '../domain/report';
@@ -263,7 +263,7 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
           {inHeat && (
             <p className="rp-people">
               <span className="rp-people__value">{formatPeople(inHeat.people)}</span> в&nbsp;черте города живут на&nbsp;самых горячих участках, это{' '}
-              {formatPercent(inHeat.people / (inHeat.total || 1))} его жителей.
+              {formatPercent(inHeat.people / (inHeat.total || 1))} его жителей. {sparseHeatNote(inHeat) ?? ''}
             </p>
           )}
         </Part>

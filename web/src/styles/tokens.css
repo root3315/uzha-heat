@@ -1,6 +1,7 @@
 /*
  * The same system as the author's portfolio: cool grey paper, ink, one amber lamp, Tektur + Onest + Martian Mono.
  * UzHa adds only what is its own: the temperature steps and the hatching for causes.
+ * Here amber belongs to the temperature scale only; the interface itself is ink on paper, so the map is the one coloured thing.
  */
 :root {
   --paper: #eceeeb;
@@ -11,9 +12,6 @@
   --line: #cdd1cc;
   --night: #0b0d12;
   --amber: #e8892b;
-  --amber-ink: #8a4a0c;
-  /* Highlighter band behind a number, and the bar's fade into the page. */
-  --amber-wash: rgba(232, 137, 43, 0.5);
   --paper-clear: rgba(236, 238, 235, 0);
   --scrim: rgba(18, 20, 23, 0.55);
 
@@ -26,7 +24,7 @@
   --pencil: var(--ink-2);
   --grid: var(--line);
   --water: #cbd9db;
-  --noon: var(--amber);
+  --noon: var(--card);
   /* The printed sheet. */
   --sheet: #fbfcfb;
 

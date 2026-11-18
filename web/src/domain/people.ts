@@ -9,6 +9,8 @@ export interface PeopleInHeat {
   total: number;
   /** Cells of the hottest tenth inside the outline. */
   cells: number;
+  /** All cells inside the outline. */
+  insideCells: number;
 }
 
 const sumAt = (values: readonly number[], members: readonly number[]) => members.reduce((s, i) => s + (values[i] ?? 0), 0);
@@ -25,7 +27,8 @@ export function peopleInHeat(detail: CityDetail, inside: readonly boolean[]): Pe
   if (!pop) return null;
   const members = hotInside(detail, inside);
   const total = pop.reduce((sum, p, i) => (inside[i] ? sum + p : sum), 0);
-  return { people: sumAt(pop, members), total, cells: members.length };
+  const insideCells = inside.filter(Boolean).length;
+  return { people: sumAt(pop, members), total, cells: members.length, insideCells };
 }
 
 export interface PeoplePlace {
@@ -106,6 +109,21 @@ export const peopleNoun = (n: number, forms: readonly [string, string, string]):
 
 /** People as a reader takes them in: "323 тыс. человек", "1,4 тыс. человек", "420 человек". */
 export const formatPeople = (n: number): string => `${peopleFigure(n)} ${peopleNoun(n, ['человек', 'человека', 'человек'])}`;
+
+/** Hot cells this much emptier than the city's average cell are mostly not where people live. */
+const SPARSE_RATIO = 0.5;
+
+/**
+ * Why so few people live in the heat, when that is the case: "Самые горячие участки здесь почти без жилья: в среднем 20 человек
+ * на участок против 220 по городу." Null when the hot cells are as lived-in as the rest.
+ */
+export function sparseHeatNote(inHeat: PeopleInHeat): string | null {
+  if (inHeat.cells === 0 || inHeat.insideCells === 0) return null;
+  const hot = inHeat.people / inHeat.cells;
+  const city = inHeat.total / inHeat.insideCells;
+  if (hot >= city * SPARSE_RATIO) return null;
+  return `Самые горячие участки здесь почти без жилья: в среднем ${formatPeople(hot)} на участок против ${peopleFigure(city)} по городу.`;
+}
 
 /** The caveat printed next to every population figure. */
 export const populationCaveat = (year: number): string =>

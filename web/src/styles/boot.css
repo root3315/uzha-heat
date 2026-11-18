@@ -69,7 +69,7 @@
 .boot__meter span {
   display: block;
   height: 100%;
-  background: var(--amber);
+  background: var(--ink);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--fast) linear;

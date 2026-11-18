@@ -83,7 +83,7 @@
 }
 .rp-part__n {
   flex: 0 0 auto;
-  color: var(--amber-ink);
+  color: var(--ink-2);
   font: 500 0.72rem/1 var(--font-mono);
   letter-spacing: 0.02em;
   transform: translateY(-0.2em);
@@ -410,7 +410,7 @@
 }
 .rp-table tr.is-current th::after {
   content: ' ●';
-  color: var(--amber);
+  color: var(--ink);
   font-size: 0.6em;
   vertical-align: middle;
 }
@@ -448,7 +448,7 @@
 }
 .rp-table--wx thead th.is-current::after {
   content: ' ●';
-  color: var(--amber);
+  color: var(--ink);
   font-size: 0.6em;
   vertical-align: middle;
 }

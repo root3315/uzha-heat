@@ -30,11 +30,11 @@ export class DataContractError extends Error {
 
 type Json = Record<string, unknown>;
 
-function isObject(value: unknown): value is Json {
+export function isObject(value: unknown): value is Json {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+export const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 function requireObject(value: unknown, path: string): Json {
   if (!isObject(value)) throw new DataContractError(`${path} должен быть объектом`);
