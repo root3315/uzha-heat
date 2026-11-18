@@ -53,11 +53,24 @@ describe('whatIf', () => {
   it('changes nothing for an empty change', () => {
     expect(whatIf(TOY, cell, {}).delta).toBe(0);
   });
+
+  it('lets a cell already past the range keep its value and move only back into the range', () => {
+    const ranges = { tree: [0, 8] as const };
+    const lush = { tree: 30, ndvi: 0.5, built: 0 };
+    expect(whatIf(TOY, lush, { tree: 30 }, ranges).delta).toBe(0);
+    expect(whatIf(TOY, lush, { tree: 50 }, ranges).after).toBe(predict(TOY, lush));
+    expect(whatIf(TOY, lush, { tree: 5 }, ranges).delta).toBe(3);
+  });
 });
 
 describe('factorRanges', () => {
-  it('takes min and max of each column, skipping non-numbers', () => {
-    expect(factorRanges({ tree: [3, 0, 40, Number.NaN], ndvi: [] })).toEqual({ tree: [0, 40] });
+  it('takes the 5th and 95th percentile of each column, skipping non-numbers', () => {
+    const column = [...Array.from({ length: 101 }, (_, i) => i), Number.NaN];
+    expect(factorRanges({ tree: column, ndvi: [] })).toEqual({ tree: [5, 95] });
+  });
+
+  it('takes other percentiles when asked', () => {
+    expect(factorRanges({ tree: [3, 0, 40] }, [0, 1])).toEqual({ tree: [0, 40] });
   });
 });
 
@@ -88,6 +101,15 @@ describe('leversFor', () => {
     const cell = { tree: 0, ndvi: 0.1, built: 90 };
     expect(leversFor(TOY, cell, { built: 0.9 }, ranges).map((l) => l.lever.key)).not.toContain('built');
     expect(leversFor(WITH_BUILT, cell, { built: -0.2 }, ranges).map((l) => l.lever.key)).not.toContain('built');
+  });
+
+  it('starts at the cell when it is already past the range, and then offers no move that way', () => {
+    const levers = leversFor(WITH_BUILT, { tree: 75, ndvi: 0.1, built: 3 }, { built: 0.9 }, { ...ranges, built: [10, 95] });
+    expect(levers.map((l) => l.lever.key)).toEqual(['ndvi']);
+  });
+
+  it('offers nothing where the range has no width, as with trees in a city that has almost none', () => {
+    expect(leversFor(TOY, { tree: 0, ndvi: 0.9, built: 0 }, {}, { tree: [0, 0], ndvi: [0, 0.8] })).toEqual([]);
   });
 
   it('leaves out a lever with no room left and a factor the model lacks', () => {

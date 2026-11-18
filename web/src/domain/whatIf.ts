@@ -3,6 +3,7 @@
  * The model file is written by the pipeline (pipeline/uzha/browser_model.py); layout in docs/data-contract.md.
  */
 import type { Tree, TreeModel } from '../data/contract';
+import { quantile } from './stats';
 
 /** Values of one cell, by factor key. */
 export type FactorValues = Record<string, number>;
@@ -48,28 +49,31 @@ export function predict(model: TreeModel, values: FactorValues): number {
 
 export const clamp = (value: number, [min, max]: readonly [number, number]): number => Math.min(max, Math.max(min, value));
 
-/** Min and max of every factor column, so nobody asks the model for a value the city does not have. */
-export function factorRanges(columns: Record<string, readonly number[]>): FactorRanges {
+/** Sliders stop at the city's 5th and 95th percentile: past them the model would be asked about combinations it hardly saw. */
+export const RANGE_QUANTILES = [0.05, 0.95] as const;
+
+/** The 5th–95th percentile of every factor column, so nobody asks the model for a value the city barely has. */
+export function factorRanges(columns: Record<string, readonly number[]>, [lo, hi]: readonly [number, number] = RANGE_QUANTILES): FactorRanges {
   const ranges: FactorRanges = {};
   for (const [key, column] of Object.entries(columns)) {
-    let min = Infinity;
-    let max = -Infinity;
-    for (const v of column) {
-      if (!Number.isFinite(v)) continue;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    if (min <= max) ranges[key] = [min, max];
+    const finite = column.filter(Number.isFinite);
+    if (finite.length) ranges[key] = [quantile(finite, lo), quantile(finite, hi)];
   }
   return ranges;
 }
 
-/** The cell as it is and with `changes` (new values, clamped to the city's range), by the model. */
+/**
+ * The cell as it is and with `changes` (new values), by the model. A change is clamped to the city's range, widened
+ * to take in the cell's own value: a cell already past the range keeps its value and may only move back into it.
+ */
 export function whatIf(model: TreeModel, cell: FactorValues, changes: FactorValues, ranges: FactorRanges = {}): WhatIf {
   const changed: FactorValues = { ...cell };
   for (const [key, value] of Object.entries(changes)) {
     const range = ranges[key];
-    changed[key] = range ? clamp(value, range) : value;
+    const here = cell[key];
+    const bounds: readonly [number, number] | undefined =
+      range && here !== undefined && Number.isFinite(here) ? [Math.min(range[0], here), Math.max(range[1], here)] : range;
+    changed[key] = bounds ? clamp(value, bounds) : value;
   }
   const before = predict(model, cell);
   const after = predict(model, changed);
@@ -123,11 +127,13 @@ export function leversFor(model: TreeModel, cell: FactorValues, contributions: F
     const range = ranges[lever.key];
     const here = cell[lever.key];
     if (!range || here === undefined || !model.features.includes(lever.key)) continue;
-    const from = clamp(here, range);
+    // The slider starts at the cell as it is, even past the range; then it has no room in that direction.
+    const from = here;
     // A slider moves in whole steps from its low end: going up, that end is the cell itself, so the top is the last
-    // step that fits; going down, the low end is the city's minimum and is reached exactly.
+    // step that fits; going down, the low end is the range's own end and is reached exactly.
     const to = lever.direction === 'up' ? from + Math.floor((range[1] - from) / lever.step + 1e-9) * lever.step : range[0];
-    if (Math.abs(to - from) < MIN_ROOM * (range[1] - range[0])) continue;
+    const room = lever.direction === 'up' ? to - from : from - to;
+    if (room < lever.step || room < MIN_ROOM * (range[1] - range[0])) continue;
     const heat = contributions[lever.key] ?? 0;
     if (lever.direction === 'down' && (heat < MIN_HEAT || whatIf(model, cell, { [lever.key]: to }).delta > -MIN_COOLING)) continue;
     options.push({ lever, from, to, heat });
