@@ -23,31 +23,32 @@ their phones from the QR code.
 
 Say: "UzHa answers one question for Tashkent: where to plant first. Here is the answer."
 
-1. In the panel: **Where to plant first**. Point at the list: **−3.7°, −3.1°, −2.7°, −2.6°, −2.6°**, each for about
+1. In the panel: **Where to plant first**. Point at the list: **−3.7, −3.1, −2.7, −2.6, −2.6 °C**, each for about
    **1,200–1,400** residents.
    Say: "Every inhabited 200 metre cell gets the same greening: tree crowns plus grass and watering, that is plus 20 points
-   of crown and plus 0.1 NDVI. The city's own model gives the cooling. We rank by degrees times residents, at least 1 km apart."
-2. Click place **1**. The map flies to **Near Small Ring Road**, **43.5°**.
+   of crown and plus 0.1 NDVI. The city's own model gives the cooling. We rank by degrees times residents, at least 1 km apart,
+   not by how hot the cell is today."
+2. Click place **1**. The map flies to **Near Small Ring Road**, **43.5 °C**, about **1,300 residents**.
 
 ### 1:00–2:15 · What if, in this place
 
 1. Open **What if**.
-2. Drag **Trees** from 3 % to **23 %** only. Point at the result: about **−0.5°**.
+2. Drag **Trees** from 3 % to **23 %** only. Point at the result: about **−0.5 °C**.
    Say: "Crowns alone do little here."
-3. Drag **Greenery, NDVI** from 0.14 to **0.24**. Result **−3.7°**, "about 39.9° instead of 43.5°".
-   Say: "Greening as a whole does it: crowns plus grass and watering. NDVI alone gives about −3.1.
+3. Drag **Greenery, NDVI** from 0.14 to **0.24**. Result **−3.7 °C**, "about 39.9 °C instead of 43.5 °C".
+   Say: "The model links the cooler surface with greening as a whole: crowns plus grass and watering. NDVI alone gives about −3.1.
    This is the city's XGBoost model, running in the browser. Sliders stop at what the city already has, 5th to 95th percentile.
    It is an association in the data, not an experiment."
 4. Point at the measure card below: "Each measure links to a published study."
 
 ### 2:15–3:30 · Why it is hot here (still tab 1)
 
-1. Click **Whole city**. Point at **43.6°** and the sentence under it: "Inside Tashkent the surface is 1.8 degrees hotter than
-   the ring around it. One in ten cells is above 48.1."
-2. Point at the first cause, **Lack of greenery, +3.2°**. Say: "This is SHAP: the model splits each cell's temperature into
+1. Click **Whole city**. Point at **43.6 °C** and the sentence under it: "Inside Tashkent the surface is 1.8 degrees hotter than
+   the ring around it. The hottest 10% of cells are above 48.1 °C; 313,000 people live in them."
+2. Point at the first cause, **Low greenery, +3.2 °C**. Say: "This is SHAP: the model splits each cell's temperature into
    factors, in degrees."
-3. Click **Already through the hottest**. Point at the profile and the hatched band of causes under it.
-   Say: "10 of 14 km hotter than average, by up to 9.4 degrees; most of it is lack of greenery."
+3. Point at the section (it already passes through the hottest point): the profile and the hatched band of causes under it.
+   Say: "10 of 14 km hotter than average, by up to 9.4 degrees; the model puts most of it on low greenery."
 4. Click **People**: residents as dots, schools and clinics on the hottest cells. "Colour still means temperature."
 
 ### 3:30–4:00 · 3D
@@ -57,7 +58,7 @@ under it. Heights from OpenStreetMap, or our own height model where OSM has none
 
 ### 4:00–4:30 · It transfers (tab 3)
 
-Switch to the pre-warmed **Samarkand** tab. Point at the summary: "Plus 1.4 degrees. Same pipeline, same code.
+Switch to the pre-warmed **Samarkand** tab. Point at the summary: "Plus 1.4 °C. Same pipeline, same code.
 The hot places differ: here they are open bare land, not housing." Bukhara (+3.1) only if asked.
 
 ### 4:30–5:30 · How we checked (tab 2)
@@ -69,8 +70,9 @@ Point at, in order:
   Say: "r is the main check: is the heat in the same places. The absolute level differs by satellite: our surface is
   4.4 degrees warmer than Terra and 0.4 warmer than Aqua. That is a known difference between products: emissivity,
   30 m against 1 km, view angle, time of day."
-- Night line, Aqua ~01:30: **+2.4°**. "At night the city is still warmer than its ring. Landsat cannot see that."
-- Rings 0.5 / 1 / 1.5 km: **+1.3 / +1.5 / +1.8°**. "The sign does not depend on the ring."
+- Heat island by MODIS, ring 1.5 km: by day **+2.0 °C** (Terra) and **+2.3 °C** (Aqua), at night (Aqua ~01:30) **+2.4 °C**.
+  "MODIS at 1 km sees the same island, day and night. Our +1.8 is not a Landsat artefact."
+- Rings 0.5 / 1 / 1.5 km: **+1.3 / +1.5 / +1.8 °C**. "The sign does not depend on the ring."
 
 ### 5:30–6:40 · Code review: the model in the browser
 
@@ -100,11 +102,14 @@ Thank you. The site is open on your phones now."
 | Mean error on held-out blocks | 1.3 / 1.1 / 1.4 °C |
 | MODIS Terra (~10:30): r; mean difference; RMSE | 0.87 / 0.65 / 0.87; +4.4 / +3.2 / +3.3 °C; 4.7 / 3.8 / 3.7 °C |
 | MODIS Aqua (~13:30): r; mean difference; RMSE | 0.85 / 0.61 / 0.81; +0.4 / −0.6 / −0.7 °C; 1.7 / 2.1 / 1.8 °C |
+| Day heat island, MODIS, ring 1.5 km: Terra; Aqua | +2.0 / +1.6 / +2.1 °C; +2.3 / +2.0 / +2.5 °C |
 | Night heat island, Aqua ~01:30, ring 1.5 km | +2.4 / +1.2 / +1.8 °C |
-| City mean surface temperature | 43.6 / 42.7 / 41.4 °C |
-| People in the hottest tenth of cells | 313,000 / ~7,000 / 55,000 |
+| Mean surface: city + 1.5 km ring (site summary); inside the outline | 43.6 / 42.7 / 41.4 °C; 43.9 / 43.4 / 42.7 °C |
+| People in the hottest 10% of cells | 313,000 / ~7,000 / 55,000 |
+| Share of SHAP inside the outline: vegetation and soil; built-up | 64 / 39 / 50 %; 21 / 37 / 27 % |
 | Planting list, Tashkent top five | −3.7, −3.1, −2.7, −2.6, −2.6 °C; 1.2–1.4 thousand people each |
 | Place 1 (Small Ring Road): crowns only / NDVI only / both | −0.5 / −3.1 / −3.7 °C; crowns to the city's top (34 %) alone: −0.8 °C |
+| Place 1: surface; NDVI; residents | 43.5 °C (inside mean 43.9 °C); 0.14, lowest fifth of inhabited cells; ~1,300 |
 | Tests | 92 pipeline + 309 web |
 
 ## Jury Q&A
@@ -114,10 +119,26 @@ The measure is greening as a whole: tree crowns plus grass and watering, which s
 1 °C at this place (−0.5 °C for +20 points, −0.8 °C even at the city's top). The model shows an association, not an
 experiment. The next step is a pilot: green one block and measure before and after.
 
+**Your own source (Mukhamedjanov 2024) says crowns cool most and lawns barely. Your model says NDVI. Which is it?**
+Both, for different things. That study measured air in Tashkent squares; we map the surface at about 11:00. Watered grass
+cools the surface by evaporation; crowns cool the air by shade. And ESA WorldCover's 10 m tree layer misses most street-tree
+canopy, so those leaves show up in NDVI rather than in the tree share.
+
+**Place 1 is not hot: 43.5 °C, about the city mean. Why is it first?**
+The ranking is cooling × residents, not how hot the cell is today. NDVI there is 0.14, in the lowest fifth of inhabited
+cells, and about 1,300 people live in the cell: the same planting buys the most degrees for the most people. The hottest
+cells are built-up or open land with few residents: each of the 20 hottest has fewer than 100.
+
+**NDVI dominates. That is known. What is new?**
+NDVI dominates, as expected. What is new is where, by how many degrees per cell, for how many people, and a what-if anyone
+can run. The list is ranked by people × cooling, which is why a low-NDVI, dense-living cell comes first.
+
 **Why compare with Aqua, when Terra passes closer to Landsat's time?**
 We show both. The pattern matches for both: r = 0.87 with Terra, 0.85 with Aqua in Tashkent. The absolute offset is a known
 difference between products (emissivity, 30 m against 1 km, view angle, time of day); Terra reads 4.4 °C cooler than our
-Landsat surface, Aqua 0.4 °C. What we check is where it is hot, and that holds with either satellite.
+Landsat surface, Aqua 0.4 °C. MOD11A2 is an 8-day clear-sky mean at 1 km with wide view angles; the Landsat Collection 2
+surface temperature product is known to run warm over dry bright land. We never quote the absolute level as truth, only
+where it is hot (r) and the city-vs-ring sign. Both hold with either satellite.
 
 **What did you write yourselves?**
 The 200 m grid and the assembly of all factors onto it; spatial block cross-validation; SHAP grouping of correlated factors;
@@ -131,11 +152,10 @@ model for 3D. Then each member names their part:
 
 **Backup: why only +1.8 °C? Tashkent feels much hotter.**
 The comparison ring is suburban itself, not a cool forest: 37 % built-up against 55 % inside the city, NDVI 0.34
-against 0.29. So the day contrast is modest. At night,
-when the city's stored heat shows, MODIS gives +2.4 °C. And the sign does not depend on the ring width: +1.3 / +1.5 / +1.8 °C
-for 0.5 / 1 / 1.5 km.
+against 0.29. So the contrast is modest. MODIS at 1 km gives +2.0–2.4 °C by day and +2.4 °C at night for Tashkent, so
++1.8 is not a Landsat artefact; and the sign holds for any ring width: +1.3 / +1.5 / +1.8 °C for 0.5 / 1 / 1.5 km.
 
-**Backup: what is "Physics of the hottest tenth"?**
+**Backup: what is "Energy balance" on the method page?**
 A physical estimate next to the statistical model: where the absorbed sunlight goes, in W/m², split into evaporation, heating
 the air and the ground, by the S-SEBI / SEBAL energy balance from our map data and ERA5 at the overpass hour.
 
@@ -149,4 +169,4 @@ the air and the ground, by the S-SEBI / SEBAL energy balance from our map data a
 1. Local site down: `cd web && npm run dev` again. All city data, models and the planting list are local files in `web/public/data/`.
 2. No network: the basemap (streets, labels from OpenFreeMap) does not load. Heat map, isotherms, panel, what-if and planting list still work.
 3. 3D without the local `.fgb` files shows only the basemap's buildings; skip the 3D step.
-4. Browser fails completely: open `docs/uzha-pitch-en.pptx`, slides 3–8 carry real screenshots and the same numbers.
+4. Browser fails completely: open `docs/uzha-pitch-en.pptx`, slides 3, 4, 6 show screenshots; 4–8 carry the numbers.
