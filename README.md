@@ -14,7 +14,7 @@
 A map of summer surface overheating in Tashkent, with Samarkand and Bukhara as a check that the method transfers. For every
 200 × 200 m cell it shows how hot the surface is, which factors heat or cool that place and by how many degrees, and what
 can be done there. "What if" sliders recompute the temperature of a place with the city's own model right in the browser,
-"Where to plant first" ranks the places where greening cools the most people, and a 3D view colours about 660 thousand buildings
+"Where to plant first" ranks places by cooling × residents, and a 3D view colours about 660 thousand buildings
 by the surface temperature under them.
 
 ![Landing page](docs/screenshots/00-landing.png)
@@ -23,16 +23,17 @@ by the surface temperature under them.
 
 Inside the city outline the surface is hotter in summer than in the ring around it:
 
-| | Heat island | With a ring of 0.5 / 1 / 1.5 km | Mean surface | Variance explained (R² on blocks the model never saw) |
+| | Heat island | With a ring of 0.5 / 1 / 1.5 km | Mean surface inside the outline | Variance explained (R² on blocks the model never saw) |
 |---|---|---|---|---|
-| Tashkent | +1.8 °C | +1.3 / +1.5 / +1.8 °C | 43.6 °C | 79 % |
-| Samarkand | +1.4 °C | +1.2 / +1.2 / +1.4 °C | 42.7 °C | 77 % |
-| Bukhara | +3.1 °C | +2.9 / +3.0 / +3.1 °C | 41.4 °C | 69 % |
+| Tashkent | +1.8 °C | +1.3 / +1.5 / +1.8 °C | 43.9 °C | 79 % |
+| Samarkand | +1.4 °C | +1.2 / +1.2 / +1.4 °C | 43.4 °C | 77 % |
+| Bukhara | +3.1 °C | +2.9 / +3.0 / +3.1 °C | 42.7 °C | 69 % |
 
 Heat island: median of the cells inside the outline minus the median of the ring around it. Its sign and size do not depend
 on the ring width.
 
-Greenery is the strongest factor everywhere. Grouping correlated factors, vegetation and bare soil take 39–64 % of the
+NDVI is the single strongest factor in all three cities; in Samarkand built-up land is close behind (37 % against 39 %
+for vegetation and soil). Grouping correlated factors, vegetation and bare soil take 39–64 % of the
 mean contribution inside the outline, built-up land 21–37 %. The hot places differ by city: dense building without trees in
 Tashkent, open nearly unbuilt land in Samarkand, building mixed with bare ground in Bukhara.
 
@@ -46,19 +47,28 @@ This is the temperature of the surface itself at about 11:00, from satellite ima
 | Aqua (MYD11A2) | ~13:30 | 0.85 / 0.61 / 0.81 | +0.4 / −0.6 / −0.7 °C | 1.7 / 2.1 / 1.8 °C |
 
 The main metric is r: it says whether we find the heat in the same places. The absolute level differs between the
-products for known reasons: emissivity, 30 m Landsat against 1 km MODIS, view angle and time of day. At night (Aqua,
-about 01:30) MODIS also shows the city warmer than the 1.5 km ring: +2.4 / +1.2 / +1.8 °C.
-Command: `python -m pipeline.validate --all --web`.
+products for known reasons: emissivity, 30 m Landsat against 1 km MODIS, view angle and time of day.
+
+MODIS at 1 km also puts the city above its 1.5 km ring: by day +2.0 / +1.6 / +2.1 °C (Terra) and +2.3 / +2.0 / +2.5 °C
+(Aqua), at night (Aqua, about 01:30) +2.4 / +1.2 / +1.8 °C. So Tashkent's +1.8 °C is not a Landsat artefact. In Samarkand
+and Bukhara the night island is smaller than the day one.
+Command: `PYTHONUTF8=1 python -m pipeline.validate --all --web`.
 
 **People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
-in the hottest tenth of cells inside the outline. In Samarkand the hottest cells are mostly empty open land, hence the small
+in the hottest 10% of cells inside the outline. In Samarkand the hottest cells are mostly empty open land, hence the small
 figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
 
 **Where to plant first.** The same greening on every inhabited 200 m cell: tree crowns plus grass and watering, that is
 +20 percentage points of tree crown and +0.1 NDVI (never past the city's 95th percentile), run through the city model. In
-Tashkent the top five places cool the surface by about 2.6–3.7 °C for roughly 1.2–1.4 thousand residents each.
-Most of the effect comes from greenery as a whole, not from crowns alone. At the first place, near the Small Ring Road:
-crowns only −0.5 °C, NDVI only −3.1 °C, both −3.7 °C (surface 43.5 → 39.9 °C).
+Tashkent the model gives the top five places a 2.6–3.7 °C cooler surface, for roughly 1.2–1.4 thousand residents each.
+The ranking is cooling × residents, not how hot the cell is today: the first place, near the Small Ring Road, is an
+average block (43.5 °C; mean inside the outline 43.9 °C) with low NDVI (0.14) and about 1,300 residents. There: crowns only −0.5 °C,
+NDVI only −3.1 °C, both −3.7 °C (surface 43.5 → 39.9 °C).
+
+On the surface most of it shows up as greenery (NDVI), not crowns. A survey of 30 green squares in Tashkent (Mukhamedjanov et al.,
+2024) found crown area cools most and lawns barely; that study measured air. We map the surface at about 11:00: watered
+grass cools the surface by evaporation, crowns cool the air by shade. And ESA WorldCover's 10 m tree class misses most
+street-tree canopy, so those leaves show up in NDVI rather than in the tree share.
 
 ## How to use it
 
@@ -140,6 +150,8 @@ for c in tashkent samarkand bukhara; do
   curl -o web/public/data/buildings/$c.fgb https://uzha.mydevbox.xyz/data/buildings/$c.fgb
 done
 ```
+
+Commands are for bash or Git Bash. In PowerShell set `$env:PYTHONUTF8=1` and use `curl.exe`.
 
 **Data pipeline** (Python 3.10+, no keys):
 
