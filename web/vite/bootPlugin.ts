@@ -25,6 +25,35 @@ function dataBytes(dataDir: string): Record<string, number> {
   return sizes;
 }
 
+/** Every city id in the list, for the preload script to check the address against. */
+function cityIds(dataDir: string): string[] {
+  const cities = readJson(join(dataDir, 'cities.json'));
+  return Array.isArray(cities) ? cities.flatMap((c: { id?: unknown }) => (typeof c?.id === 'string' ? [c.id] : [])) : [];
+}
+
+/**
+ * A tiny external script (the server's CSP allows no inline ones) that preloads the city in the address:
+ * /map/bukhara starts fetching Bukhara, not the opening city. Unknown or no city: the opening one.
+ */
+function preloadScript(base: string, ids: string[], fallback: string): string {
+  return `(function () {
+  var ids = ${JSON.stringify(ids)};
+  var m = location.pathname.slice(${JSON.stringify(base)}.length - 1).match(new RegExp('^/(?:map|method)/([^/?#]+)'));
+  var id = m && ids.indexOf(decodeURIComponent(m[1])) >= 0 ? decodeURIComponent(m[1]) : ${JSON.stringify(fallback)};
+  ['boundaries/' + id + '.geojson', 'data/' + id + '.json'].forEach(function (href) {
+    var link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'fetch';
+    link.crossOrigin = '';
+    link.href = ${JSON.stringify(base)} + href;
+    document.head.appendChild(link);
+  });
+})();
+`;
+}
+
+const PRELOAD_FILE = 'preload-city.js';
+
 function defaultCity(dataDir: string): DefaultCity {
   const cities = readJson(join(dataDir, 'cities.json'));
   const first = Array.isArray(cities) ? (cities[0] as Partial<DefaultCity> | undefined) : undefined;
@@ -66,9 +95,19 @@ export function boot(): Plugin[] {
     },
   };
 
-  /** Fonts first (small, and the headline waits for them), then the opening city: its list, outline and file. */
+  /** Fonts first (small, and the headline waits for them), then the city of the address: its list, outline and file. */
   const preloads: Plugin = {
     name: 'uzha-boot-preloads',
+    generateBundle() {
+      const ids = cityIds(join(config.publicDir, 'data'));
+      this.emitFile({ type: 'asset', fileName: PRELOAD_FILE, source: preloadScript(config.base, ids, city.id) });
+    },
+    configureServer(server) {
+      server.middlewares.use(`${config.base}${PRELOAD_FILE}`, (_req, res) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.end(preloadScript(config.base, cityIds(join(config.publicDir, 'data')), city.id));
+      });
+    },
     transformIndexHtml: {
       order: 'post',
       handler(_html, { bundle }) {
@@ -82,8 +121,8 @@ export function boot(): Plugin[] {
         return [
           ...fonts.map((file) => preload('font', file)),
           preload('fetch', 'data/cities.json'),
-          preload('fetch', `boundaries/${city.id}.geojson`),
-          preload('fetch', `data/${city.id}.json`),
+          // The city itself is preloaded by the address, in a script of its own (see preloadScript).
+          { tag: 'script', attrs: { src: `${config.base}${PRELOAD_FILE}` }, injectTo: 'head' },
         ];
       },
     },
