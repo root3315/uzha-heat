@@ -951,12 +951,12 @@ summary.rest__summary:hover,
   min-width: 4.5ch;
 }
 
-/* Что если: sliders over the city's own model. Ink only; the one coloured thing is the change in temperature. */
+/* What if: sliders over the city's own model. Ink only; the one coloured thing is the change in temperature. */
 .whatif {
   margin-top: 28px;
   border-top: 1px solid var(--line);
 }
-/* A section header like "Физика участка", that opens. */
+/* A section header like "Physics of the place", that opens. */
 .whatif__summary {
   display: flex;
   justify-content: space-between;
@@ -1014,7 +1014,7 @@ summary.rest__summary:hover,
 }
 
 /*
- * The slider: a hairline track, the stretch from "сейчас" to the chosen value as a 3 px line, a tick at "сейчас",
+ * The slider: a hairline track, the stretch from "now" to the chosen value as a 3 px line, a tick at "now",
  * a small round thumb. The native input stays on top, so keys and screen readers work as usual.
  */
 .whatif__slider {
@@ -1142,7 +1142,7 @@ summary.rest__summary:hover,
   font: 400 0.68rem/1.5 var(--font-mono);
 }
 
-/* Физика участка: where the sunlight goes. Ink and hatch only, colour stays for temperature. */
+/* Physics of the place: where the sunlight goes. Ink and hatch only, colour stays for temperature. */
 .energy {
   margin-top: 28px;
   padding-top: 20px;
@@ -1420,6 +1420,7 @@ summary.rest__summary:hover,
     margin-right: 0;
   }
   .bar__id,
+  .bar__lang,
   .bar__open {
     flex: 0 0 auto;
   }
@@ -1548,7 +1549,7 @@ summary.rest__summary:hover,
   font: 400 0.62rem/1.3 var(--font-mono);
 }
 
-/* Где сажать первым: five places, each a button that opens it on the map. */
+/* Where to plant first: five places, each a button that opens it on the map. */
 .plan {
   margin-top: 8px;
   padding: 0;

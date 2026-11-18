@@ -11,14 +11,17 @@ import './styles/print.css';
 import './styles/boot.css';
 import { App } from './ui/App';
 import { prepareBoot } from './ui/boot';
+import { initialLocale, LocaleProvider } from './ui/locale';
 import { parseRoute } from './ui/routing';
 
-prepareBoot(parseRoute(window.location.pathname, window.location.hash, import.meta.env.BASE_URL));
+prepareBoot(parseRoute(window.location.pathname, window.location.hash, import.meta.env.BASE_URL), initialLocale());
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root not found');
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <LocaleProvider>
+      <App />
+    </LocaleProvider>
   </StrictMode>,
 );

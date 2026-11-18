@@ -5,11 +5,17 @@ import { boundaryGeometry } from '../src/data/boundary';
 import { outlinePath } from '../src/domain/outlinePath';
 
 /** Font files the first screen sets text in: the headline and the bar (Tektur), the captions (Onest). */
-const FIRST_SCREEN_FONTS = [/tektur-cyrillic-standard-normal-[\w-]+\.woff2$/, /tektur-latin-standard-normal-[\w-]+\.woff2$/, /onest-cyrillic-wght-normal-[\w-]+\.woff2$/];
+const FIRST_SCREEN_FONTS = [
+  /tektur-latin-standard-normal-[\w-]+\.woff2$/,
+  /onest-latin-wght-normal-[\w-]+\.woff2$/,
+  /tektur-cyrillic-standard-normal-[\w-]+\.woff2$/,
+  /onest-cyrillic-wght-normal-[\w-]+\.woff2$/,
+];
 
 interface DefaultCity {
   id: string;
   name: string;
+  nameEn: string;
 }
 
 function readJson(path: string): unknown {
@@ -58,11 +64,11 @@ function defaultCity(dataDir: string): DefaultCity {
   const cities = readJson(join(dataDir, 'cities.json'));
   const first = Array.isArray(cities) ? (cities[0] as Partial<DefaultCity> | undefined) : undefined;
   if (!first?.id || !first.name) throw new Error('cities.json: no first city for the loading screen');
-  return { id: first.id, name: first.name };
+  return { id: first.id, name: first.name, nameEn: first.nameEn || first.name };
 }
 
 /**
- * The first screen before the app runs: the opening city's name and outline baked into index.html,
+ * The first screen before the app runs: the opening city's names (English shown, Russian kept for the switch) and outline baked into index.html,
  * the city file and the first-screen fonts preloaded, and the display face held back until it is ready
  * instead of flashing a fallback.
  */
@@ -86,7 +92,8 @@ export function boot(): Plugin[] {
         const geometry = boundaryGeometry(readJson(join(config.publicDir, 'boundaries', `${city.id}.geojson`)));
         const outline = geometry ? outlinePath(geometry) : { d: '', width: 1000, height: 1000 };
         const page = html
-          .replaceAll('__UZHA_CITY_NAME__', city.name)
+          .replaceAll('__UZHA_CITY_NAME_RU__', city.name)
+          .replaceAll('__UZHA_CITY_NAME__', city.nameEn)
           .replaceAll('__UZHA_CITY_ID__', city.id)
           .replace('__UZHA_OUTLINE_VIEWBOX__', `0 0 ${outline.width} ${outline.height}`)
           .replace('__UZHA_OUTLINE_D__', outline.d);

@@ -1,29 +1,32 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { CitySummary } from '../data/contract';
 import { loadCities } from '../data/load';
-import { genitive } from '../domain/answers';
+import { cityName } from '../domain/dataTexts';
 import { huntTarget } from '../domain/hunt';
 import { loadingLine } from '../domain/loading';
 import { Bar } from './Bar';
 import { endBoot, isBooting, showBootStage } from './boot';
 import { scrollToId, useAsync } from './hooks';
 import { Landing, REPO } from './landing/Landing';
+import { useLocale, useTexts } from './locale';
 import { MethodPage } from './MethodPage';
 import { cityModel, watchLoad } from './models';
 import { PatternDefs } from './patterns';
 import { methodHref, navigate, redirect, toolHref, useRoute, type Route } from './routing';
 import { Tool } from './Tool';
+import { APP_TEXTS } from './ui.texts';
 
 const HOME = import.meta.env.BASE_URL;
 
 /** A loading or error line; with `onRetry`, a button to try again. */
 function Status({ children, onRetry }: { children: string; onRetry?(): void }) {
+  const t = useTexts(APP_TEXTS);
   return (
     <div className="app-status" role="status">
       <p>{children}</p>
       {onRetry && (
         <button type="button" className="pill pill--ink" onClick={onRetry}>
-          Повторить
+          {t.retry}
         </button>
       )}
     </div>
@@ -32,16 +35,18 @@ function Status({ children, onRetry }: { children: string; onRetry?(): void }) {
 
 /** The loading line once the first screen is gone: switching cities, trying again. */
 function Loading({ cityId }: { cityId: string }) {
-  const [line, setLine] = useState(() => loadingLine({ download: null, building: false }));
-  useEffect(() => watchLoad(cityId, (stage) => setLine(loadingLine(stage))), [cityId]);
+  const locale = useLocale();
+  const [line, setLine] = useState(() => loadingLine({ download: null, building: false }, locale));
+  useEffect(() => watchLoad(cityId, (stage) => setLine(loadingLine(stage, locale))), [cityId, locale]);
   return <Status>{line}</Status>;
 }
 
 function Footer() {
+  const t = useTexts(APP_TEXTS);
   return (
     <footer className="foot">
       <p>
-        UzHa: острова тепла Ташкента, Самарканда и&nbsp;Бухары по&nbsp;снимкам NASA/USGS Landsat. Код открыт на&nbsp;
+        {t.footerLead} {t.footerCode}
         <a href={REPO} target="_blank" rel="noopener">
           GitHub
         </a>
@@ -53,10 +58,11 @@ function Footer() {
 }
 
 function Notice({ text, onClose }: { text: string; onClose(): void }) {
+  const t = useTexts(APP_TEXTS);
   return (
     <p className="notice" role="status">
       <span>{text}</span>
-      <button type="button" className="notice__close" onClick={onClose} aria-label="Закрыть">
+      <button type="button" className="notice__close" onClick={onClose} aria-label={t.close}>
         ×
       </button>
     </p>
@@ -64,6 +70,8 @@ function Notice({ text, onClose }: { text: string; onClose(): void }) {
 }
 
 function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
+  const locale = useLocale();
+  const t = APP_TEXTS[locale];
   const known = cities.find((c) => c.id === route.cityId);
   const city = known ?? cities[0];
   const landingCity = cities[0];
@@ -78,13 +86,13 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
   // An unknown city in the address: open the first one instead, and say so.
   useEffect(() => {
     if (route.view === 'story' || !route.cityId || known || !city) return;
-    setNotice(`Города «${route.cityId}» в данных нет, открыт ${city.name}.`);
+    setNotice(t.unknownCity(route.cityId, cityName(city, locale)));
     redirect(route.view === 'tool' ? toolHref(city.id) : methodHref(city.id));
-  }, [route.view, route.cityId, known, city]);
+  }, [route.view, route.cityId, known, city, t, locale]);
 
   const ready = state.status === 'ready';
   const subjectId = subject?.id;
-  useEffect(() => (subjectId ? watchLoad(subjectId, (stage) => showBootStage(subjectId, stage)) : undefined), [subjectId]);
+  useEffect(() => (subjectId ? watchLoad(subjectId, (stage) => showBootStage(subjectId, stage, locale)) : undefined), [subjectId, locale]);
   // Swap the first screen for the page before the browser paints, so nothing is shown twice.
   useLayoutEffect(() => {
     if (state.status !== 'loading' || !subject) endBoot();
@@ -97,15 +105,14 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
   }, [route.view, route.cityId, ready]);
 
   useEffect(() => {
-    const name = subject?.name ?? '';
-    document.title =
-      route.view === 'tool' ? `${name}: карта жары, UzHa` : route.view === 'method' ? `Как посчитано: ${name}, UzHa` : 'UzHa: где город перегревается летом';
-  }, [route.view, subject?.name]);
+    const name = subject ? cityName(subject, locale) : '';
+    document.title = route.view === 'tool' ? t.titleTool(name) : route.view === 'method' ? t.titleMethod(name) : t.titleStory;
+  }, [route.view, subject, locale, t]);
 
   const bar = <Bar home={HOME} tool={route.view === 'tool' || !subject ? null : toolHref(subject.id)} onLanding={route.view === 'story'} />;
   const noticeLine = notice && <Notice text={notice} onClose={() => setNotice(null)} />;
 
-  if (!subject) return <Status>В cities.json нет ни одного города.</Status>;
+  if (!subject) return <Status>{t.noCities}</Status>;
   if (state.status === 'loading' && isBooting()) return null;
   if (state.status !== 'ready' || !model) {
     // A failed load is dropped from the cache, so a new attempt fetches again.
@@ -114,8 +121,8 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
       <>
         {bar}
         {state.status === 'loading' && <Loading cityId={subject.id} />}
-        {state.status === 'error' && <Status onRetry={retry}>{`Не получилось загрузить данные ${genitive(subject.name)}. Проверьте связь и попробуйте ещё раз.`}</Status>}
-        {state.status === 'ready' && <Status>{`Для ${genitive(subject.name)} данных пока нет.`}</Status>}
+        {state.status === 'error' && <Status onRetry={retry}>{t.cityFailed(cityName(subject, locale))}</Status>}
+        {state.status === 'ready' && <Status>{t.cityEmpty(cityName(subject, locale))}</Status>}
       </>
     );
   }
@@ -124,15 +131,17 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
     <>
       {bar}
       {noticeLine}
-      {route.view === 'tool' && <Tool key={model.detail.city.id} model={model} cities={cities} onCity={(id) => navigate(toolHref(id))} />}
+      {/* A new language remounts the map pages: the map, its labels and the picked place's name are built once per mount. */}
+      {route.view === 'tool' && <Tool key={`${model.detail.city.id}-${locale}`} model={model} cities={cities} onCity={(id) => navigate(toolHref(id))} />}
       {route.view === 'method' && <MethodPage model={model} />}
-      {route.view === 'story' && target && <Landing cities={cities} model={model} hunt={{ target, found }} onHunt={setFound} />}
+      {route.view === 'story' && target && <Landing key={locale} cities={cities} model={model} hunt={{ target, found }} onHunt={setFound} />}
       {route.view === 'method' && <Footer />}
     </>
   );
 }
 
 export function App() {
+  const t = useTexts(APP_TEXTS);
   const route = useRoute();
   const [attempt, setAttempt] = useState(0);
   const cities = useAsync(loadCities, [attempt]);
@@ -145,9 +154,9 @@ export function App() {
     if (cities.status === 'error') endBoot();
   }, [cities.status]);
 
-  if (cities.status === 'loading') return isBooting() ? null : <Status>Загружаю города</Status>;
+  if (cities.status === 'loading') return isBooting() ? null : <Status>{t.loadingCities}</Status>;
   if (cities.status === 'error') {
-    return <Status onRetry={() => setAttempt((n) => n + 1)}>Не получилось загрузить список городов. Проверьте связь и попробуйте ещё раз.</Status>;
+    return <Status onRetry={() => setAttempt((n) => n + 1)}>{t.citiesFailed}</Status>;
   }
   return (
     <>
