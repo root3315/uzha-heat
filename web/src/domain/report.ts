@@ -1,4 +1,5 @@
 import type { CityDetail, LstStats } from '../data/contract';
+import { isNegligible } from './answers';
 import { dominantShares } from './hotTenth';
 import { distanceM } from './placeName';
 import { dominantHeatingFactor, hottestTenth, type PlaceProfile } from './places';
@@ -90,5 +91,6 @@ export function hotTenthCauses(detail: CityDetail, hotspot: PlaceProfile): Cause
   const leads = new Map(dominantShares(detail, hottestTenth(detail)).map((s) => [s.key, s.share]));
   return detail.features
     .map((f) => ({ key: f.key, value: hotspot.contributions[f.key] ?? 0, leads: leads.get(f.key) ?? 0 }))
+    .filter((c) => !isNegligible(c.value) || c.leads > 0)
     .sort((a, b) => b.value - a.value);
 }

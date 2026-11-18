@@ -1,4 +1,4 @@
-import { advise, capitalize, cityAnswer, dominantFor, placeAnswer, restOfCauses, type Advice, type Phrase } from '../domain/answers';
+import { advise, capitalize, cityAnswer, dominantFor, isNegligible, placeAnswer, restOfCauses, type Advice, type Phrase } from '../domain/answers';
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { cellFluxes, energyView, meanFluxes, type EnergyView } from '../domain/energy';
@@ -52,7 +52,7 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
       (feature && cityMean !== undefined ? `, в среднем по городу ${formatFactorValue(feature, cityMean)}` : '');
     cause = { key, value, label: capitalize(value >= 0 ? words.heats : words.cools), note };
     const others = Object.entries(subject.contributions)
-      .filter(([k]) => k !== key)
+      .filter(([k, v]) => k !== key && !isNegligible(v))
       .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
       .map(([k, v]) => ({ key: k, value: v, label: causeLabel(causeWords(featureByKey.get(k) ?? { key: k, label: k, unit: '' }), v) }));
     if (others.length) rest = { summary: restOfCauses(subject.contributions, key).summary, rows: others };

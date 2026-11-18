@@ -167,6 +167,12 @@ describe('dominantFor and restOfCauses', () => {
     expect(plain(rest.summary)).toBe('ещё 2 причины · +0,7°');
   });
 
+  it('does not count causes that round to 0,0°', () => {
+    const rest = restOfCauses({ ndvi: 4.6, built: 1.2, elevation: 0.02 }, 'ndvi');
+    expect(rest.count).toBe(1);
+    expect(plain(rest.summary)).toBe('ещё 1 причина · +1,2°');
+  });
+
   it('shows what cools a cool place', () => {
     expect(dominantFor(place(40, { ndvi: -3, built: 0.4 }), 43.4)).toEqual(['ndvi', -3]);
   });

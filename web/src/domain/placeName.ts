@@ -58,23 +58,53 @@ function nearest<T>(items: readonly T[], distance: (item: T) => number, radius: 
   return best;
 }
 
-const STREET_GENITIVE: ReadonlyArray<readonly [RegExp, string]> = [
-  [/^улица /i, 'улицы '],
-  [/^проспект /i, 'проспекта '],
-  [/^переулок /i, 'переулка '],
-  [/^проезд /i, 'проезда '],
-  [/^бульвар /i, 'бульвара '],
-  [/^тупик /i, 'тупика '],
-  [/ улица$/i, ' улицы'],
-  [/ проспект$/i, ' проспекта'],
-  [/ переулок$/i, ' переулка'],
-  [/ проезд$/i, ' проезда'],
+/** Street types and their genitive: "у улицы", "у проспекта". */
+const STREET_TYPES: Record<string, string> = {
+  улица: 'улицы',
+  проспект: 'проспекта',
+  переулок: 'переулка',
+  проезд: 'проезда',
+  бульвар: 'бульвара',
+  тупик: 'тупика',
+  дорога: 'дороги',
+  площадь: 'площади',
+  шоссе: 'шоссе',
+  набережная: 'набережной',
+};
+
+/** Adjective endings and their genitive: "объездная" → "объездной", "Ташкентский" → "Ташкентского". */
+const ADJECTIVE_GENITIVE: ReadonlyArray<readonly [RegExp, string]> = [
+  [/ая$/, 'ой'],
+  [/яя$/, 'ей'],
+  [/([кгхжшчщ])ий$/, '$1ого'],
+  [/ий$/, 'его'],
+  [/[ыо]й$/, 'ого'],
+  [/ое$/, 'ого'],
+  [/ее$/, 'его'],
 ];
 
-/** "улица Бабура" → "улицы Бабура", for "у улицы Бабура". Names in other languages stay as they are. */
+const isAdjective = (word: string) => ADJECTIVE_GENITIVE.some(([pattern]) => pattern.test(word));
+
+function adjectiveGenitive(word: string): string {
+  const rule = ADJECTIVE_GENITIVE.find(([pattern]) => pattern.test(word));
+  return rule ? word.replace(rule[0], rule[1]) : word;
+}
+
+/**
+ * A street name as it follows "у": "улица Бабура" → "улицы Бабура",
+ * "Ташкентская городская объездная дорога" → "Ташкентской городской объездной дороги",
+ * "Ханабадтепа проспект" → "проспекта Ханабадтепа" (a name before the type moves after it, as Russian puts it).
+ * Names in other languages stay as they are.
+ */
 export function streetGenitive(name: string): string {
-  for (const [pattern, replacement] of STREET_GENITIVE) {
-    if (pattern.test(name)) return name.replace(pattern, replacement);
+  const words = name.trim().split(/\s+/);
+  const first = words[0]?.toLowerCase() ?? '';
+  const last = words[words.length - 1]?.toLowerCase() ?? '';
+  if (words.length > 1 && STREET_TYPES[first]) return [STREET_TYPES[first], ...words.slice(1)].join(' ');
+  if (words.length > 1 && STREET_TYPES[last]) {
+    const before = words.slice(0, -1);
+    if (before.every(isAdjective)) return [...before.map(adjectiveGenitive), STREET_TYPES[last]].join(' ');
+    return [STREET_TYPES[last], ...before].join(' ');
   }
   return name;
 }

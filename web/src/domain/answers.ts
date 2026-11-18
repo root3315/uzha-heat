@@ -189,11 +189,16 @@ export interface RestOfCauses {
   summary: string;
 }
 
-/** "ещё 7 причин · +4,3°": everything except the dominant cause, folded into one line. */
+/** Contributions this small print as "0,0°": they say nothing and are left out of lists. */
+export const NEGLIGIBLE_DEG = 0.05;
+
+export const isNegligible = (value: number): boolean => Math.abs(value) < NEGLIGIBLE_DEG;
+
+/** "ещё 7 причин · +4,3°": everything except the dominant cause, folded into one line; causes that round to 0,0° are not counted. */
 export function restOfCauses(contributions: Record<string, number>, dominantKey: string): RestOfCauses {
   const others = Object.entries(contributions).filter(([key]) => key !== dominantKey);
   const sum = others.reduce((total, [, value]) => total + value, 0);
-  const count = others.length;
+  const count = others.filter(([, value]) => !isNegligible(value)).length;
   return { count, sum, summary: `ещё ${count} ${plural(count, ['причина', 'причины', 'причин'])} · ${formatDegSigned(sum)}` };
 }
 
