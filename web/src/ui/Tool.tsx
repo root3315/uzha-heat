@@ -12,6 +12,7 @@ import { Report } from '../report/Report';
 import { CitySwitcher } from './CitySwitcher';
 import { downloadText } from './download';
 import { prefersReducedMotion, useViewport } from './hooks';
+import { readSharedView, sharedViewQuery } from '../domain/shareLink';
 import { Link } from './Link';
 import { MapHint } from './MapHint';
 import { Panel } from './panel/Panel';
@@ -43,6 +44,8 @@ interface PickedPlace {
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
 const THREE_D_KEY = 'uzha.3d';
+/** How long "Ссылка скопирована" stays on the button. */
+const SHARED_NOTE_MS = 2200;
 
 function readThreeD(): boolean {
   try {
@@ -71,7 +74,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
   // 3D stays on from one city to the next: the reader chose a way of looking, not a city.
-  const [threeD, setThreeDState] = useState(() => readThreeD());
+  const [threeD, setThreeDState] = useState(() => readSharedView(window.location.search).threeD || readThreeD());
   const setThreeD = (on: boolean) => {
     setThreeDState(on);
     writeThreeD(on);
@@ -101,6 +104,34 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     },
     [cellUnder, detail],
   );
+
+  // A shared link opens on its place, once.
+  useEffect(() => {
+    const { place } = readSharedView(window.location.search);
+    if (place) pick(place);
+  }, []);
+
+  // The address always says what is on screen, so copying it from the bar shares this exact view.
+  useEffect(() => {
+    const query = sharedViewQuery({ place: picked?.point ?? null, threeD });
+    const url = `${window.location.pathname}${query}${window.location.hash}`;
+    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) window.history.replaceState(window.history.state, '', url);
+  }, [picked?.point, threeD]);
+
+  const [shared, setShared] = useState(false);
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setShared(true);
+        window.setTimeout(() => setShared(false), SHARED_NOTE_MS);
+      }
+    } catch {
+      /* the reader closed the share sheet, or the clipboard is not allowed: nothing to undo */
+    }
+  };
 
   // A new place starts at its own title: the panel may still be scrolled down to the previous place's sliders.
   useEffect(() => {
@@ -159,6 +190,11 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     setReporting(false);
     requestAnimationFrame(() => reportButtonRef.current?.focus());
   };
+  const shareButton = (
+    <button type="button" className="pill pill--small" onClick={() => void share()} aria-live="polite">
+      {shared ? 'Ссылка скопирована' : 'Поделиться'}
+    </button>
+  );
   const reportButton = (
     <button ref={reportButtonRef} type="button" className="pill pill--small" onClick={() => setReporting(true)}>
       Отчёт
@@ -173,6 +209,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
             Весь город
           </button>
         )}
+        {!narrow && shareButton}
         {!narrow && reportButton}
       </span>
     </>
@@ -237,6 +274,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
                 </button>
               )}
               {threeDButton}
+              {shareButton}
               {reportButton}
             </div>
           )}
