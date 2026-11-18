@@ -40,6 +40,34 @@ PYTHONUTF8=1 python -m pipeline.run --all --only energy
 
 A full run does all three steps too, at the end.
 
+Buildings for the 3D view are a separate step with its own downloads (Geofabrik extract of Uzbekistan,
+~130 MB; Microsoft ML footprints, ~45 MB per level-9 quadkey; the GHSL Built-H tile):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.buildings          # all cities, one height model for all
+```
+
+It writes `web/public/data/buildings/<id>.fgb` (FlatGeobuf with a spatial index; properties `h` height in m
+to 0.5, `conf` 0–1, `src` 0 = OSM tag, 1 = model) and `model.json` with the held-out errors. The files are
+tens of MB and are not committed: build and deploy copy them from `web/public/data/` like the JSON.
+
+Footprints are OSM `building=*` inside the city outline + 1.5 km, plus Microsoft footprints that share at most
+10 % of their area with an OSM building; under 6 m² dropped, simplified at 0.4 m. Height is the OSM `height` or
+`building:levels` × 3 m where tagged; elsewhere a gradient-boosting model (the method of the Soya project) on
+footprint shape (area, perimeter, compactness, oriented-rectangle sides, elongation, vertices), the type prior,
+distance to the centre, GHSL Built-H at the building, neighbour count and size within 100 m, neighbour heights
+within 150 m and the city. One model for the three cities; the error is measured on 20 % of the tagged buildings
+of each city held out, with neighbour heights taken from the training part only. Confidence of a modelled
+height is 1 − (10–90 % quantile interval) / 24 m, kept within 0.12–0.85.
+
+| City | Buildings | Tagged | Added from MS | Held out | MAE model | MAE type prior | MAE GHSL |
+|---|---|---|---|---|---|---|---|
+| Tashkent | 496 687 | 26 244 | 179 479 | 5 249 | 3.89 m | 6.34 m | 6.81 m |
+| Samarkand | 147 832 | 2 469 | 57 574 | 494 | 1.42 m | 4.72 m | 7.42 m |
+| Bukhara | 13 623 | 1 448 | 0 | 290 | 2.42 m | 4.10 m | 4.41 m |
+
+Microsoft's footprints have no coverage around Bukhara (568 in its whole quadkey), so Bukhara stays OSM only.
+
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
 Downloads are cached in `pipeline/cache/<city>_<grid-hash>/` (gitignored); a rerun with the same
@@ -178,5 +206,8 @@ uzha/population.py  light step: people per cell and facilities into an existing 
 uzha/weather.py     light step: summer weather (ERA5) into an existing city JSON and cities.json
 uzha/energy.py      light step: surface energy balance per cell from LST, albedo, NDVI and the overpass weather
 uzha/export.py      contract JSON (3-decimal values, 5-decimal coordinates)
+buildings.py        CLI: footprints with heights → buildings/<id>.fgb
+uzha/footprints.py  OSM + MS merge, simplify, FlatGeobuf export
+uzha/heights.py     building height model (shape, neighbours, GHSL), held-out errors, confidence
 tests/              pytest
 ```
