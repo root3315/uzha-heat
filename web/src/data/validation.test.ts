@@ -12,13 +12,19 @@ const platform = {
 describe('parseValidation', () => {
   it('reads a city and keeps missing rings as null', () => {
     const v = parseValidation({ period: 'лето', cities: { tashkent: { aqua: platform } } });
-    expect(v?.cities.tashkent?.aqua?.day.r).toBe(0.85);
+    expect(v?.cities.tashkent?.aqua?.day?.r).toBe(0.85);
     expect(v?.cities.tashkent?.aqua?.heatIsland.night).toEqual({ '1km': 2.24, '5km': null });
     expect(v?.cities.tashkent?.terra).toBeUndefined();
   });
 
+  it('keeps the heat island when the day comparison is missing', () => {
+    const v = parseValidation({ cities: { bukhara: { aqua: { ...platform, day: { n: 2, r: null, bias: null, rmse: null } } } } });
+    expect(v?.cities.bukhara?.aqua?.day).toBeNull();
+    expect(v?.cities.bukhara?.aqua?.heatIsland.day).toEqual({ '1km': 1.76 });
+  });
+
   it('drops a malformed platform and rejects a document without cities', () => {
-    expect(parseValidation({ cities: { tashkent: { aqua: { day: { r: 'x' } } } } })?.cities.tashkent?.aqua).toBeUndefined();
+    expect(parseValidation({ cities: { tashkent: { aqua: { day: {} } } } })?.cities.tashkent?.aqua).toBeUndefined();
     expect(parseValidation({})).toBeNull();
   });
 });

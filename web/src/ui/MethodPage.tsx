@@ -156,7 +156,7 @@ function Robustness({ model }: { model: CityModel }) {
     () => (outline ? islandByRingWidth(detail.cells.lst, detail.cells.lon, detail.cells.lat, inside, outline, RING_WIDTHS_M) : []),
     [detail, inside, outline],
   );
-  const groups = useMemo(() => groupShares(detail), [detail]);
+  const groups = useMemo(() => groupShares(detail, inside), [detail, inside]);
   const spread = ringSpread(rings);
   return (
     <>
@@ -185,14 +185,15 @@ function Robustness({ model }: { model: CityModel }) {
         <>
           <p>
             Зелень, деревья и голая земля связаны между собой, и модель может делить вклад между ними почти произвольно. Поэтому мы складываем вклады
-            связанных факторов в группы (SHAP это позволяет: вклады складываются) и смотрим, какая группа сильнее связана с температурой участков.
+            связанных факторов в группы (SHAP это позволяет: вклады складываются) и смотрим, на какую группу приходится больше вклада на участках
+            в черте города. Это доли среднего вклада, а не доли дисперсии.
           </p>
           <dl className="method__factors">
             {groups.map((group) => (
               <div key={group.id}>
                 <dt>{group.label}</dt>
                 <dd>
-                  {formatPercent(group.share)} объяснённого разброса, в среднем ±{formatNumber(group.meanAbs, 1)}° на участок
+                  {formatPercent(group.share)} среднего вклада, в среднем ±{formatNumber(group.meanAbs, 1)}° на участок
                 </dd>
               </div>
             ))}
@@ -205,9 +206,24 @@ function Robustness({ model }: { model: CityModel }) {
 
 const ringLabel = (width: string) => width.replace('km', '').replace('.', ',') + ' км';
 
-function islandLine(platform: ModisPlatform, when: 'day' | 'night'): string {
+/** "+2,2° при кольце 1 км, +2,4° при кольце 1,5 км", or null when no ring had enough pixels. */
+function islandLine(platform: ModisPlatform, when: 'day' | 'night'): string | null {
   const rings = Object.entries(platform.heatIsland[when]).filter((entry): entry is [string, number] => entry[1] !== null);
-  return rings.map(([width, value]) => `${formatDegSigned(value)} при кольце ${ringLabel(width)}`).join(', ');
+  return rings.length ? rings.map(([width, value]) => `${formatDegSigned(value)} при кольце ${ringLabel(width)}`).join(', ') : null;
+}
+
+/** "теплее" only when every ring says so; a mixed night is stated as a difference. */
+function nightSentence(platform: ModisPlatform): string | null {
+  const night = islandLine(platform, 'night');
+  if (!night) return null;
+  const values = Object.values(platform.heatIsland.night).filter((v): v is number => v !== null);
+  const lead = values.every((v) => v > 0)
+    ? 'город тоже теплее окрестностей'
+    : values.every((v) => v < 0)
+      ? 'город прохладнее окрестностей'
+      : 'разница города с окрестностями';
+  const day = islandLine(platform, 'day');
+  return `Ночью (${platform.product}, ${platform.overpassLocal.night}) ${lead}: ${night}.${day ? ` Днём по нему же: ${day}.` : ''}`;
 }
 
 /** Our Landsat surface against NASA MODIS, and the night the Landsat pass cannot see. */
@@ -224,7 +240,7 @@ function ModisCheck({ check }: { check: CityValidation }) {
       </p>
       <dl className="method__factors">
         {[aqua, terra].flatMap((p) =>
-          p
+          p?.day
             ? [
                 <div key={p.product}>
                   <dt>
@@ -239,11 +255,8 @@ function ModisCheck({ check }: { check: CityValidation }) {
             : [],
         )}
       </dl>
-      {night && (
-        <p>
-          Ночью ({night.product}, {night.overpassLocal.night}) город тоже теплее окрестностей: {islandLine(night, 'night')}. Днём по нему же:{' '}
-          {islandLine(night, 'day')}. Landsat ночью не снимает, так что ночной остров тепла мы знаем только с разрешением 1 км.
-        </p>
+      {night && nightSentence(night) && (
+        <p>{nightSentence(night)} Landsat ночью не снимает, так что ночной остров тепла мы знаем только с разрешением 1 км.</p>
       )}
     </>
   );
