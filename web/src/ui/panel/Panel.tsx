@@ -110,10 +110,8 @@ export function Panel({ model, content, header, footer, expanded = false }: Pane
     <div className="panel">
       <div className="panel__header">{header}</div>
       <h1 className={content.isCity ? 'visually-hidden' : 'panel__title'}>{content.title}</h1>
-      <p className="panel__answer">
-        <Phrase spans={content.answer} />
-      </p>
 
+      {/* The number first: the eye lands on the temperature, the sentence explains it. */}
       <div className="figure">
         <p className="figure__row">
           <span className="figure__value">{formatDeg(content.figure)}</span>
@@ -121,6 +119,9 @@ export function Panel({ model, content, header, footer, expanded = false }: Pane
         </p>
         <Ramp levels={model.levels} shares={model.shares} min={stats.lstMin} max={stats.lstMax} value={content.figure} meanMark={content.meanMark} />
       </div>
+      <p className="panel__answer">
+        <Phrase spans={content.answer} />
+      </p>
 
       {content.cause && <CauseBar row={content.cause} scale={scale} />}
       {content.rest &&

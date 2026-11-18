@@ -158,9 +158,10 @@ function WhatIfBody({ detail, cell }: { detail: CityDetail; cell: number }) {
  * moves the surface temperature. The model file is fetched the first time the block is opened.
  */
 export function WhatIfBlock({ detail, cell }: { detail: CityDetail; cell: number }) {
-  const [open, setOpen] = useState(false);
+  // Open from the start: it is the part of the panel a reader most wants to touch, and its model loads only for a place.
+  const [open, setOpen] = useState(true);
   return (
-    <details className="whatif" onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details className="whatif" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className="whatif__summary">
         <span className="whatif__title">Что если</span>
         <span className="whatif__hint">
