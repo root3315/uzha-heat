@@ -19,6 +19,7 @@ export const SOURCE = {
   found: 'found',
   people: 'people',
   facilities: 'facilities',
+  buildings: 'buildings',
 } as const;
 
 export const LAYER = {
@@ -30,6 +31,7 @@ export const LAYER = {
   people: 'people',
   facilities: 'facilities',
   buildings: 'buildings-3d',
+  buildingsFile: 'buildings-3d-file',
 } as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
@@ -98,6 +100,11 @@ export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes', t
   ] as unknown as ExpressionSpecification;
 }
 
+/** A building in the colour of its temperature class `k`; plain where the satellite has no reading (k = −1). */
+function buildingColor(tokens: MapTokens, k: ExpressionSpecification): ExpressionSpecification {
+  return ['match', k, ...tokens.classes.flatMap((color, i) => [i, color]), tokens.building] as unknown as ExpressionSpecification;
+}
+
 function roadLayer(id: string, classes: string[], width: number, color: string): LayerSpecification {
   return {
     id,
@@ -128,6 +135,7 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       [SOURCE.outsideCity]: { type: 'geojson', data: outline ? outsideOf(outline) : EMPTY },
       [SOURCE.outline]: { type: 'geojson', data: outline ? { type: 'Feature', properties: {}, geometry: outline } : EMPTY },
       [SOURCE.transect]: { type: 'geojson', data: EMPTY },
+      [SOURCE.buildings]: { type: 'geojson', data: EMPTY },
       [SOURCE.probe]: { type: 'geojson', data: EMPTY },
       [SOURCE.place]: { type: 'geojson', data: EMPTY },
       [SOURCE.found]: { type: 'geojson', data: EMPTY },
@@ -234,14 +242,24 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         minzoom: BUILDINGS_MIN_ZOOM,
         layout: { visibility: 'none' },
         paint: {
-          'fill-extrusion-color': [
-            'match',
-            ['coalesce', ['feature-state', 'k'], -1],
-            ...tokens.classes.flatMap((color, k) => [k, color]),
-            tokens.building,
-          ] as unknown as ExpressionSpecification,
+          'fill-extrusion-color': buildingColor(tokens, ['coalesce', ['feature-state', 'k'], -1]),
           'fill-extrusion-height': ['max', ['coalesce', ['get', 'render_height'], DEFAULT_BUILDING_M], MIN_BUILDING_M],
           'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      },
+      // The same city from our own footprints (OSM plus Microsoft's, heights tagged or modelled), read for the view from
+      // buildings/<city>.fgb; it replaces the basemap's buildings when the file is there. Class `k` is set as it loads.
+      {
+        id: LAYER.buildingsFile,
+        type: 'fill-extrusion',
+        source: SOURCE.buildings,
+        minzoom: BUILDINGS_MIN_ZOOM,
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-extrusion-color': buildingColor(tokens, ['get', 'k']),
+          'fill-extrusion-height': ['max', ['coalesce', ['get', 'h'], DEFAULT_BUILDING_M], MIN_BUILDING_M],
           'fill-extrusion-opacity': 0.95,
           'fill-extrusion-vertical-gradient': true,
         },
