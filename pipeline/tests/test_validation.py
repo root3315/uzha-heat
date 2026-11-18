@@ -88,3 +88,16 @@ def test_modis_raster_snaps_to_global_grid():
     offset = (raster.transform.c - tile_h23_left) / PIXEL_M
     assert offset == pytest.approx(round(offset), abs=1e-4)  # mm-level float noise
     assert raster.res == pytest.approx(926.625433, abs=1e-5)
+
+
+def test_period_of_matches_the_published_landsat_period():
+    from pipeline.validate import period_of
+    from pipeline.uzha.sources.landsat import PERIODS
+    assert period_of({"period": {"label": PERIODS[1].label}}) is PERIODS[1]
+    with pytest.raises(ValueError):
+        period_of({"period": {"label": "зима"}})
+
+
+def test_rounded_turns_nan_into_none():
+    from pipeline.validate import _rounded
+    assert _rounded({"n": 2, "r": float("nan"), "bias": 0.123}) == {"n": 2, "r": None, "bias": 0.12}
