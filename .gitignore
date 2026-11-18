@@ -7,3 +7,6 @@ dist/
 pipeline/cache/
 *.log
 .DS_Store
+
+# Local agent worktrees and settings
+.claude/
