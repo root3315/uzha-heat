@@ -1,24 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CityDetail, FeatureMeta, TreeModel } from '../data/contract';
 import { loadTreeModel } from '../data/load';
-import { formatDeg, formatDegSigned, formatFactorValue } from '../domain/format';
+import { featureLabel } from '../domain/dataTexts';
 import { cityRanges, cutText, leversFor, whatIf, type FactorValues, type LeverRange } from '../domain/whatIf';
-
-/** What each slider is called, how its value is said aloud (screen readers get the unit in words) and its noun for a cut. */
-const LEVER_TEXT: Record<string, { label: string; spoken: (value: string) => string; noun?: string }> = {
-  tree: { label: 'Деревья', spoken: (v) => `деревья на ${v} площади` },
-  ndvi: { label: 'Зелень, NDVI', spoken: (v) => `NDVI ${v}` },
-  albedo: { label: 'Светлые крыши и покрытия, альбедо', spoken: (v) => `альбедо ${v}` },
-  built: { label: 'Застройка', spoken: (v) => `застроено ${v} площади`, noun: 'застройки' },
-  roads: { label: 'Дороги', spoken: (v) => `${v} дорог`, noun: 'дорог' },
-};
+import { useFormats, useLocale } from './locale';
+import { WHAT_IF_TEXTS, type LeverWords } from './ui.texts';
 
 /** Changes smaller than this read as no change. */
 const NEGLIGIBLE_DEG = 0.05;
 
 export type ModelState = { status: 'loading' } | { status: 'ready'; model: TreeModel } | { status: 'failed' };
 
-/** The city's model for "что если", fetched once per city. */
+/** The city's model for "what if", fetched once per city. */
 export function useTreeModel(cityId: string): ModelState {
   const [state, setState] = useState<ModelState>({ status: 'loading' });
   useEffect(() => {
@@ -47,19 +40,23 @@ interface SliderProps {
 
 function LeverSlider({ range, feature, value, onChange }: SliderProps) {
   const { lever, from, to } = range;
-  const text = LEVER_TEXT[lever.key] ?? { label: feature.label, spoken: (v: string) => `${feature.label} ${v}` };
+  const locale = useLocale();
+  const t = WHAT_IF_TEXTS[locale];
+  const { formatFactorValue } = useFormats();
+  const label = featureLabel(feature, locale);
+  const text: LeverWords = (t.levers as Partial<Record<string, LeverWords>>)[lever.key] ?? { label, spoken: (v) => t.spokenOther(label, v) };
   const id = `whatif-${lever.key}`;
   const say = (v: number) => formatFactorValue(feature, v);
   const up = lever.direction === 'up';
-  // The input measures how far from "сейчас": 0 is the cell as it is, always on the step grid, so the slider can
+  // The input measures how far from "now": 0 is the cell as it is, always on the step grid, so the slider can
   // always come back to it; the grid divides the span exactly, so the far end is reachable too.
   const span = Math.abs(to - from);
   const steps = Math.max(1, Math.round(span / lever.step));
   const amount = Math.min(span, Math.abs(value - from));
   const at = span > 0 ? amount / span : 0;
-  const cut = range.bound === 'cut' ? cutText(lever) : undefined;
-  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : `${up ? 'верхние' : 'нижние'} 5 % города`;
-  const limit = `до ${say(to)} — ${reason}`;
+  const cut = range.bound === 'cut' ? cutText(lever, locale) : undefined;
+  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : t.cityTail(up);
+  const limit = t.limit(say(to), reason);
   return (
     <div className="whatif__lever">
       <p className="whatif__head">
@@ -79,7 +76,7 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
           max={span}
           step={span / steps}
           value={amount}
-          aria-valuetext={`${text.spoken(say(value))}, сейчас ${say(from)}`}
+          aria-valuetext={t.spokenNow(text.spoken(say(value)), say(from))}
           aria-describedby={`${id}-limit`}
           onChange={(event) => {
             const moved = Number(event.currentTarget.value);
@@ -89,7 +86,7 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
       </div>
       <p className="whatif__ends">
         {/* The value now is already in aria-valuetext; the limit is the slider's description. */}
-        <span aria-hidden="true">сейчас {say(from)}</span>
+        <span aria-hidden="true">{t.now(say(from))}</span>
         <span id={`${id}-limit`}>{limit}</span>
       </p>
     </div>
@@ -104,10 +101,12 @@ function WhatIfBody({ detail, cell }: { detail: CityDetail; cell: number }) {
   const model = state.status === 'ready' ? state.model : null;
   const levers = useMemo(() => (model ? leversFor(model, values, contributions, ranges) : []), [model, values, contributions, ranges]);
   const [changes, setChanges] = useState<FactorValues>({});
+  const t = WHAT_IF_TEXTS[useLocale()];
+  const { formatDeg, formatDegSigned } = useFormats();
 
-  if (state.status === 'loading') return <p className="whatif__status">Загружаю модель города…</p>;
-  if (state.status === 'failed' || !model) return <p className="whatif__status">Модель не загрузилась. Закройте и откройте блок ещё раз.</p>;
-  if (!levers.length) return <p className="whatif__status">Здесь нечего прибавить: деревьев, зелени и светлых покрытий уже столько, сколько бывает в городе.</p>;
+  if (state.status === 'loading') return <p className="whatif__status">{t.loading}</p>;
+  if (state.status === 'failed' || !model) return <p className="whatif__status">{t.failed}</p>;
+  if (!levers.length) return <p className="whatif__status">{t.nothingToAdd}</p>;
 
   const featureByKey = new Map(detail.features.map((f) => [f.key, f]));
   const { delta } = whatIf(model, values, changes, ranges);
@@ -132,41 +131,42 @@ function WhatIfBody({ detail, cell }: { detail: CityDetail; cell: number }) {
         );
       })}
       <div className="whatif__result">
-        {/* Before any move there is no change to state: a big "0,0°" would read as a temperature, so only the hint shows. */}
+        {/* Before any move there is no change to state: a big "0.0°" would read as a temperature, so only the hint shows. */}
         <output className={changed ? `whatif__delta num${tone === 'none' ? '' : ` num--${tone}`}` : 'visually-hidden'} aria-live="polite">
-          {changed ? formatDegSigned(shown) : 'пока без изменений'}
-          {changed && <span className="visually-hidden"> к температуре поверхности здесь</span>}
+          {changed ? formatDegSigned(shown) : t.noChange}
+          {changed && <span className="visually-hidden">{t.toSurface}</span>}
         </output>
         <p className="whatif__caption">
-          {changed ? `к поверхности здесь: около ${formatDeg(lst + shown)} вместо ${formatDeg(lst)}` : 'подвиньте ползунок, модель пересчитает температуру поверхности'}
+          {changed ? t.result(formatDeg(lst + shown), formatDeg(lst)) : t.hint}
         </p>
       </div>
       {changed && (
         <button type="button" className="whatif__reset" onClick={() => setChanges({})}>
-          Вернуть как есть
+          {t.reset}
         </button>
       )}
       <p className="whatif__caveat">
-        По модели: связь в данных, не эксперимент; поверхность, не воздух.
-        {levers.some((range) => range.lever.key === 'tree') && ' «Деревья» здесь только доля крон; трава и листва под ними идут в NDVI, поэтому зелень меняет больше.'}
+        {t.caveat}
+        {levers.some((range) => range.lever.key === 'tree') && t.treesNote}
       </p>
     </>
   );
 }
 
 /**
- * "Что если" for one picked cell: two or three sliders for what can be changed here, and how the city's own model
+ * "What if" for one picked cell: two or three sliders for what can be changed here, and how the city's own model
  * moves the surface temperature. The model file is fetched the first time the block is opened.
  */
 export function WhatIfBlock({ detail, cell }: { detail: CityDetail; cell: number }) {
   // Open from the start: it is the part of the panel a reader most wants to touch, and its model loads only for a place.
   const [open, setOpen] = useState(true);
+  const t = WHAT_IF_TEXTS[useLocale()];
   return (
     <details className="whatif" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className="whatif__summary">
-        <span className="whatif__title">Что если</span>
+        <span className="whatif__title">{t.title}</span>
         <span className="whatif__hint">
-          пересчитать по модели
+          {t.recalc}
           <svg className="whatif__chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
             <path d="M2 3.5 5 6.5 8 3.5" />
           </svg>

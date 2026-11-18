@@ -1,5 +1,9 @@
-import type { CityDetail, Facility, FacilityType, LonLat } from '../data/contract';
-import { formatNumber, plural } from './format';
+import type { CityDetail, Facility, LonLat } from '../data/contract';
+import type { Locale } from '../i18n/locale';
+import { plural, type EnForms, type RuForms } from '../i18n/plural';
+import { formats } from './format';
+import { PEOPLE_TEXTS } from './people.texts';
+import { capitalize } from './phrase';
 import { distanceM } from './placeName';
 import { hottestTenth } from './places';
 
@@ -80,35 +84,32 @@ export function hotFacilities(detail: CityDetail, cellAt: (point: LonLat) => num
   });
 }
 
-const FACILITY_WORDS: Record<FacilityType, string> = {
-  school: 'школа',
-  kindergarten: 'детский сад',
-  clinic: 'поликлиника',
-  hospital: 'больница',
-};
-
 /** "Школа № 110" as named in OSM, or the kind of place when it has no name there. */
-export function facilityTitle(facility: Facility): string {
-  const word = FACILITY_WORDS[facility.type];
-  return facility.name || word.charAt(0).toUpperCase() + word.slice(1);
+export function facilityTitle(facility: Facility, locale: Locale): string {
+  const word = PEOPLE_TEXTS[locale].facilities[facility.type];
+  return facility.name || capitalize(word);
 }
 
-/** A people count rounded to what a model estimate can say: 323 000 → 323 тыс., 1373 → 1,4 тыс., 417 → 420. */
-function roundPeople(n: number): { figure: string; count: number } {
-  if (n >= 10_000) return { figure: `${formatNumber(Math.round(n / 1000), 0)} тыс.`, count: 0 };
-  if (n >= 1000) return { figure: `${formatNumber(n / 1000, 1)} тыс.`, count: 0 };
+/** A people count rounded to what a model estimate can say: 323 000 → 323 thousand, 1373 → 1.4 thousand, 417 → 420. */
+function roundPeople(n: number, locale: Locale): { figure: string; count: number } {
+  const { formatNumber } = formats(locale);
+  const { thousands } = PEOPLE_TEXTS[locale];
+  if (n >= 10_000) return { figure: thousands(formatNumber(Math.round(n / 1000), 0)), count: 0 };
+  if (n >= 1000) return { figure: thousands(formatNumber(n / 1000, 1)), count: 0 };
   const count = n >= 100 ? Math.round(n / 10) * 10 : Math.round(n);
   return { figure: formatNumber(count, 0), count };
 }
 
-/** The number alone, for a big figure with its noun in a caption: "323 тыс.", "420". */
-export const peopleFigure = (n: number): string => roundPeople(n).figure;
+/** The number alone, for a big figure with its noun in a caption: "323 thousand", "420". */
+export const peopleFigure = (n: number, locale: Locale): string => roundPeople(n, locale).figure;
 
-/** The noun that goes with the rounded number, in the given forms (for 1, 2–4, 5+). */
-export const peopleNoun = (n: number, forms: readonly [string, string, string]): string => plural(roundPeople(n).count, forms);
+/** The noun that goes with the rounded number, in the given forms of each language. */
+export const peopleNoun = (n: number, forms: { en: EnForms; ru: RuForms }, locale: Locale): string =>
+  plural(locale, roundPeople(n, locale).count, forms);
 
-/** People as a reader takes them in: "323 тыс. человек", "1,4 тыс. человек", "420 человек". */
-export const formatPeople = (n: number): string => `${peopleFigure(n)} ${peopleNoun(n, ['человек', 'человека', 'человек'])}`;
+/** People as a reader takes them in: "323 thousand people", "1.4 thousand people", "420 people". */
+export const formatPeople = (n: number, locale: Locale): string =>
+  `${peopleFigure(n, locale)} ${PEOPLE_TEXTS[locale].people(roundPeople(n, locale).count)}`;
 
 /** Hot cells this much emptier than the city's average cell are mostly not where people live. */
 const SPARSE_RATIO = 0.5;
@@ -117,14 +118,13 @@ const SPARSE_RATIO = 0.5;
  * Why so few people live in the heat, when that is the case: "Самые горячие участки здесь почти без жилья: в среднем 20 человек
  * на участок против 220 по городу." Null when the hot cells are as lived-in as the rest.
  */
-export function sparseHeatNote(inHeat: PeopleInHeat): string | null {
+export function sparseHeatNote(inHeat: PeopleInHeat, locale: Locale): string | null {
   if (inHeat.cells === 0 || inHeat.insideCells === 0) return null;
   const hot = inHeat.people / inHeat.cells;
   const city = inHeat.total / inHeat.insideCells;
   if (hot >= city * SPARSE_RATIO) return null;
-  return `Самые горячие участки здесь почти без жилья: в среднем ${formatPeople(hot)} на участок против ${peopleFigure(city)} по городу.`;
+  return PEOPLE_TEXTS[locale].sparse(formatPeople(hot, locale), peopleFigure(city, locale));
 }
 
 /** The caveat printed next to every population figure. */
-export const populationCaveat = (year: number): string =>
-  `Число жителей: оценка WorldPop ${year}. Это модель по переписи и снимкам застройки, а не подсчёт людей.`;
+export const populationCaveat = (year: number, locale: Locale): string => PEOPLE_TEXTS[locale].caveat(year);

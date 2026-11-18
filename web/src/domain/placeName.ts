@@ -1,3 +1,5 @@
+import type { Locale } from '../i18n/locale';
+import { districtName } from './dataTexts';
 import type { LonLat } from './transect';
 
 /** A named point from the basemap: suburb, quarter, neighbourhood. */
@@ -118,20 +120,25 @@ export interface FoundName {
   precision: NamePrecision;
 }
 
+/** "Участок у улицы Бабура" in Russian; in English the street keeps its name as the map gives it: "Near Bobur ko'chasi". */
+const nearStreet = (street: string, locale: Locale): string => (locale === 'en' ? `Near ${street}` : `Участок у ${streetGenitive(street)}`);
+
 /**
  * Name for a picked point from what is already at hand: the nearest named place on the basemap,
- * else "Участок у <улица>", else the district from the data, else null. No geocoding service is involved.
+ * else "Near <street>", else the district from the data, else null. No geocoding service is involved.
+ * The basemap names come in the reader's language already; the district is the data's and is put into it here.
  */
 export function placeName(
   point: LonLat,
   places: readonly NamedPoint[],
   streets: readonly NamedLine[],
-  district: string | null = null,
+  district: string | null,
+  locale: Locale,
   { placeRadiusM = 1500, streetRadiusM = 400 }: PlaceNameOptions = {},
 ): FoundName | null {
   const place = nearest(places, (p) => distanceM(point, p.point), placeRadiusM);
   if (place) return { name: place.name, precision: PRECISION.place };
   const street = nearest(streets, (s) => distanceToLineM(point, s.line), streetRadiusM);
-  if (street) return { name: `Участок у ${streetGenitive(street.name)}`, precision: PRECISION.street };
-  return district ? { name: district, precision: PRECISION.district } : null;
+  if (street) return { name: nearStreet(street.name, locale), precision: PRECISION.street };
+  return district ? { name: districtName(district, locale), precision: PRECISION.district } : null;
 }

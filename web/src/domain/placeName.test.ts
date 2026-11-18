@@ -25,19 +25,25 @@ describe('placeName', () => {
   const streets = [{ name: 'улица Бабура', line: [[69.24, 41.3005], [69.26, 41.3005]] as [number, number][] }];
 
   it('prefers the nearest named place within reach', () => {
-    expect(placeName(HERE, places, streets, 'Чиланзарский район')).toEqual({ name: 'Чиланзар', precision: 3 });
+    expect(placeName(HERE, places, streets, 'Чиланзарский район', 'ru')).toEqual({ name: 'Чиланзар', precision: 3 });
   });
 
   it('falls back to the nearest street, in the genitive', () => {
-    expect(placeName(HERE, places, streets, null, { placeRadiusM: 100 })).toEqual({ name: 'Участок у улицы Бабура', precision: 2 });
+    expect(placeName(HERE, places, streets, null, 'ru', { placeRadiusM: 100 })).toEqual({ name: 'Участок у улицы Бабура', precision: 2 });
   });
 
   it('falls back to the district from the data when the basemap has nothing near', () => {
-    expect(placeName(HERE, [], [], 'Чиланзарский район')).toEqual({ name: 'Чиланзарский район', precision: 1 });
+    expect(placeName(HERE, [], [], 'Чиланзарский район', 'ru')).toEqual({ name: 'Чиланзарский район', precision: 1 });
+  });
+
+  it('keeps the street name as the map gives it in English, and puts the district into English', () => {
+    const latin = [{ name: "Bobur ko'chasi", line: streets[0]!.line }];
+    expect(placeName(HERE, places, latin, null, 'en', { placeRadiusM: 100 })).toEqual({ name: "Near Bobur ko'chasi", precision: 2 });
+    expect(placeName(HERE, [], [], 'Чиланзарский район', 'en')).toEqual({ name: 'Chilonzor district', precision: 1 });
   });
 
   it('returns null when nothing named is near', () => {
-    expect(placeName(HERE, [], [])).toBeNull();
+    expect(placeName(HERE, [], [], null, 'ru')).toBeNull();
   });
 });
 

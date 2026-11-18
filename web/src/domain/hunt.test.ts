@@ -82,12 +82,12 @@ describe('registerFind', () => {
 
 describe('cellReadout', () => {
   it('names the strongest cause, heating or cooling', () => {
-    expect(cellReadout(city(), 4)).toEqual({ t: 50, cause: 'мало зелени', heats: true });
-    expect(cellReadout(city(), 0)).toEqual({ t: 38, cause: 'зелень', heats: false });
+    expect(cellReadout(city(), 4, 'ru')).toEqual({ t: 50, cause: 'мало зелени', heats: true });
+    expect(cellReadout(city(), 0, 'ru')).toEqual({ t: 38, cause: 'зелень', heats: false });
   });
 
   it('returns null outside the data', () => {
-    expect(cellReadout(city(), 99)).toBeNull();
+    expect(cellReadout(city(), 99, 'ru')).toBeNull();
   });
 });
 
@@ -111,12 +111,12 @@ describe('findMessage', () => {
   const plain = (text: string) => text.replace(/[  ]/g, ' ');
 
   it('confirms a find and refuses a repeat', () => {
-    expect(plain(findMessage('new', 49.24, target, 43.8))).toBe('Засчитано: 49,2°, горячая десятая часть города.');
-    expect(findMessage('repeat', 49.24, target, 43.8)).toBe('Этот участок уже засчитан.');
+    expect(plain(findMessage('new', 49.24, target, 43.8, 'ru'))).toBe('Засчитано: 49,2°, горячая десятая часть города.');
+    expect(findMessage('repeat', 49.24, target, 43.8, 'ru')).toBe('Этот участок уже засчитан.');
   });
 
   it('says how far a miss was from hot', () => {
-    expect(plain(findMessage('cold', 45.1, target, 43.8))).toBe('45,1°: теплее среднего, но горячими считаются от 47,9°.');
-    expect(plain(findMessage('cold', 40, target, 43.8))).toBe('40,0°: прохладнее среднего по городу, 43,8°.');
+    expect(plain(findMessage('cold', 45.1, target, 43.8, 'ru'))).toBe('45,1°: теплее среднего, но горячими считаются от 47,9°.');
+    expect(plain(findMessage('cold', 40, target, 43.8, 'ru'))).toBe('40,0°: прохладнее среднего по городу, 43,8°.');
   });
 });

@@ -1,44 +1,19 @@
 import type { CityDetail, FeatureMeta } from '../data/contract';
-import { causeClause, causeWords, type CauseWords } from './causes';
-import { formatDeg, formatDegSigned, formatKm, formatNumber, formatPercent, formatPoints, plural } from './format';
+import type { Locale } from '../i18n/locale';
+import { ANSWER_TEXTS } from './answers.texts';
+import { causeWords, type CauseWords } from './causes';
+import { cityName, periodText } from './dataTexts';
+import { formats } from './format';
 import type { HeatIsland } from './heatIsland';
 import { dominantShares, hotTenthPattern, secondCause, type CauseShare, type HotTenthPattern, type Share } from './hotTenth';
+import { cool, hot, type Phrase } from './phrase';
 import { hottestTenth, type FactorMeans, type PlaceProfile } from './places';
 import { recommend, type Evidence } from './recommendations';
 import { insideSamples, type Profile } from './transect';
 
-/** A sentence with some spans marked as hot or cool numbers. */
-export type Tone = 'hot' | 'cool';
-export type Span = string | { text: string; tone: Tone };
-export type Phrase = Span[];
-
-const hot = (text: string): Span => ({ text, tone: 'hot' });
-const cool = (text: string): Span => ({ text, tone: 'cool' });
-
-export const plainText = (phrase: Phrase): string => phrase.map((span) => (typeof span === 'string' ? span : span.text)).join('');
-
-export const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
-
-/** Genitive of a city name, for "в черте Ташкента". Covers the usual endings. */
-export function genitive(name: string): string {
-  const last = name.slice(-1);
-  const stem = name.slice(0, -1);
-  if (last === 'а') return /[гкхжшщч]$/.test(stem) ? `${stem}и` : `${stem}ы`;
-  if (last === 'я') return `${stem}и`;
-  if (/[бвгджзклмнпрстфхцчшщ]/.test(last)) return `${name}а`;
-  return name;
-}
-
-/** Prepositional of a city name, for "в Бухаре", "в Ташкенте". Covers the usual endings. */
-export function locative(name: string): string {
-  if (/[ая]$/.test(name)) return `${name.slice(0, -1)}е`;
-  if (/[бвгджзклмнпрстфхцчшщ]$/.test(name)) return `${name}е`;
-  return name;
-}
-
-function wordsByKey(features: readonly FeatureMeta[]): (key: string) => CauseWords {
-  const byKey = new Map(features.map((f) => [f.key, causeWords(f)]));
-  return (key) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' });
+function wordsByKey(features: readonly FeatureMeta[], locale: Locale): (key: string) => CauseWords {
+  const byKey = new Map(features.map((f) => [f.key, causeWords(f, locale)]));
+  return (key) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' }, locale);
 }
 
 function strongest(contributions: Record<string, number>, sign: 1 | -1 | 0): [string, number] | null {
@@ -70,57 +45,52 @@ export function cityFacts(detail: CityDetail, inside: readonly boolean[], island
   };
 }
 
-/** "В черте Ташкента поверхность на 1,4° горячее, чем вокруг." Says plainly when the city is the cooler one. */
-export function islandAnswer(name: string, island: HeatIsland | null): Phrase {
+/** "Within Tashkent, the surface is 1.4° hotter than around the city." Says plainly when the city is the cooler one. */
+export function islandAnswer(name: string, island: HeatIsland | null, locale: Locale): Phrase {
   if (!island) return [];
-  const where = `В черте ${genitive(name)} поверхность`;
-  if (Math.abs(island.intensity) < 0.05) return [`${where} такая же, как вокруг.`];
-  if (island.intensity > 0) return [`${where} на `, hot(formatDeg(island.intensity)), ' горячее, чем вокруг.'];
-  return [`${where} на `, cool(formatDeg(-island.intensity)), ' прохладнее, чем вокруг: голая земля за чертой нагревается сильнее города.'];
+  const t = ANSWER_TEXTS[locale].island;
+  const { formatDeg } = formats(locale);
+  if (Math.abs(island.intensity) < 0.05) return t.same(name);
+  if (island.intensity > 0) return t.hotter(name, hot(formatDeg(island.intensity)));
+  return t.cooler(name, cool(formatDeg(-island.intensity)));
 }
 
 /** From this share of the hottest tenth outside the city line, the answer says so. */
 const MANY_OUTSIDE = 0.2;
 
-const gapPoints = (s: Share) => `${formatNumber(Math.abs(s.hot - s.city), 0)} п.п.`;
-
-function patternSentence({ kind, outsideShare, built, bare }: HotTenthPattern): string {
+function patternSentence({ kind, outsideShare, built, bare }: HotTenthPattern, locale: Locale): string {
+  const t = ANSWER_TEXTS[locale].pattern;
+  const { formatNumber, formatPercent, formatPoints } = formats(locale);
+  const share = (s: Share) => formatPercent(s.hot / 100);
+  const gap = (s: Share) => formatPoints(s.hot - s.city);
+  const gapPoints = (s: Share) => t.gap(formatNumber(Math.abs(s.hot - s.city), 0));
   if (kind === 'open' && built) {
-    const ground = bare && bare.hot > bare.city ? `, голой земли ${formatPercent(bare.hot / 100)} (${formatPoints(bare.hot - bare.city)})` : '';
-    const edge = outsideShare >= MANY_OUTSIDE ? ` ${capitalize(formatPercent(outsideShare))} из них за городской чертой.` : '';
-    return ` Это в основном открытые, мало застроенные места: застроено ${formatPercent(built.hot / 100)} (${formatPoints(built.hot - built.city)})${ground}.${edge}`;
+    const ground = bare && bare.hot > bare.city ? { share: share(bare), gap: gap(bare) } : null;
+    return t.open(share(built), gap(built), ground, outsideShare >= MANY_OUTSIDE ? formatPercent(outsideShare) : null);
   }
-  if (kind === 'dense-bare' && built && bare) {
-    return (
-      ` Там плотная застройка вперемешку с голой землёй: застроено ${formatPercent(built.hot / 100)} (${formatPoints(built.hot - built.city)}), ` +
-      `голой земли ${formatPercent(bare.hot / 100)} (${formatPoints(bare.hot - bare.city)}).`
-    );
-  }
-  if (kind === 'dense' && built) {
-    return ` Это плотная застройка: застроено ${formatPercent(built.hot / 100)}, на ${gapPoints(built)} больше среднего.`;
-  }
-  if (kind === 'bare' && bare) {
-    return ` Там много голой земли: ${formatPercent(bare.hot / 100)}, на ${gapPoints(bare)} больше среднего.`;
-  }
+  if (kind === 'dense-bare' && built && bare) return t.denseBare(share(built), gap(built), share(bare), gap(bare));
+  if (kind === 'dense' && built) return t.dense(share(built), gapPoints(built));
+  if (kind === 'bare' && bare) return t.bare(share(bare), gapPoints(bare));
   return '';
 }
 
 /** The hottest tenth: its threshold, what it is made of and what the model says heats it most often. */
-export function hotTenthAnswer(detail: CityDetail, facts: CityFacts): Phrase {
-  const phrase: Phrase = ['Каждый десятый участок 200 м горячее ', hot(formatDeg(detail.stats.lstP90)), '.'];
-  const pattern = patternSentence(facts.pattern);
+export function hotTenthAnswer(detail: CityDetail, facts: CityFacts, locale: Locale): Phrase {
+  const t = ANSWER_TEXTS[locale].hotTenth;
+  const { formatDeg, formatPercent } = formats(locale);
+  const phrase: Phrase = t.head(hot(formatDeg(detail.stats.lstP90)));
+  const pattern = patternSentence(facts.pattern, locale);
   if (pattern) phrase.push(pattern);
   if (!facts.top) return phrase;
-  const words = wordsByKey(detail.features);
-  let cause = ` Сильнее всего с жарой там по модели связано: ${words(facts.top.key).there}, так в ${formatPercent(facts.top.share)} из них`;
-  if (facts.second) cause += `; на втором месте ${words(facts.second.key).there} (${formatPercent(facts.second.share)})`;
-  return [...phrase, `${cause}.`];
+  const words = wordsByKey(detail.features, locale);
+  const second = facts.second ? { there: words(facts.second.key).there, share: formatPercent(facts.second.share) } : null;
+  return [...phrase, t.cause(words(facts.top.key).there, formatPercent(facts.top.share), second)];
 }
 
 /** The whole answer for a city: the heat island first, then its hottest tenth. */
-export function cityAnswer(detail: CityDetail, facts: CityFacts): Phrase {
-  const island = islandAnswer(detail.city.name, facts.island);
-  const rest = hotTenthAnswer(detail, facts);
+export function cityAnswer(detail: CityDetail, facts: CityFacts, locale: Locale): Phrase {
+  const island = islandAnswer(cityName(detail.city, locale), facts.island, locale);
+  const rest = hotTenthAnswer(detail, facts, locale);
   return island.length ? [...island, ' ', ...rest] : rest;
 }
 
@@ -129,26 +99,26 @@ const NEAR_MEAN = 0.5;
 /** A cause that explains this much of the excess explains "almost all" of it. */
 const MOST_OF_IT = 0.7;
 
-export function placeAnswer(place: PlaceProfile, cityMean: number, features: readonly FeatureMeta[]): Phrase {
-  const words = wordsByKey(features);
+export function placeAnswer(place: PlaceProfile, cityMean: number, features: readonly FeatureMeta[], locale: Locale): Phrase {
+  const t = ANSWER_TEXTS[locale].place;
+  const { formatDeg } = formats(locale);
+  const words = wordsByKey(features, locale);
   const anomaly = place.lst - cityMean;
   if (Math.abs(anomaly) < NEAR_MEAN) {
     const top = strongest(place.contributions, 0);
-    const lead = 'Почти как в среднем по городу.';
-    if (!top) return [lead];
-    return [`${lead} Сильнее всего ${causeClause(words(top[0]), top[1], { one: 'влияет', many: 'влияют' })}.`];
+    if (!top) return [t.nearMean];
+    return [`${t.nearMean}${t.nearMeanCause({ words: words(top[0]), value: top[1] })}`];
   }
   if (anomaly > 0) {
     const top = strongest(place.contributions, 1);
-    const head: Phrase = ['На ', hot(formatDeg(anomaly)), ' жарче, чем в среднем по городу.'];
+    const head = t.hotter(hot(formatDeg(anomaly)));
     if (!top) return head;
-    const lead = top[1] / anomaly >= MOST_OF_IT ? 'Почти всё это' : 'Больше всего';
-    return [...head, ` ${lead} ${causeClause(words(top[0]), top[1], { one: 'даёт', many: 'дают' })}.`];
+    return [...head, t.hotterCause({ words: words(top[0]), value: top[1] }, top[1] / anomaly >= MOST_OF_IT)];
   }
   const top = strongest(place.contributions, -1);
-  const head: Phrase = ['На ', cool(formatDeg(-anomaly)), ' прохладнее, чем в среднем по городу.'];
+  const head = t.cooler(cool(formatDeg(-anomaly)));
   if (!top) return head;
-  return [...head, ` Больше всего ${causeClause(words(top[0]), top[1], { one: 'охлаждает', many: 'охлаждают' })}.`];
+  return [...head, t.coolerCause({ words: words(top[0]), value: top[1] })];
 }
 
 function averageContributions(profile: Profile, samples = insideSamples(profile)): Record<string, number> {
@@ -160,27 +130,26 @@ function averageContributions(profile: Profile, samples = insideSamples(profile)
 }
 
 /** One or two sentences about the section: how much of it is hot, and what heats it. */
-export function sectionAnswer(profile: Profile, cityMean: number, features: readonly FeatureMeta[]): Phrase {
-  const words = wordsByKey(features);
+export function sectionAnswer(profile: Profile, cityMean: number, features: readonly FeatureMeta[], locale: Locale): Phrase {
+  const t = ANSWER_TEXTS[locale].section;
+  const { formatDegSigned, formatKm } = formats(locale);
+  const words = wordsByKey(features, locale);
   const inside = insideSamples(profile);
-  if (inside.length < 3) return ['Разрез прошёл мимо данных.'];
+  if (inside.length < 3) return [t.missed];
   const hotPart = inside.filter((sample) => sample.t > cityMean);
   if (hotPart.length === 0) {
     const top = strongest(averageContributions(profile, inside), -1);
-    const head = 'Весь разрез прохладнее, чем в среднем по городу.';
-    return top ? [`${head} Больше всего ${causeClause(words(top[0]), top[1], { one: 'охлаждает', many: 'охлаждают' })}.`] : [head];
+    return top ? [`${t.allCool}${t.allCoolCause({ words: words(top[0]), value: top[1] })}`] : [t.allCool];
   }
   const share = (count: number) => (count / profile.samples.length) * profile.length;
-  const peak = Math.max(...hotPart.map((sample) => sample.t));
-  const hotM = share(hotPart.length);
-  const insideM = share(inside.length);
-  const head: Phrase =
+  const peak = hot(formatDegSigned(Math.max(...hotPart.map((sample) => sample.t)) - cityMean));
+  const head =
     hotPart.length === inside.length
-      ? [`Весь разрез, ${formatKm(profile.length)}, жарче среднего, до `, hot(formatDegSigned(peak - cityMean)), '.']
-      : [`Жарче среднего ${formatKm(hotM)} из ${formatKm(insideM)}, до `, hot(formatDegSigned(peak - cityMean)), '.'];
+      ? t.allHot(formatKm(profile.length), peak)
+      : t.partHot(formatKm(share(hotPart.length)), formatKm(share(inside.length)), peak);
   const top = strongest(averageContributions(profile, hotPart), 1);
   if (!top) return head;
-  return [...head, ` Там больше всего ${causeClause(words(top[0]), top[1], { one: 'греет', many: 'греют' })}.`];
+  return [...head, t.hotCause({ words: words(top[0]), value: top[1] })];
 }
 
 export interface RestOfCauses {
@@ -189,17 +158,17 @@ export interface RestOfCauses {
   summary: string;
 }
 
-/** Contributions this small print as "0,0°": they say nothing and are left out of lists. */
+/** Contributions this small print as "0.0°": they say nothing and are left out of lists. */
 export const NEGLIGIBLE_DEG = 0.05;
 
 export const isNegligible = (value: number): boolean => Math.abs(value) < NEGLIGIBLE_DEG;
 
-/** "ещё 7 причин · +4,3°": everything except the dominant cause, folded into one line; causes that round to 0,0° are not counted. */
-export function restOfCauses(contributions: Record<string, number>, dominantKey: string): RestOfCauses {
+/** "7 more causes · +4.3°": everything except the dominant cause, folded into one line; causes that round to 0.0° are not counted. */
+export function restOfCauses(contributions: Record<string, number>, dominantKey: string, locale: Locale): RestOfCauses {
   const others = Object.entries(contributions).filter(([key]) => key !== dominantKey);
   const sum = others.reduce((total, [, value]) => total + value, 0);
   const count = others.filter(([, value]) => !isNegligible(value)).length;
-  return { count, sum, summary: `ещё ${count} ${plural(count, ['причина', 'причины', 'причин'])} · ${formatDegSigned(sum)}` };
+  return { count, sum, summary: ANSWER_TEXTS[locale].rest(count, formats(locale).formatDegSigned(sum)) };
 }
 
 /** The cause to show as the one bar: what heats a hot place most, what cools a cool place most. */
@@ -216,33 +185,31 @@ export type Advice =
  * What to do here, and why, in this place's own numbers. When nothing applies, the text
  * says why, from the contributions themselves; it never claims a factor cools unless it does.
  */
-export function advise(detail: CityDetail, place: PlaceProfile, cityMeans: FactorMeans): Advice {
-  const words = wordsByKey(detail.features);
-  const [first] = recommend({ features: detail.features, values: place.values, contributions: place.contributions, cityMeans });
-  const where = place.kind === 'hotspot' ? 'В горячей десятой части' : 'Здесь';
+export function advise(detail: CityDetail, place: PlaceProfile, cityMeans: FactorMeans, locale: Locale): Advice {
+  const t = ANSWER_TEXTS[locale].advice;
+  const { formatDegSigned } = formats(locale);
+  const words = wordsByKey(detail.features, locale);
+  const [first] = recommend({ features: detail.features, values: place.values, contributions: place.contributions, cityMeans }, locale);
+  const where = place.kind === 'hotspot' ? t.whereHotspot : t.whereHere;
 
   if (first) {
     const key = first.reasons[0]?.key ?? '';
-    const reason: Phrase = [`${where} ${words(key).measure(place.values[key] ?? Number.NaN)}, по модели это даёт `, hot(formatDegSigned(place.contributions[key] ?? 0)), '.'];
+    const reason = t.reason(where, words(key).measure(place.values[key] ?? Number.NaN), hot(formatDegSigned(place.contributions[key] ?? 0)));
     return { kind: 'act', title: first.title, actions: first.actions, reason, heating: first.heating, evidence: first.evidence };
   }
 
   if (place.lst < detail.stats.lstMean) {
     const top = strongest(place.contributions, -1);
-    const head = place.kind === 'hotspot' ? 'Менять нечего.' : 'Здесь прохладнее среднего, менять нечего.';
+    const head = place.kind === 'hotspot' ? t.nothingHotspot : t.nothingCool;
     if (!top || !words(top[0]).better) return { kind: 'none', text: [head] };
-    return { kind: 'none', text: [`${head} Стоит сохранить то, что охлаждает: ${words(top[0]).cools}, `, cool(formatDegSigned(top[1])), '.'] };
+    return { kind: 'none', text: t.keep(head, words(top[0]).cools, cool(formatDegSigned(top[1]))) };
   }
 
   const top = strongest(place.contributions, 1);
-  if (!top) return { kind: 'none', text: ['Ни один фактор не греет это место заметно, явной меры нет.'] };
+  if (!top) return { kind: 'none', text: [t.noHeat] };
   const w = words(top[0]);
-  if (!w.better) {
-    const verb = w.plural ? 'добавляют' : 'добавляет';
-    const tail = w.explain ? `. ${w.explain}` : ', а это благоустройством не изменить.';
-    return { kind: 'none', text: [`${capitalize(w.heats)} ${verb} здесь `, hot(formatDegSigned(top[1])), tail] };
-  }
-  return { kind: 'none', text: [`Явной меры нет: ${w.heats} здесь не хуже, чем в среднем по городу.`] };
+  if (!w.better) return { kind: 'none', text: t.notLever(w, hot(formatDegSigned(top[1]))) };
+  return { kind: 'none', text: [t.noClear(w.heats)] };
 }
 
 const SOURCE_BY_KEY: Record<string, string> = {
@@ -260,15 +227,11 @@ const SOURCE_BY_KEY: Record<string, string> = {
 };
 
 /** The quiet last line: where the numbers come from and how far to trust them. */
-export function sourcesLine(detail: CityDetail): string {
+export function sourcesLine(detail: CityDetail, locale: Locale): string {
   const sources = ['NASA/USGS Landsat 8/9', ...new Set(detail.features.map((f) => SOURCE_BY_KEY[f.key]).filter((s): s is string => Boolean(s)))];
   if (detail.features.some((f) => f.key === 'water_dist') && !sources.includes('OpenStreetMap')) sources.push('OpenStreetMap');
   if (detail.population) sources.push(`WorldPop ${detail.population.year}`);
+  const { formatDeg, formatNumber } = formats(locale);
   const { model } = detail;
-  return (
-    `${sources.join(', ')}, ${detail.period.label}. ` +
-    `R² ${formatNumber(model.r2Cv, 2)} на пространственной проверке, ошибка ~${formatDeg(model.maeCv)}. ` +
-    'Вклад факторов показывает связь, а не эксперимент.'
-  );
+  return ANSWER_TEXTS[locale].sources(sources.join(', '), periodText(detail.period.label, locale), formatNumber(model.r2Cv, 2), formatDeg(model.maeCv));
 }
-

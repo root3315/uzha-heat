@@ -1,8 +1,8 @@
-import type { Weather } from '../data/contract';
-import { locative } from './answers';
-import { formatDeg, formatNumber, plural } from './format';
-
-const NBSP = ' ';
+import type { CitySummary, Weather } from '../data/contract';
+import type { Locale } from '../i18n/locale';
+import { cityName, periodText } from './dataTexts';
+import { formats } from './format';
+import { WEATHER_TEXTS } from './weather.texts';
 
 export interface WeatherFigure {
   key: 'wind' | 'humidity' | 'solar' | 'cloud' | 'airMean' | 'airMax';
@@ -10,35 +10,42 @@ export interface WeatherFigure {
   value: string;
 }
 
-export const formatWind = (ms: number): string => `${formatNumber(ms, 1)}${NBSP}м/с`;
-const formatShare = (pct: number): string => `${formatNumber(pct, 0)}${NBSP}%`;
-const formatSolar = (kwh: number): string => `${formatNumber(kwh, 1)}${NBSP}кВт·ч`;
+export const formatWind = (ms: number, locale: Locale): string => `${formats(locale).formatNumber(ms, 1)}${WEATHER_TEXTS[locale].wind}`;
+const formatShare = (pct: number, locale: Locale): string => `${formats(locale).formatNumber(pct, 0)}${WEATHER_TEXTS[locale].percent}`;
+const formatSolar = (kwh: number, locale: Locale): string => `${formats(locale).formatNumber(kwh, 1)}${WEATHER_TEXTS[locale].solar}`;
 
 /** The summer in six numbers, in the order a reader compares cities: wind first, it is what carries heat away. */
-export function summerFigures({ summer }: Weather): WeatherFigure[] {
+export function summerFigures({ summer }: Weather, locale: Locale): WeatherFigure[] {
+  const label = WEATHER_TEXTS[locale].labels;
+  const { formatDeg } = formats(locale);
   return [
-    { key: 'wind', label: 'ветер', value: formatWind(summer.windMs) },
-    { key: 'airMax', label: 'воздух, дневной максимум', value: formatDeg(summer.airMaxC) },
-    { key: 'airMean', label: 'воздух, среднее', value: formatDeg(summer.airMeanC) },
-    { key: 'humidity', label: 'влажность', value: formatShare(summer.humidityPct) },
-    { key: 'solar', label: 'солнце за день на м²', value: formatSolar(summer.solarKwhM2) },
-    { key: 'cloud', label: 'облачность', value: formatShare(summer.cloudPct) },
+    { key: 'wind', label: label.wind, value: formatWind(summer.windMs, locale) },
+    { key: 'airMax', label: label.airMax, value: formatDeg(summer.airMaxC) },
+    { key: 'airMean', label: label.airMean, value: formatDeg(summer.airMeanC) },
+    { key: 'humidity', label: label.humidity, value: formatShare(summer.humidityPct, locale) },
+    { key: 'solar', label: label.solar, value: formatSolar(summer.solarKwhM2, locale) },
+    { key: 'cloud', label: label.cloud, value: formatShare(summer.cloudPct, locale) },
   ];
 }
 
 /** What the air was like when Landsat took the pictures, or null without overpass data. */
-export function overpassLine({ overpass }: Weather): string | null {
+export function overpassLine({ overpass }: Weather, locale: Locale): string | null {
   if (!overpass) return null;
-  const days = `${formatNumber(overpass.days, 0)} ${plural(overpass.days, ['день', 'дня', 'дней'])}`;
-  return (
-    `В ${days} съёмки Landsat, около ${overpass.localHour}:00: ветер ${formatWind(overpass.windMs)}, воздух ${formatDeg(overpass.airC)}, ` +
-    `влажность ${formatShare(overpass.humidityPct)}, облачность ${formatShare(overpass.cloudPct)}.`
+  const { formatDeg, formatNumber } = formats(locale);
+  return WEATHER_TEXTS[locale].overpass(
+    overpass.days,
+    formatNumber(overpass.days, 0),
+    overpass.localHour,
+    formatWind(overpass.windMs, locale),
+    formatDeg(overpass.airC),
+    formatShare(overpass.humidityPct, locale),
+    formatShare(overpass.cloudPct, locale),
   );
 }
 
 /** Where the numbers come from and how coarse they are. */
-export const weatherSource = (weather: Weather): string =>
-  `${weather.source}, ${weather.period}: одна точка сетки около 25${NBSP}км у центра города.`;
+export const weatherSource = (weather: Weather, locale: Locale): string =>
+  WEATHER_TEXTS[locale].source(weather.source, periodText(weather.period, locale));
 
 export interface CityWeather {
   name: string;
@@ -57,24 +64,22 @@ function extremes(cities: readonly CityWeather[], value: (w: Weather) => number)
  * What the summers say about the cities' heat, from the numbers alone: where the wind is weakest and why that matters,
  * and where the afternoon air is hottest. Null when fewer than two cities have weather.
  */
-export function weatherComparison(cities: readonly CityWeather[]): string | null {
+export function weatherComparison(cities: readonly CityWeather[], locale: Locale): string | null {
+  const t = WEATHER_TEXTS[locale];
   const wind = extremes(cities, (w) => w.summer.windMs);
   const air = extremes(cities, (w) => w.summer.airMaxC);
   const sentences: string[] = [];
   if (wind) {
     const [calm, windy] = wind;
-    sentences.push(
-      `Слабее всего ветер в ${locative(calm.name)}: ${formatWind(calm.weather.summer.windMs)} против ${formatWind(windy.weather.summer.windMs)} ` +
-        `в ${locative(windy.name)}. Чем слабее ветер, тем меньше тепла он уносит с нагретых крыш и асфальта.`,
-    );
+    sentences.push(t.calmest(calm.name, formatWind(calm.weather.summer.windMs, locale), windy.name, formatWind(windy.weather.summer.windMs, locale)));
   }
   if (air) {
     const [, hottest] = air;
-    sentences.push(`Жарче всего воздух в ${locative(hottest.name)}: днём в среднем до ${formatDeg(hottest.weather.summer.airMaxC)}.`);
+    sentences.push(t.hottestAir(hottest.name, formats(locale).formatDeg(hottest.weather.summer.airMaxC)));
   }
   return sentences.length ? sentences.join(' ') : null;
 }
 
-/** Cities that carry weather, with their names, in the given order. */
-export const withWeather = <T extends { name: string; weather?: Weather }>(cities: readonly T[]): CityWeather[] =>
-  cities.flatMap((c) => (c.weather ? [{ name: c.name, weather: c.weather }] : []));
+/** Cities that carry weather, with their names in the reader's language, in the given order. */
+export const withWeather = (cities: readonly Pick<CitySummary, 'name' | 'nameEn' | 'weather'>[], locale: Locale): CityWeather[] =>
+  cities.flatMap((c) => (c.weather ? [{ name: cityName(c, locale), weather: c.weather }] : []));

@@ -1,12 +1,13 @@
 import { sectionAnswer } from '../domain/answers';
 import { causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
-import { formatDeg, formatNumber } from '../domain/format';
 import type { Profile, Sample } from '../domain/transect';
 import type { MapMode } from '../map/CityMap';
 import { useWidth } from './hooks';
 import { formatPeople, hotFacilities, peopleInHeat, populationCaveat, sparseHeatNote } from '../domain/people';
 import { FacilityIcon } from './icons';
+import { useFormats, useLocale } from './locale';
+import { SECTION_TEXTS } from './ui.texts';
 import { HatchSwatch } from './patterns';
 import { Phrase } from './Phrase';
 import { ProfileChart } from './ProfileChart';
@@ -35,44 +36,49 @@ const CHART_H = 196;
 
 /** Every hatch on the map gets its swatch and name: an unexplained hatch is worse than a second row. */
 export function CauseKey({ model }: { model: CityModel }) {
+  const locale = useLocale();
   const byKey = new Map(model.detail.features.map((f) => [f.key, f]));
   return (
-    <ul className="cause-key" aria-label="Что греет сильнее всего, по штриховке">
+    <ul className="cause-key" aria-label={SECTION_TEXTS[locale].causeKey}>
       {model.causeAreas.features.map(({ properties: { key } }) => (
         <li key={key}>
           <HatchSwatch hatch={key} direction="heats" />
-          {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }).heatsShort}
+          {causeWords(byKey.get(key) ?? { key, label: key, unit: '' }, locale).heatsShort}
         </li>
       ))}
     </ul>
   );
 }
 
-/** What the "Люди" layer shows, how many live in the heat, and how sure that number is. */
+/** What the "People" layer shows, how many live in the heat, and how sure that number is. */
 export function PeopleKey({ model }: { model: CityModel }) {
   const { detail } = model;
+  const locale = useLocale();
+  const t = SECTION_TEXTS[locale];
+  const { formatDeg, formatNumber } = useFormats();
   const inHeat = peopleInHeat(detail, model.inside);
   const facilities = hotFacilities(detail, model.source.cellAt).filter((f) => model.inside[model.source.cellAt([f.lon, f.lat])]);
   if (!inHeat) return null;
   return (
     <div className="people-key">
-      <ul className="cause-key" aria-label="Что на карте в слое «Люди»">
+      <ul className="cause-key" aria-label={t.peopleKey}>
         <li>
           <svg className="swatch" width="18" height="12" aria-hidden="true">
             <circle cx="5" cy="6" r="2" className="people-key__dot" />
             <circle cx="13" cy="6" r="4" className="people-key__dot" />
           </svg>
-          жители участка
+          {t.residents}
         </li>
         <li>
           <FacilityIcon type="school" size={16} />
           <FacilityIcon type="kindergarten" size={16} />
           <FacilityIcon type="clinic" size={16} />
-          школы, сады и поликлиники на самых горячих участках в черте города: {formatNumber(facilities.length, 0)}
+          {t.facilities(formatNumber(facilities.length, 0))}
         </li>
       </ul>
       <p className="people-key__note">
-        На самых горячих участках, горячее {formatDeg(detail.stats.lstP90)}, в черте города живут {formatPeople(inHeat.people)}. {sparseHeatNote(inHeat) ?? ''} {detail.population ? populationCaveat(detail.population.year) : ''}
+        {t.peopleNote(formatDeg(detail.stats.lstP90), formatPeople(inHeat.people, locale))} {sparseHeatNote(inHeat, locale) ?? ''}{' '}
+        {detail.population ? populationCaveat(detail.population.year, locale) : ''}
       </p>
     </div>
   );
@@ -82,31 +88,33 @@ export function PeopleKey({ model }: { model: CityModel }) {
 export function Section({ model, profile, isDefault, drawing, mode, onDraw, onReset, onModeChange, people, onPeopleChange, onProbe, onPick, quiet = false, keys = true }: SectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>(900);
   const { detail } = model;
+  const locale = useLocale();
+  const t = SECTION_TEXTS[locale];
   return (
-    <section className="section" aria-label="Разрез">
+    <section className="section" aria-label={t.section}>
       <div className="section__head">
         <p className="section__answer">
-          <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features)} />
+          <Phrase spans={sectionAnswer(profile, detail.stats.lstMean, detail.features, locale)} />
         </p>
         <div className="section__tools" hidden={quiet}>
           <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={onDraw}>
-            {drawing ? 'Ведите по карте' : 'Новый разрез'}
+            {drawing ? t.drawing : t.newSection}
           </button>
           <button
             type="button"
             className="pill pill--small"
             onClick={onReset}
             disabled={isDefault}
-            title={isDefault ? 'Разрез уже идёт через самое жаркое место города' : 'Вернуть разрез через самое жаркое место'}
+            title={isDefault ? t.alreadyHottestTitle : t.hottestTitle}
           >
-            {isDefault ? 'Уже через самое жаркое' : 'Через самое жаркое'}
+            {isDefault ? t.alreadyHottest : t.hottest}
           </button>
           <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={() => onModeChange(mode === 'causes' ? 'temperature' : 'causes')}>
-            Причины на карте
+            {t.causesOnMap}
           </button>
           {people !== undefined && onPeopleChange && (
             <button type="button" className="pill pill--small" aria-pressed={people} onClick={() => onPeopleChange(!people)}>
-              Люди
+              {t.people}
             </button>
           )}
         </div>

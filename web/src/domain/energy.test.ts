@@ -86,17 +86,17 @@ describe('where the sunlight goes', () => {
 
   it('says it plainly, by the evaporative fraction', () => {
     expect(evaporativeFraction(balance(400, 100, 30))).toBeCloseTo(0.1);
-    expect(fluxVerdict(balance(400, 100, 0))).toContain('испаряться нечему');
-    expect(fluxVerdict(balance(400, 100, 90))).toContain('Испаряется мало');
-    expect(fluxVerdict(balance(400, 100, 150))).toContain('поровну');
-    expect(fluxVerdict(balance(500, 60, 380))).toContain('на испарение');
+    expect(fluxVerdict(balance(400, 100, 0), 'ru')).toContain('испаряться нечему');
+    expect(fluxVerdict(balance(400, 100, 90), 'ru')).toContain('Испаряется мало');
+    expect(fluxVerdict(balance(400, 100, 150), 'ru')).toContain('поровну');
+    expect(fluxVerdict(balance(500, 60, 380), 'ru')).toContain('на испарение');
   });
 
   it('compares the air heating with the greenest cells', () => {
-    expect(plain(greenComparison(balance(400, 100, 0), balance(500, 60, 380)))).toBe(
+    expect(plain(greenComparison(balance(400, 100, 0), balance(500, 60, 380), 'ru'))).toBe(
       'Воздух здесь греется в 5,0 раза сильнее, чем на самых зелёных участках города: 300 Вт/м² против 60 Вт/м².',
     );
-    expect(greenComparison(balance(500, 60, 370), balance(500, 60, 380))).toContain('Почти как на самых зелёных');
+    expect(greenComparison(balance(500, 60, 370), balance(500, 60, 380), 'ru')).toContain('Почти как на самых зелёных');
   });
 });
 
@@ -109,24 +109,24 @@ describe('heat storage', () => {
   });
 
   it('explains the evening with numbers from the reference table', () => {
-    expect(plain(storageLine('built', SURFACES))).toContain('1 205 и 1 785 против 620');
-    expect(storageLine('bare', SURFACES)).toContain('остывает быстрее');
-    expect(plain(storageLine('green', SURFACES))).toContain('2 550');
-    expect(storageLine('built', [])).toBeNull();
+    expect(plain(storageLine('built', SURFACES, 'ru'))).toContain('1 205 и 1 785 против 620');
+    expect(storageLine('bare', SURFACES, 'ru')).toContain('остывает быстрее');
+    expect(plain(storageLine('green', SURFACES, 'ru'))).toContain('2 550');
+    expect(storageLine('built', [], 'ru')).toBeNull();
   });
 });
 
 describe('the block and the city summary', () => {
   it('puts the verdict, the comparison, the storage line and the caveat together', () => {
     const detail = city();
-    const view = energyView(detail, cellFluxes(detail, 0), { built: 90, bare: 10 });
+    const view = energyView(detail, cellFluxes(detail, 0), { built: 90, bare: 10 }, 'ru');
     expect(view?.verdict).toContain('испаряться нечему');
     expect(view?.comparison).toContain('сильнее');
     expect(view?.storage).toContain('Асфальт и бетон');
-    expect(view?.caveat).toBe(energyCaveat(METHOD));
+    expect(view?.caveat).toBe(energyCaveat(METHOD, 'ru'));
     expect(view?.caveat).toContain('около 11:00');
     expect(view?.caveat).not.toMatch(/[—–]/);
-    expect(energyView(city(false), null, {})).toBeNull();
+    expect(energyView(city(false), null, {}, 'ru')).toBeNull();
   });
 
   it('sets the hottest tenth, the city and the greenest tenth side by side', () => {
@@ -139,7 +139,7 @@ describe('the block and the city summary', () => {
 
   it('says the city summary in one sentence', () => {
     const summary = cityEnergy(city());
-    expect(summary && plain(cityEnergyLine('Ташкент', summary))).toBe(
+    expect(summary && plain(cityEnergyLine('Ташкент', summary, 'ru'))).toBe(
       'Самые горячие участки Ташкента отдают воздуху 270 Вт/м², самые зелёные 80 Вт/м²: на испарение у первых уходит 0 % энергии, у вторых 73 %.',
     );
   });

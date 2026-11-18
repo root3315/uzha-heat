@@ -194,7 +194,7 @@ export interface Tree {
   defaultLeft: number[];
 }
 
-/** `model-<id>.json`: the city's XGBoost model for "что если", evaluated in the browser. */
+/** `model-<id>.json`: the city's XGBoost model for "what if", evaluated in the browser. */
 export interface TreeModel {
   features: string[];
   baseScore: number;

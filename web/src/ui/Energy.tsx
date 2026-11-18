@@ -1,6 +1,8 @@
 import type { Fluxes } from '../data/contract';
-import { SINKS, formatWatts, sinkShares, type CityEnergy, type EnergyView, type Sink } from '../domain/energy';
-import { capitalize } from '../domain/answers';
+import { SINKS, formatWatts, sinkLabel, sinkShares, type CityEnergy, type EnergyView, type Sink } from '../domain/energy';
+import { capitalize } from '../domain/phrase';
+import { useLocale } from './locale';
+import { ENERGY_UI_TEXTS } from './ui.texts';
 import { SinkIcon } from './icons';
 import { HatchSwatch, usePatternFill } from './patterns';
 
@@ -13,14 +15,15 @@ function useSinkFill(): (sink: Sink) => string {
 /** Net radiation as one bar, split into where it goes. */
 export function EnergyBar({ fluxes, label }: { fluxes: Fluxes; label: string }) {
   const fill = useSinkFill();
+  const locale = useLocale();
   const shares = sinkShares(fluxes);
   let x = 0;
-  const parts = SINKS.map(({ key, label: name }) => {
-    const part = { key, name, x, width: shares[key] };
+  const parts = SINKS.map((key) => {
+    const part = { key, x, width: shares[key] };
     x += shares[key];
     return part;
   });
-  const said = SINKS.map(({ key, label: name }) => `${name} ${formatWatts(fluxes[key])}`).join(', ');
+  const said = SINKS.map((key) => `${sinkLabel(key, locale)} ${formatWatts(fluxes[key], locale)}`).join(', ');
   return (
     <svg className="energy__bar" width="100%" height="18" role="img" aria-label={`${label}: ${said}`}>
       {parts.map((p) => (
@@ -36,13 +39,14 @@ function SinkSwatch({ sink }: { sink: Sink }) {
 
 /** What each segment of the bar is, once per block. */
 export function EnergyKey() {
+  const locale = useLocale();
   return (
     <ul className="energy__key">
-      {SINKS.map(({ key, label }) => (
+      {SINKS.map((key) => (
         <li key={key}>
           <SinkSwatch sink={key} />
           <SinkIcon sink={key} size={16} />
-          {label}
+          {sinkLabel(key, locale)}
         </li>
       ))}
     </ul>
@@ -50,32 +54,38 @@ export function EnergyKey() {
 }
 
 function SinkFigures({ fluxes }: { fluxes: Fluxes }) {
+  const locale = useLocale();
   return (
     <dl className="energy__figures">
-      {SINKS.map(({ key, label }) => (
+      {SINKS.map((key) => (
         <div key={key}>
           <dt>
             <SinkSwatch sink={key} />
             <SinkIcon sink={key} size={16} />
-            {capitalize(label)}
+            {capitalize(sinkLabel(key, locale))}
           </dt>
-          <dd className="num">{formatWatts(fluxes[key])}</dd>
+          <dd className="num">{formatWatts(fluxes[key], locale)}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-/** "Физика участка": where the place's sunlight goes at about 11 am, and why it stays warm into the evening. */
+/** "Physics of the place": where the place's sunlight goes at about 11 am, and why it stays warm into the evening. */
 export function EnergyBlock({ view, title }: { view: EnergyView; title: string }) {
   const { fluxes } = view;
+  const locale = useLocale();
+  const { intake } = ENERGY_UI_TEXTS[locale];
   return (
     <section className="energy" aria-label={title}>
       <h2 className="energy__title">{title}</h2>
       <p className="energy__lead">{view.verdict}</p>
       <p className="energy__intake">
-        Поглощено солнца <span className="num">{formatWatts(fluxes.sAbs)}</span>, после теплового излучения остаётся{' '}
-        <span className="num">{formatWatts(fluxes.rn)}</span>. Куда оно уходит:
+        {intake.before}
+        <span className="num">{formatWatts(fluxes.sAbs, locale)}</span>
+        {intake.middle}
+        <span className="num">{formatWatts(fluxes.rn, locale)}</span>
+        {intake.after}
       </p>
       <EnergyBar fluxes={fluxes} label={title} />
       <SinkFigures fluxes={fluxes} />
@@ -86,26 +96,23 @@ export function EnergyBlock({ view, title }: { view: EnergyView; title: string }
   );
 }
 
-const SUMMARY_ROWS = [
-  ['hot', 'Горячая десятая часть'],
-  ['mean', 'Весь город'],
-  ['green', 'Зелёная десятая часть'],
-] as const;
+const SUMMARY_ROWS = ['hot', 'mean', 'green'] as const;
 
 /** The city at a glance: the hottest tenth, the mean and the greenest tenth on one scale of shares. */
 export function EnergySummary({ summary }: { summary: CityEnergy }) {
+  const locale = useLocale();
+  const t = ENERGY_UI_TEXTS[locale];
   return (
     <div className="energy-summary">
       <ul className="energy-summary__rows">
-        {SUMMARY_ROWS.map(([key, label]) => {
+        {SUMMARY_ROWS.map((key) => {
           const fluxes = summary[key];
+          const label = t.rows[key];
           return (
             <li key={key}>
               <p className="energy-summary__head">
                 <span>{label}</span>
-                <span className="num">
-                  в воздух {formatWatts(fluxes.h)} · на испарение {formatWatts(fluxes.le)}
-                </span>
+                <span className="num">{t.split(formatWatts(fluxes.h, locale), formatWatts(fluxes.le, locale))}</span>
               </p>
               <EnergyBar fluxes={fluxes} label={label} />
             </li>

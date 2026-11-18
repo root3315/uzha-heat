@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTexts } from './locale';
+import { MISC_TEXTS } from './ui.texts';
 
 const KEY = 'uzha.tool-hint-seen';
 
@@ -21,6 +23,7 @@ function remember() {
 /** One line over the map the first time the tool opens, until it is closed or the map is first tapped (a scroll across the map does not count). */
 export function MapHint({ touch }: { touch: boolean }) {
   const [open, setOpen] = useState(() => !seen());
+  const t = useTexts(MISC_TEXTS);
   useEffect(() => {
     if (!open) return undefined;
     const onTap = (event: MouseEvent) => {
@@ -38,11 +41,8 @@ export function MapHint({ touch }: { touch: boolean }) {
   };
   return (
     <p className="map-hint">
-      <span>
-        Нажмите на&nbsp;участок, чтобы узнать причину · тяните А и&nbsp;Б, чтобы сделать разрез
-        {touch ? '' : ' · или ведите по карте с зажатым Shift'}
-      </span>
-      <button type="button" className="map-hint__close" onClick={close} aria-label="Скрыть подсказку">
+      <span>{t.hint(touch)}</span>
+      <button type="button" className="map-hint__close" onClick={close} aria-label={t.hideHint}>
         ×
       </button>
     </p>

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CitySummary } from '../data/contract';
-import { genitive, sourcesLine } from '../domain/answers';
+import { sourcesLine } from '../domain/answers';
 import type { CityModel } from '../domain/cityModel';
+import { cityName } from '../domain/dataTexts';
 import { cellsToCsv, cellsToGeoJson } from '../domain/exportCells';
 import { PRECISION, type NamePrecision } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
@@ -14,6 +15,7 @@ import { downloadText } from './download';
 import { prefersReducedMotion, useViewport } from './hooks';
 import { readSharedView, sharedViewQuery } from '../domain/shareLink';
 import { Link } from './Link';
+import { useLocale } from './locale';
 import { MapHint } from './MapHint';
 import { Panel } from './panel/Panel';
 import { WeatherSummary } from './Weather';
@@ -21,6 +23,7 @@ import { panelContent } from './panelContent';
 import { useReadout } from './readout';
 import { methodHref } from './routing';
 import { CauseKey, PeopleKey, Section } from './Section';
+import { TOOL_TEXTS } from './ui.texts';
 
 interface ToolProps {
   model: CityModel;
@@ -28,7 +31,6 @@ interface ToolProps {
   onCity(id: string): void;
 }
 
-const UNNAMED = 'Участок без названия на карте';
 const VIEW = { isolines: true, transect: true, interactive: true };
 /** Below this width the panel and the section go under the map, and the controls move onto it. */
 const NARROW_PX = 860;
@@ -44,7 +46,7 @@ interface PickedPlace {
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
 const THREE_D_KEY = 'uzha.3d';
-/** How long "Ссылка скопирована" stays on the button. */
+/** How long "Link copied" stays on the button. */
 const SHARED_NOTE_MS = 2200;
 
 function readThreeD(): boolean {
@@ -69,6 +71,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const mapFrameRef = useRef<HTMLDivElement>(null);
   const reportButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const locale = useLocale();
+  const t = TOOL_TEXTS[locale];
   const [transect, setTransect] = useState<Transect>(model.defaultTransect);
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
@@ -90,7 +94,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
 
   const profile = useMemo(() => sampleTransect(model.source, transect), [model, transect]);
   const place = useMemo(() => (picked ? cellProfile(detail, picked.cell) : null), [detail, picked]);
-  const content = useMemo(() => panelContent(model, place, picked?.title ?? '', picked?.site ?? null), [model, place, picked]);
+  const content = useMemo(() => panelContent(model, place, picked?.title ?? '', picked?.site ?? null, locale), [model, place, picked, locale]);
   const padding = useMemo(() => (narrow ? { top: 64, right: 24, bottom: 24, left: 24 } : { top: 32, right: 40, bottom: 32, left: 32 }), [narrow]);
 
   const pick = useCallback(
@@ -100,9 +104,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       const center: LonLat = [detail.cells.lon[cell] ?? point[0], detail.cells.lat[cell] ?? point[1]];
       const found = mapRef.current?.nameAt(center, districtAt(detail, center)) ?? null;
       const site = mapRef.current?.siteAt(point) ?? null;
-      setPicked({ cell, point: center, title: found?.name ?? UNNAMED, precision: found?.precision ?? PRECISION.none, site });
+      setPicked({ cell, point: center, title: found?.name ?? t.unnamed, precision: found?.precision ?? PRECISION.none, site });
     },
-    [cellUnder, detail],
+    [cellUnder, detail, t.unnamed],
   );
 
   // A shared link opens on its place, once.
@@ -113,10 +117,10 @@ export function Tool({ model, cities, onCity }: ToolProps) {
 
   // The address always says what is on screen, so copying it from the bar shares this exact view.
   useEffect(() => {
-    const query = sharedViewQuery({ place: picked?.point ?? null, threeD });
+    const query = sharedViewQuery({ place: picked?.point ?? null, threeD, locale });
     const url = `${window.location.pathname}${query}${window.location.hash}`;
     if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) window.history.replaceState(window.history.state, '', url);
-  }, [picked?.point, threeD]);
+  }, [picked?.point, threeD, locale]);
 
   const [shared, setShared] = useState(false);
   const share = async () => {
@@ -178,8 +182,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       type="button"
       className={narrow ? 'pill pill--small' : 'map-3d'}
       aria-pressed={threeD}
-      aria-label={threeD ? 'Вернуть плоскую карту' : 'Показать город в 3D'}
-      title={threeD ? 'Плоская карта' : 'Город в 3D'}
+      aria-label={threeD ? t.flat : t.threeD}
+      title={threeD ? t.flatShort : t.threeDShort}
       onClick={() => setThreeD(!threeD)}
     >
       3D
@@ -192,12 +196,12 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   };
   const shareButton = (
     <button type="button" className="pill pill--small" onClick={() => void share()} aria-live="polite">
-      {shared ? 'Ссылка скопирована' : 'Поделиться'}
+      {shared ? t.copied : t.share}
     </button>
   );
   const reportButton = (
     <button ref={reportButtonRef} type="button" className="pill pill--small" onClick={() => setReporting(true)}>
-      Отчёт
+      {t.report}
     </button>
   );
   const header = (
@@ -206,7 +210,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       <span className="panel__links">
         {picked && (
           <button type="button" className="pill pill--small" onClick={() => setPicked(null)}>
-            Весь город
+            {t.wholeCity}
           </button>
         )}
         {!narrow && shareButton}
@@ -218,7 +222,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     <div className="panel__foot">
       {!picked && detail.city.weather && <WeatherSummary weather={detail.city.weather} />}
       <p className="panel__export">
-        <span>Все участки {genitive(detail.city.name)}: температура, факторы, вклады</span>
+        <span>{t.exportAll(cityName(detail.city, locale))}</span>
         <span className="panel__export-buttons">
           <button type="button" className="pill pill--small" onClick={() => exportAs('csv')}>
             CSV
@@ -229,9 +233,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
         </span>
       </p>
       <p className="panel__sources">
-        {sourcesLine(detail)}{' '}
+        {sourcesLine(detail, locale)}{' '}
         <Link className="text-link" href={methodHref(detail.city.id)}>
-          Как это посчитано
+          {t.howCalculated}
         </Link>
       </p>
     </div>
@@ -260,17 +264,17 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           onIdle={refineName}
         >
           {narrow && (
-            <div className="map-bar" role="toolbar" aria-label="Карта">
+            <div className="map-bar" role="toolbar" aria-label={t.mapToolbar}>
               {switcher}
               <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={toggleDrawing}>
-                {drawing ? 'Ведите' : 'Разрез'}
+                {drawing ? t.drawing : t.section}
               </button>
               <button type="button" className="pill pill--small" aria-pressed={mode === 'causes'} onClick={toggleMode}>
-                Причины
+                {t.causes}
               </button>
               {hasPeople && (
                 <button type="button" className="pill pill--small" aria-pressed={people} onClick={() => setPeople(!people)}>
-                  Люди
+                  {t.people}
                 </button>
               )}
               {threeDButton}
@@ -306,7 +310,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           onPick={(sample) => pick(sample.point)}
         />
       </div>
-      <aside ref={panelRef} className="tool__panel" aria-label="Что здесь происходит">
+      <aside ref={panelRef} className="tool__panel" aria-label={t.panel}>
         <Panel model={model} content={content} header={header} footer={footer} onPick={pick} />
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}

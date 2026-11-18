@@ -24,7 +24,7 @@ import { FLUX_KEYS } from './contract';
 
 export class DataContractError extends Error {
   constructor(message: string) {
-    super(`Данные не соответствуют контракту: ${message}`);
+    super(`Data does not match the contract: ${message}`);
     this.name = 'DataContractError';
   }
 }
@@ -38,34 +38,34 @@ export function isObject(value: unknown): value is Json {
 export const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 function requireObject(value: unknown, path: string): Json {
-  if (!isObject(value)) throw new DataContractError(`${path} должен быть объектом`);
+  if (!isObject(value)) throw new DataContractError(`${path} must be an object`);
   return value;
 }
 
 function requireArray(value: unknown, path: string): unknown[] {
-  if (!Array.isArray(value)) throw new DataContractError(`${path} должен быть массивом`);
+  if (!Array.isArray(value)) throw new DataContractError(`${path} must be an array`);
   return value;
 }
 
 function requireString(value: unknown, path: string): string {
-  if (typeof value !== 'string') throw new DataContractError(`${path} должен быть строкой`);
+  if (typeof value !== 'string') throw new DataContractError(`${path} must be a string`);
   return value;
 }
 
 function requireNumber(value: unknown, path: string): number {
-  if (!isNumber(value)) throw new DataContractError(`${path} должен быть числом`);
+  if (!isNumber(value)) throw new DataContractError(`${path} must be a number`);
   return value;
 }
 
 function requireNumberArray(value: unknown, path: string): number[] {
   const array = requireArray(value, path);
   if (array.every(isNumber)) return array;
-  throw new DataContractError(`${path}[${array.findIndex((v) => !isNumber(v))}] должен быть числом`);
+  throw new DataContractError(`${path}[${array.findIndex((v) => !isNumber(v))}] must be a number`);
 }
 
 function requireNumberTuple(value: unknown, length: number, path: string): number[] {
   const numbers = requireNumberArray(value, path);
-  if (numbers.length !== length) throw new DataContractError(`${path} должен содержать ${length} числа`);
+  if (numbers.length !== length) throw new DataContractError(`${path} must hold ${length} numbers`);
   return numbers;
 }
 
@@ -89,7 +89,7 @@ function requireColumns(value: unknown, keys: string[], length: number, path: st
   return Object.fromEntries(
     keys.map((key) => {
       const column = requireNumberArray(obj[key], `${path}.${key}`);
-      if (column.length !== length) throw new DataContractError(`${path}.${key}: длина ${column.length}, ожидалось ${length}`);
+      if (column.length !== length) throw new DataContractError(`${path}.${key}: length ${column.length}, expected ${length}`);
       return [key, column];
     }),
   );
@@ -212,7 +212,7 @@ function parseGeometry(value: unknown, path: string): District['geometry'] {
     const polygons = requireArray(geometry.coordinates, coordinatesPath);
     return { type: 'MultiPolygon', coordinates: polygons.map((rings, i) => requireRings(rings, `${coordinatesPath}[${i}]`)) };
   }
-  throw new DataContractError(`${path}.type должен быть Polygon или MultiPolygon`);
+  throw new DataContractError(`${path}.type must be Polygon or MultiPolygon`);
 }
 
 function parseDistrict(value: unknown, path: string): District {
@@ -241,7 +241,7 @@ const FACILITY_TYPES: readonly FacilityType[] = ['school', 'kindergarten', 'clin
 function parseFacility(value: unknown, path: string): Facility {
   const facility = requireObject(value, path);
   const type = requireString(facility.type, `${path}.type`);
-  if (!FACILITY_TYPES.includes(type as FacilityType)) throw new DataContractError(`${path}.type: неизвестный тип ${type}`);
+  if (!FACILITY_TYPES.includes(type as FacilityType)) throw new DataContractError(`${path}.type: unknown type ${type}`);
   return {
     name: requireString(facility.name, `${path}.name`),
     type: type as FacilityType,
@@ -253,7 +253,7 @@ function parseFacility(value: unknown, path: string): Facility {
 function parsePop(value: unknown, length: number): number[] | undefined {
   if (value === undefined) return undefined;
   const pop = requireNumberArray(value, 'cells.pop');
-  if (pop.length !== length) throw new DataContractError(`cells.pop: длина ${pop.length}, ожидалось ${length}`);
+  if (pop.length !== length) throw new DataContractError(`cells.pop: length ${pop.length}, expected ${length}`);
   return pop;
 }
 
@@ -270,7 +270,7 @@ const ENERGY_KEYS = ['localHour', 'solarWm2', 'airC', 'humidityPct', 'longwaveDo
 
 function parseEnergy(cellsEnergy: unknown, method: unknown, length: number): { columns?: Record<FluxKey, number[]>; method: EnergyMethod | null } {
   if (cellsEnergy === undefined && method === undefined) return { method: null };
-  if (cellsEnergy === undefined || method === undefined) throw new DataContractError('cells.energy и energy должны быть вместе');
+  if (cellsEnergy === undefined || method === undefined) throw new DataContractError('cells.energy and energy must come together');
   const columns = requireColumns(cellsEnergy, [...FLUX_KEYS], length, 'cells.energy') as Record<FluxKey, number[]>;
   const meta = requireObject(method, 'energy');
   return {
@@ -288,7 +288,7 @@ export function parseCities(raw: unknown): CitySummary[] {
 }
 
 export function parseCityDetail(raw: unknown): CityDetail {
-  const root = requireObject(raw, 'город');
+  const root = requireObject(raw, 'city');
   const features = requireArray(root.features, 'features').map((f, i) => parseFeature(f, `features[${i}]`));
   const keys = features.map((f) => f.key);
   const cellsRaw = requireObject(root.cells, 'cells');
@@ -296,7 +296,7 @@ export function parseCityDetail(raw: unknown): CityDetail {
   const lat = requireNumberArray(cellsRaw.lat, 'cells.lat');
   const lst = requireNumberArray(cellsRaw.lst, 'cells.lst');
   if (lat.length !== lon.length || lst.length !== lon.length) {
-    throw new DataContractError('cells.lon, cells.lat и cells.lst разной длины');
+    throw new DataContractError('cells.lon, cells.lat and cells.lst differ in length');
   }
   const districts = root.districts === undefined ? [] : requireArray(root.districts, 'districts');
   const energy = parseEnergy(cellsRaw.energy, root.energy, lon.length);
@@ -332,24 +332,24 @@ const isIndexArray = (value: unknown): value is number[] => Array.isArray(value)
 /** `model-<id>.json`: every tree has its four arrays, of one length. */
 export function parseTreeModel(raw: unknown): TreeModel {
   const root = requireObject(raw, 'model');
-  if (!isNumber(root.baseScore)) throw new DataContractError('model.baseScore должен быть числом');
+  if (!isNumber(root.baseScore)) throw new DataContractError('model.baseScore must be a number');
   const features = requireArray(root.features, 'model.features');
   requireArray(root.trees, 'model.trees').forEach((tree, i) => {
     const path = `model.trees[${i}]`;
     const t = requireObject(tree, path);
     if (!isIndexArray(t.feature) || !isIndexArray(t.left) || !isIndexArray(t.defaultLeft) || !Array.isArray(t.value) || !t.value.every(isNumber)) {
-      throw new DataContractError(`${path}: нет массивов feature, value, left, defaultLeft`);
+      throw new DataContractError(`${path}: no feature, value, left, defaultLeft arrays`);
     }
     const n = t.feature.length;
     if (!n || t.value.length !== n || t.left.length !== n || t.defaultLeft.length !== n) {
-      throw new DataContractError(`${path}: массивы разной длины`);
+      throw new DataContractError(`${path}: arrays differ in length`);
     }
-    if (t.feature.some((f) => f >= features.length)) throw new DataContractError(`${path}: признак вне model.features`);
+    if (t.feature.some((f) => f >= features.length)) throw new DataContractError(`${path}: feature outside model.features`);
     // Leaves have feature −1; a split's left child is left[i], its right child left[i] + 1. Both must lie after the
     // node and inside the tree, or a walk from the root could loop forever.
     const left = t.left as number[];
     const badChild = t.feature.some((f, node) => f >= 0 && !((left[node] ?? -1) > node && (left[node] ?? -1) + 1 < n));
-    if (badChild) throw new DataContractError(`${path}: ссылка на дочерний узел вне дерева или назад`);
+    if (badChild) throw new DataContractError(`${path}: child node outside the tree or pointing back`);
   });
   return raw as TreeModel;
 }
