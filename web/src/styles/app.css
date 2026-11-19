@@ -484,6 +484,36 @@ select {
   transform: translate(0, -50%);
 }
 
+/* A numbered place over the map: cool blue, so it is not taken for a section end. */
+.mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--cool);
+  color: var(--card);
+  font: 600 12px/1 var(--font-mono);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease-out);
+}
+/* The mark stays small; the target around it does not. */
+.mark::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+}
+.mark:hover,
+.mark:focus-visible {
+  transform: scale(1.15);
+  border-radius: 50%;
+}
+
 .maplibregl-ctrl-group:not(:empty) {
   overflow: hidden;
   background: var(--card);

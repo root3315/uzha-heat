@@ -49,6 +49,16 @@ export interface CityMapHandle {
   siteAt(point: LonLat): Site | null;
 }
 
+export interface MapMark {
+  point: LonLat;
+  /** What the mark shows: a rank, one or two characters. */
+  label: string;
+  /** What a screen reader says for it. */
+  name: string;
+}
+
+const NO_MARKS: readonly MapMark[] = [];
+
 interface CityMapProps {
   model: CityModel;
   view: MapView;
@@ -69,6 +79,8 @@ interface CityMapProps {
   people?: boolean;
   /** Tilt the camera and raise the buildings over the temperature map. */
   threeD?: boolean;
+  /** Numbered places over the map (the planting list); a click opens the place, as the list does. */
+  marks?: readonly MapMark[];
   /** Text of the small readout under the pointer, or null where there is nothing to say. */
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
@@ -151,6 +163,15 @@ function handleElement(letter: string, t: MapTexts): HTMLDivElement {
   return element;
 }
 
+function markElement(mark: MapMark): HTMLButtonElement {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = 'mark num';
+  element.setAttribute('aria-label', mark.name);
+  element.textContent = mark.label;
+  return element;
+}
+
 function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void {
   for (const handler of [map.dragPan, map.scrollZoom, map.doubleClickZoom, map.touchZoomRotate, map.keyboard]) {
     if (on) handler.enable();
@@ -160,7 +181,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, marks = NO_MARKS } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -397,6 +418,18 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const map = mapRef.current;
     if (map?.getSource(SOURCE.found)) setData(map, SOURCE.found, pointsOf(found));
   }, [found]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    // Added last to first, so where two marks overlap the higher rank stays on top.
+    const placed = [...marks].reverse().map((mark) => {
+      const element = markElement(mark);
+      element.addEventListener('click', () => latest.current.onPick(mark.point));
+      return new Marker({ element }).setLngLat(mark.point).addTo(map);
+    });
+    return () => placed.forEach((marker) => marker.remove());
+  }, [marks, model]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CityDetail, LonLat } from '../data/contract';
+import type { MapMark } from '../map/CityMap';
 import { formatPeople } from '../domain/people';
 import { plantingPlan, type PlantingPlace } from '../domain/plantingPlan';
 import { useFormats, useLocale } from './locale';
@@ -12,10 +13,14 @@ interface PlantingPlanProps {
   detail: CityDetail;
   inside: readonly boolean[];
   onPick: (point: LonLat) => void;
+  /** The places as numbered marks for the map once they are known; null when the block closes. */
+  onPlan?: (marks: MapMark[] | null) => void;
+  /** The marks are on the map already: the block opens with them, so it can also take them away. */
+  shown?: boolean;
 }
 
 /** The city's five places where trees cool the most people the most; a place opens on the map with its own "what if". */
-function PlanBody({ detail, inside, onPick }: PlantingPlanProps) {
+function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
   const locale = useLocale();
   const t = PLAN_TEXTS[locale];
   const { formatDegSigned } = useFormats();
@@ -29,6 +34,17 @@ function PlanBody({ detail, inside, onPick }: PlantingPlanProps) {
     const timer = window.setTimeout(() => setPlan(plantingPlan(state.model, detail, inside, PLACES)), 0);
     return () => window.clearTimeout(timer);
   }, [state, detail, inside]);
+
+  useEffect(() => {
+    if (!plan?.length) return;
+    onPlan?.(
+      plan.map((place, i) => ({
+        point: place.point,
+        label: String(i + 1),
+        name: t.mark(i + 1, formatDegSigned(-place.cooling), t.forPeople(formatPeople(place.people, locale))),
+      })),
+    );
+  }, [plan, onPlan, t, formatDegSigned, locale]);
 
   if (state.status === 'failed') return <p className="whatif__status">{t.failed}</p>;
   if (!plan) return <p className="whatif__status">{t.computing}</p>;
@@ -53,10 +69,14 @@ function PlanBody({ detail, inside, onPick }: PlantingPlanProps) {
 }
 
 export function PlantingPlanBlock(props: PlantingPlanProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(props.shown));
   const t = PLAN_TEXTS[useLocale()];
+  const toggle = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) props.onPlan?.(null);
+  };
   return (
-    <details className="whatif" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details className="whatif" open={open} onToggle={(event) => toggle(event.currentTarget.open)}>
       <summary className="whatif__summary">
         <span className="whatif__title">{t.title}</span>
         <span className="whatif__hint">

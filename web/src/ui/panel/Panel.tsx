@@ -4,6 +4,7 @@ import type { Advice } from '../../domain/answers';
 import { capitalize } from '../../domain/phrase';
 import type { Evidence as EvidenceData } from '../../domain/recommendations';
 import type { CityModel } from '../../domain/cityModel';
+import type { MapMark } from '../../map/CityMap';
 import { useFormats } from '../locale';
 import type { CauseRow, PanelContent } from '../panelContent';
 import { EnergyBlock } from '../Energy';
@@ -24,6 +25,10 @@ interface PanelProps {
   expanded?: boolean;
   /** Opens a place on the map; without it the city view has no "where to plant first". */
   onPick?: (point: LonLat) => void;
+  /** Hands the planting places to the map as numbered marks. */
+  onPlan?: (marks: MapMark[] | null) => void;
+  /** The planting places are on the map now. */
+  planShown?: boolean;
 }
 
 /** Bars share one scale, so a cause of +2° is visibly half of one of +4°. */
@@ -110,7 +115,7 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
   );
 }
 
-export function Panel({ model, content, header, footer, expanded = false, onPick }: PanelProps) {
+export function Panel({ model, content, header, footer, expanded = false, onPick, onPlan, planShown = false }: PanelProps) {
   const { stats } = model.detail;
   const { formatDeg } = useFormats();
   const scale = Math.max(BAR_SCALE_MIN, Math.abs(content.cause?.value ?? 0) * 1.15);
@@ -146,7 +151,7 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
         ))}
       {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
       {content.isCity && !expanded && onPick && model.detail.cells.pop && (
-        <PlantingPlanBlock detail={model.detail} inside={model.inside} onPick={onPick} />
+        <PlantingPlanBlock detail={model.detail} inside={model.inside} onPick={onPick} onPlan={onPlan} shown={planShown} />
       )}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
