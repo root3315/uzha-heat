@@ -53,6 +53,9 @@ products for known reasons: emissivity, Landsat's thermal band (100 m, delivered
 and time of day. Terra passes closest to Landsat's hour, so its +3 to +4 °C is the fair measure of the level difference;
 Aqua's smaller one comes partly from its later, hotter overpass, not from closer agreement.
 
+The pattern holds inside the city outline alone, so it is not just the contrast between city and countryside: on the
+734 / 124 / 121 MODIS pixels within the outline r is 0.87 / 0.67 / 0.86 (Terra) and 0.85 / 0.61 / 0.78 (Aqua).
+
 MODIS at 1 km also puts the city above its 1.5 km ring: by day +2.0 / +1.6 / +2.1 °C (Terra) and +2.3 / +2.0 / +2.5 °C
 (Aqua), at night (Aqua, about 01:30) +2.4 / +1.2 / +1.8 °C. So Tashkent's +1.8 °C is not a Landsat artefact. In Samarkand
 and Bukhara the night island is smaller than the day one.
@@ -163,7 +166,7 @@ All sources are open; no API keys are needed.
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # 320 unit tests (Vitest), about 15 seconds
+npm test           # 321 unit tests (Vitest), about 15 seconds
 npm run build      # output in web/dist
 ```
 

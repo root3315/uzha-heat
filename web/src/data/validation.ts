@@ -17,6 +17,8 @@ export interface ModisPlatform {
   composites: number;
   /** Null when too few pixels overlapped to compare; the heat island still stands on its own. */
   day: Agreement | null;
+  /** The same, only on pixels inside the city outline: the pattern within the city, not just city against countryside. */
+  dayInsideCity: Agreement | null;
   /** Heat island by MODIS, °C, keyed by ring width ("1km", "1.5km", ...); null where a side had too few pixels. */
   heatIsland: { day: Record<string, number | null>; night: Record<string, number | null> };
 }
@@ -51,6 +53,7 @@ function parsePlatform(value: unknown): ModisPlatform | undefined {
     overpassLocal: { day: String(value.overpassLocal.day ?? ''), night: String(value.overpassLocal.night ?? '') },
     composites: isNumber(value.composites) ? value.composites : 0,
     day: parseAgreement(value.day),
+    dayInsideCity: parseAgreement(value.dayInsideCity),
     heatIsland: { day: parseRings(value.heatIsland.day), night: parseRings(value.heatIsland.night) },
   };
 }

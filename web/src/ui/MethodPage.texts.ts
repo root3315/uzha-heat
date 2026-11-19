@@ -73,10 +73,11 @@ export const METHOD_TEXTS = texts(
       title: 'Check against MODIS, and the night',
       intro:
         'There are no ground measurements of surface temperature to compare the whole map with. So we compare with a second NASA satellite, MODIS ' +
-        '(cells of about 1 km, the same summers). Our 200 m cells are averaged to its pixels.',
+        '(cells of about 1 km, the same summers). Our 200 m cells are averaged to its pixels. The match inside the city outline alone shows the map finds the heat within the city, not only the city against the countryside.',
       day: (product: string, time: string) => `${product}, day ${time}`,
       match: (r: string, warmer: boolean, bias: string, rmse: string, n: string) =>
         `pattern match r = ${r}, our surface is ${warmer ? 'warmer' : 'cooler'} by ${bias}, spread ±${rmse}°, ${n} pixels`,
+      inside: (r: string, n: string) => `; inside the city outline alone r = ${r} on ${n} pixels`,
       ring: (value: string, width: string) => `${value} with a ${width}${NBSP}km ring`,
       warmer: 'the city is also warmer than its surroundings',
       cooler: 'the city is cooler than its surroundings',
@@ -198,10 +199,11 @@ export const METHOD_TEXTS = texts(
       title: 'Сверка с MODIS и ночь',
       intro:
         'Замеров температуры поверхности на земле, с которыми можно сравнить всю карту, нет. Поэтому сверяем со вторым спутником NASA, MODIS ' +
-        '(участки около 1 км, то же лето). Наши участки по 200 м усреднены до его пикселей.',
+        '(участки около 1 км, то же лето). Наши участки по 200 м усреднены до его пикселей. Совпадение только внутри границы города показывает, что карта находит жару внутри города, а не только разницу города и пригорода.',
       day: (product, time) => `${product}, днём ${time}`,
       match: (r, warmer, bias, rmse, n) =>
         `совпадение рисунка r = ${r}, наша поверхность ${warmer ? 'теплее' : 'холоднее'} на ${bias}, разброс ±${rmse}°, ${n} пикселей`,
+      inside: (r, n) => `; только внутри границы города r = ${r} на ${n} пикселях`,
       ring: (value, width) => `${value} при кольце ${width} км`,
       warmer: 'город тоже теплее окрестностей',
       cooler: 'город прохладнее окрестностей',

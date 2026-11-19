@@ -131,12 +131,13 @@ def _print_table(results: dict) -> None:
 
 
 def web_summary(report: dict) -> dict:
-    """What the site shows: day agreement with each MODIS platform and the MODIS heat island by day and night per ring."""
+    """What the site shows: day agreement with each MODIS platform (all pixels and those inside the outline) and the MODIS heat island by day and night per ring."""
     def platform(p: dict) -> dict:
         island = {when: {width: (ring["intensity"] if ring else None) for width, ring in rings.items()}
                   for when, rings in p["heatIsland"].items()}
         return {"product": p["product"], "overpassLocal": p["overpassLocal"], "composites": p["composites"],
-                "day": p["dayVsLandsat"], "heatIsland": island}
+                "day": p["dayVsLandsat"], "dayInsideCity": p.get("dayVsLandsatInsideCity"),
+                "heatIsland": island}
     return {
         "period": ", ".join(report["period"]),
         "cities": {city_id: {name: platform(p) for name, p in res["modis"].items()}
