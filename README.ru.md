@@ -163,7 +163,8 @@ done
 **Пайплайн данных** (Python 3.10+, без ключей):
 
 ```bash
-pip install -r pipeline/requirements.txt
+python -m venv .venv && source .venv/bin/activate     # PowerShell: .venv\Scripts\Activate.ps1
+pip install -r pipeline/requirements-lock.txt         # точные версии, с которыми мы считали; или requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
 PYTHONUTF8=1 python -m pipeline.buildings              # здания для 3D (скачивает OSM и контуры Microsoft)
@@ -171,6 +172,8 @@ python -m pytest pipeline/tests -q                     # 109 тестов, ме�
 ```
 
 Пайплайн читает Landsat и Sentinel-2 из Microsoft Planetary Computer и кеширует каждый слой в `pipeline/cache/`.
+Каталог со временем пополняется и пересчитывается, поэтому новый полный прогон может взять немного другие снимки и дать
+чуть другие числа; сайт и этот README показывают опубликованные JSON из `web/public/data/`.
 Первый прогон Ташкента занимает примерно 10–20 минут, в основном чтение Sentinel-2; повторный с кешем — около минуты.
 `pipeline.buildings` скачивает выгрузку Geofabrik по Узбекистану (~130 МБ), контуры Microsoft (~45 МБ на тайл) и тайл
 GHSL. Подробнее: [pipeline/README.md](pipeline/README.md).

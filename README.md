@@ -168,7 +168,8 @@ Commands are for bash or Git Bash. In PowerShell set `$env:PYTHONUTF8=1` and use
 **Data pipeline** (Python 3.10+, no keys):
 
 ```bash
-pip install -r pipeline/requirements.txt
+python -m venv .venv && source .venv/bin/activate     # PowerShell: .venv\Scripts\Activate.ps1
+pip install -r pipeline/requirements-lock.txt         # the exact versions we ran; or requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
@@ -176,6 +177,8 @@ python -m pytest pipeline/tests -q                     # 109 tests, under a minu
 ```
 
 The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.
+The catalogue grows and is reprocessed over time, so a fresh full run can pick slightly different scenes and give numbers
+a little off the published ones; the published JSON in `web/public/data/` is what the site and this README show.
 A first run of Tashkent takes roughly 10–20 minutes, mostly Sentinel-2 reads; a rerun with the cache takes about a minute.
 `pipeline.buildings` downloads the Geofabrik extract of Uzbekistan (~130 MB), Microsoft footprints (~45 MB per tile) and a
 GHSL tile. Details: [pipeline/README.md](pipeline/README.md).
