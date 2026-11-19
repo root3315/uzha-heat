@@ -135,6 +135,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   }, [detail]);
 
   useEffect(() => {
+    // With the report open, Escape is the report's: it closes the report and leaves the place picked.
+    if (reporting) return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setDrawing(false);
@@ -142,7 +144,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [reporting]);
 
   const toggleDrawing = () => {
     const next = !drawing;
