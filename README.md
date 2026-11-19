@@ -86,7 +86,7 @@ up in NDVI rather than in the tree share.
 - Line A–B draws a cross-section: the temperature profile and a band of causes under it (hatched).
 - "People" shows residents as dots, and schools, kindergartens and clinics on the hottest cells. Colour stays temperature.
 - "3D" tilts the map and raises the buildings, each coloured by the surface temperature under it.
-- "What if" on a place: more tree crown and greenery (NDVI), lighter roofs, and, where built-up land or roads heat that place,
+- "What if" on a place: more tree crown and greenery (NDVI), and, where built-up land or roads heat that place,
   less of them. The city model recomputes the surface temperature of that place. Sliders stay within what the city already has
   (5–95 % of cells); built-up can drop by at most 25 percentage points.
 - "Where to plant first" on the city view: five places, numbered on the map; each opens with its own "what if".

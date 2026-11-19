@@ -46,11 +46,10 @@ export const METHOD_TEXTS = texts(
       'rises with the heat here: bare dry ground is the brightest surface and also the hottest. So we read albedo as a sign of open ground, not as ' +
       'something to change.',
     whatIf: (built: string, roads: string) =>
-      'The "What if" block in a cell\'s panel runs the same model in the browser: you can add trees, greenery or light surfaces, and where the model ' +
+      'The "What if" block in a cell\'s panel runs the same model in the browser: you can add trees or greenery, and where the model ' +
       `says it cools, reduce built-up cover by at most ${built} and roads by at most ${roads}; the sliders stop at the ` +
       "city's outermost 5% of cells, so the model does not guess at combinations it has never seen. This is association in the data, not an experiment, and it is about the " +
-      'surface, not the air; albedo there changes with greenery and ground held fixed, and then lighter means cooler, although across the city ' +
-      'light surfaces are more often hot.',
+      'surface, not the air. There is no albedo slider, for the reason above: here albedo marks open ground, not a roof one could lighten.',
     isotherms: (step: string) =>
       `Isotherms are drawn on the smoothed surface every ${step}°. The hatching on the section and on the map shows the factor that ` +
       'moves the temperature most on that stretch.',
@@ -172,11 +171,10 @@ export const METHOD_TEXTS = texts(
       'растёт вместе с жарой: светлее всего голая сухая земля, она же и горячее всего. Поэтому альбедо мы читаем как признак открытого грунта, а не как то, что ' +
       'стоит менять.',
     whatIf: (built, roads) =>
-      'Блок «Что если» на панели участка считает ту же модель прямо в браузере: можно добавить деревьев, зелени или светлых покрытий, а где это по ' +
+      'Блок «Что если» на панели участка считает ту же модель прямо в браузере: можно добавить деревьев или зелени, а где это по ' +
       `модели охлаждает, уменьшить застройку не больше чем на ${built}, а дороги не больше чем на ${roads}; дальше ` +
       '5 % крайних участков города ползунки не идут, чтобы модель не гадала о небывалых сочетаниях. Это связь в данных, а не эксперимент, и речь о ' +
-      'поверхности, не о воздухе; альбедо там меняется при тех же зелени и грунте, и тогда светлее значит холоднее, хотя по городу в целом светлое ' +
-      'чаще горячее.',
+      'поверхности, не о воздухе. Ползунка альбедо нет по той же причине: здесь альбедо говорит об открытом грунте, а не о крыше, которую можно осветлить.',
     isotherms: (step) =>
       `Изотермы проведены по сглаженной поверхности через ${step}°. Штриховка в разрезе и на карте показывает фактор, который ` +
       'сильнее всего меняет температуру на этом отрезке.',
