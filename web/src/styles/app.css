@@ -90,6 +90,7 @@ select {
   justify-content: center;
   gap: 0.5em;
   white-space: nowrap;
+  min-width: 44px;
   min-height: 44px;
   padding: 0 18px;
   border: 0;
@@ -182,12 +183,16 @@ select {
   display: flex;
   align-items: center;
   gap: 4px;
+  /* Pinned at 50%, it would shrink to half the screen; max-content lets it use the width it is allowed. */
+  width: max-content;
   max-width: calc(100vw - 20px);
   padding: 0 4px 0 16px;
-  border-radius: 999px;
+  /* The map hint's shape: a pill on one line, still rounded when a phone wraps it. */
+  border-radius: 22px;
   background: var(--ink);
   color: var(--paper);
   font-size: 0.85rem;
+  line-height: 1.35;
   transform: translateX(-50%);
 }
 .notice__close,
@@ -482,6 +487,10 @@ select {
 .handle.is-hinting .handle__hint {
   opacity: 1;
   transform: translate(0, -50%);
+}
+.handle.is-hint-left .handle__hint {
+  left: auto;
+  right: 34px;
 }
 
 /* A numbered place over the map: cool blue, so it is not taken for a section end. The element itself is moved by
@@ -822,8 +831,13 @@ select {
   stroke-opacity: 0.55;
   stroke-dasharray: 3 3;
 }
-.profile__mean text {
+/* The curve may run through the label: a halo of the ground keeps it legible. */
+.profile .profile__mean text {
   fill: var(--ink);
+  stroke: var(--card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 .profile__curve {
   fill: none;
@@ -897,6 +911,10 @@ select {
   align-items: center;
   gap: 10px;
   margin-bottom: 28px;
+}
+/* On a phone the city view has nothing for the header (its controls are on the map): no empty band above the figure. */
+.panel__header:has(> .panel__links:only-child:empty) {
+  display: none;
 }
 .panel__links {
   display: flex;
@@ -1236,6 +1254,22 @@ summary.rest__summary:hover,
 .whatif__range:focus-visible::-moz-range-thumb {
   box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ink);
 }
+/* A finger needs 44 px to land on the thumb; the line and the thumb stay as they are. */
+@media (pointer: coarse) {
+  /* One rule per engine: a selector list with the other engine's pseudo-element would be dropped whole. */
+  .whatif__slider {
+    height: 44px;
+  }
+  .whatif__range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+  .whatif__range::-moz-range-track {
+    height: 44px;
+  }
+  .whatif__range::-webkit-slider-thumb {
+    margin-top: 15px;
+  }
+}
 .whatif__ends {
   display: flex;
   justify-content: space-between;
@@ -1263,7 +1297,7 @@ summary.rest__summary:hover,
   line-height: 1.35;
 }
 .whatif__reset {
-  min-height: 36px;
+  min-height: 44px;
   margin-top: 12px;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -1373,8 +1407,10 @@ summary.rest__summary:hover,
   margin-bottom: 6px;
   font-weight: 600;
 }
+/* Two figures in one line: on a phone it wraps between them (.num alone would keep it on one line and spill out). */
 .energy-summary__head .num {
   min-width: 0;
+  white-space: normal;
   overflow-wrap: anywhere;
   color: var(--ink-2);
   font: 400 0.72rem/1.4 var(--font-mono);
@@ -1540,7 +1576,7 @@ summary.rest__summary:hover,
   margin-top: 8px;
 }
 
-/* ---------- Narrow screens: map, then the answer, then the section ---------- */
+/* ---------- Narrow screens: map, then the section, then the answer ---------- */
 @media (max-width: 860px) {
   /* Slider ends readable on a phone. */
   .whatif__ends {
@@ -1589,6 +1625,11 @@ summary.rest__summary:hover,
   .bar__nav a:first-child {
     margin-left: 8px;
   }
+  /* The scrolling row clips anything outside it: the focus ring goes inside the chip. */
+  .bar__nav a:focus-visible {
+    outline-offset: -2px;
+    border-radius: 999px;
+  }
   .bar__open {
     padding: 0 14px;
   }
@@ -1612,6 +1653,7 @@ summary.rest__summary:hover,
   }
   .tool__panel {
     overflow: visible;
+    scroll-margin-top: calc(var(--bar-h) + 8px);
   }
   /* The draw and causes buttons live on the map here. */
   .tool .section__tools .pill:not(:nth-child(2)) {
@@ -1652,6 +1694,11 @@ summary.rest__summary:hover,
   }
   .maplibregl-ctrl.maplibregl-ctrl-scale {
     font-size: 11px;
+  }
+  /* Two columns leave the source under a factor some 95 px, and "OpenStreetMap" spills out: one column instead. */
+  .method__factors div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 }
 

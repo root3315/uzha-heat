@@ -67,7 +67,7 @@ export const ANSWER_TEXTS = texts(
       keep: (head: string, cools: string, deg: Span): Phrase => [`${head} Worth keeping what cools it: ${cools}, `, deg, '.'],
       noHeat: 'No factor heats this place noticeably; there is no clear measure.',
       notLever: (words: CauseWords, deg: Span): Phrase => [
-        `${capitalize(words.heats)} adds `,
+        `${capitalize(words.heats)} ${words.plural ? 'add' : 'adds'} `,
         deg,
         words.explain ? ` here. ${words.explain}` : ' here, and landscaping cannot change that.',
       ],
