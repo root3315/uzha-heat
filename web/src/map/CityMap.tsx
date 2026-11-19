@@ -327,6 +327,10 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     map.on('mousemove', moveDraft);
     map.on('touchmove', moveDraft);
     map.on('touchend', endDraft);
+    // A cancelled touch is followed by no click to swallow: just disarm, or the next move would go on drawing.
+    map.on('touchcancel', () => {
+      draft = null;
+    });
     window.addEventListener('mouseup', endDraft);
 
     map.on('click', (event) => {
