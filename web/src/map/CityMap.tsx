@@ -278,6 +278,9 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       element.addEventListener('mouseenter', () => {
         if (wasHinted() || !latest.current.view.interactive) return;
         rememberHinted();
+        // Near the right edge the hint goes to the left of the end, or the map's frame would cut it.
+        const frame = map.getContainer().getBoundingClientRect();
+        element.classList.toggle('is-hint-left', element.getBoundingClientRect().right > frame.left + frame.width / 2);
         element.classList.add('is-hinting');
         window.setTimeout(() => element.classList.remove('is-hinting'), HINT_MS);
       });

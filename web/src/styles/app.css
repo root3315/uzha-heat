@@ -488,6 +488,10 @@ select {
   opacity: 1;
   transform: translate(0, -50%);
 }
+.handle.is-hint-left .handle__hint {
+  left: auto;
+  right: 34px;
+}
 
 /* A numbered place over the map: cool blue, so it is not taken for a section end. The element itself is moved by
    MapLibre's transform, so it stays bare; the face inside carries the look and the hover scale. */
