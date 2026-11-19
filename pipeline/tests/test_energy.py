@@ -92,3 +92,10 @@ def test_enrich_file_writes_integer_fluxes_that_close(tmp_path):
 def test_enrich_needs_weather_at_the_overpass():
     with pytest.raises(ValueError, match="--only weather"):
         energy.enrich({"city": {"id": "bukhara"}, "cells": {}})
+
+
+def test_enrich_names_the_missing_factors_when_sentinel_2_failed():
+    document = {"city": {"id": "bukhara", "weather": {"overpass": {}}}, "cells": {"values": {"ndvi": [0.2]}}}
+    assert energy.missing_factors(document) == ["albedo"]
+    with pytest.raises(ValueError, match="albedo"):
+        energy.enrich(document)
