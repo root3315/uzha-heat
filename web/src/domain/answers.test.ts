@@ -199,6 +199,22 @@ describe('dominantFor and restOfCauses', () => {
   it('shows what cools a cool place', () => {
     expect(dominantFor(place(40, { ndvi: -3, built: 0.4 }), 43.4)).toEqual(['ndvi', -3]);
   });
+
+  it('shows the cause the sentence names for a place about the city mean', () => {
+    const nearMean = place(43.5, { ndvi: 3.3, elevation: -0.9, built: 0.4 });
+    expect(dominantFor(nearMean, 43.63)).toEqual(['ndvi', 3.3]);
+    expect(say(placeAnswer(nearMean, 43.63, FEATURES, 'en'))).toContain('lack of greenery');
+
+    const justAbove = place(43.8, { built: 0.4, elevation: -0.9 });
+    expect(dominantFor(justAbove, 43.63)).toEqual(['elevation', -0.9]);
+    expect(say(placeAnswer(justAbove, 43.63, FEATURES, 'en'))).toContain('About the city average');
+  });
+
+  it('treats a place exactly 0.5° from the mean as hot, like the sentence does', () => {
+    const hot = place(44, { built: 0.4, elevation: -0.9 });
+    expect(dominantFor(hot, 43.5)).toEqual(['built', 0.4]);
+    expect(say(placeAnswer(hot, 43.5, FEATURES, 'en'))).toContain('hotter');
+  });
 });
 
 describe('advise', () => {
@@ -229,6 +245,13 @@ describe('advise', () => {
   it('says plainly when the heat comes from something no measure changes', () => {
     const detail = city();
     const advice = advise(detail, place(46, { ndvi: -0.2, built: 0.05, elevation: 1.4 }, { ndvi: 0.4, built: 40, elevation: 450 }), cityFactorMeans(detail), 'ru');
+    expect(say(advice.kind === 'none' ? advice.text : [])).toBe('Рельеф добавляет здесь +1,4°, а это благоустройством не изменить.');
+  });
+
+  it('does not call a place about the city mean cooler than average', () => {
+    const detail = city();
+    const justBelow = place(43.3, { ndvi: -0.2, built: 0.05, elevation: 1.4 }, { ndvi: 0.4, built: 40, elevation: 450 });
+    const advice = advise(detail, justBelow, cityFactorMeans(detail), 'ru');
     expect(say(advice.kind === 'none' ? advice.text : [])).toBe('Рельеф добавляет здесь +1,4°, а это благоустройством не изменить.');
   });
 });
