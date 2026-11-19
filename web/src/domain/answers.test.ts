@@ -199,6 +199,12 @@ describe('dominantFor and restOfCauses', () => {
   it('shows what cools a cool place', () => {
     expect(dominantFor(place(40, { ndvi: -3, built: 0.4 }), 43.4)).toEqual(['ndvi', -3]);
   });
+
+  it('shows the cause the sentence names for a place about the city mean', () => {
+    const nearMean = place(43.5, { ndvi: 3.3, elevation: -0.9, built: 0.4 });
+    expect(dominantFor(nearMean, 43.63)).toEqual(['ndvi', 3.3]);
+    expect(say(placeAnswer(nearMean, 43.63, FEATURES, 'en'))).toContain('lack of greenery');
+  });
 });
 
 describe('advise', () => {

@@ -171,10 +171,14 @@ export function restOfCauses(contributions: Record<string, number>, dominantKey:
   return { count, sum, summary: ANSWER_TEXTS[locale].rest(count, formats(locale).formatDegSigned(sum)) };
 }
 
-/** The cause to show as the one bar: what heats a hot place most, what cools a cool place most. */
+/**
+ * The cause to show as the one bar: what heats a hot place most, what cools a cool place most,
+ * and for a place about the city mean the largest either way, the same cause `placeAnswer` names.
+ */
 export function dominantFor(place: PlaceProfile, cityMean: number): [string, number] | null {
-  const heats = place.lst >= cityMean;
-  return strongest(place.contributions, heats ? 1 : -1) ?? strongest(place.contributions, 0);
+  const anomaly = place.lst - cityMean;
+  if (Math.abs(anomaly) < NEAR_MEAN) return strongest(place.contributions, 0);
+  return strongest(place.contributions, anomaly > 0 ? 1 : -1) ?? strongest(place.contributions, 0);
 }
 
 export type Advice =
