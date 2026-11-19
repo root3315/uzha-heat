@@ -138,12 +138,27 @@ TIMEOUT_S = (30, 180)
 # Tile fractions
 # ===================================================================================================================
 
-def tile_fractions(tree_pct, built_pct, bare_pct, water_share, roof_share, road_share) -> np.ndarray:
+# Fractional vegetation cover from NDVI, linear between bare-soil and full-canopy end members (Gutman & Ignatov 1998,
+# Int. J. Remote Sens. 19, 1533–1543). The squared form of Carlson & Ripley (1997) was tried and scored worse out of
+# fold on Tashkent (R² 0.33 against 0.42): it leaves sparse, watered city green almost bare.
+NDVI_SOIL, NDVI_VEG = 0.15, 0.75
+
+
+def vegetation_cover(ndvi) -> np.ndarray:
+    """Share of the cell under green vegetation, 0..1 (theory Eq. 49 note: NDVI feeds cover through a stated conversion)."""
+    return np.clip((np.asarray(ndvi, float) - NDVI_SOIL) / (NDVI_VEG - NDVI_SOIL), 0.0, 1.0)
+
+
+def tile_fractions(tree_pct, built_pct, bare_pct, water_share, roof_share, road_share, ndvi=None) -> np.ndarray:
     """(n, T) area shares that sum to 1.
 
     tree, built, bare: WorldCover shares in %. water_share, roof_share, road_share: 0..1. Grass is what is left of
     the natural part (WorldCover grass, crops, shrubs, wetland). Roofs and roads are cut to fit inside `built`, and
     paved = built − roof − road. Rows whose shares add up to more than 1 are scaled down.
+
+    With `ndvi`, the open ground (WorldCover grass and bare together) is split by what is actually green in summer:
+    green cover from NDVI beyond the tree crowns becomes the grass tile, the rest bare. WorldCover's annual "grass"
+    class includes fallow and dry land that is bare by July, and is blind to watering.
     """
     tree, built, bare = (np.clip(np.asarray(v, float) / 100.0, 0, 1) for v in (tree_pct, built_pct, bare_pct))
     water = np.clip(np.asarray(water_share, float), 0, 1)
@@ -151,6 +166,10 @@ def tile_fractions(tree_pct, built_pct, bare_pct, water_share, roof_share, road_
     road = np.minimum(np.clip(np.asarray(road_share, float), 0, 1), built - roof)
     paved = np.maximum(built - roof - road, 0.0)
     grass = np.maximum(1.0 - tree - built - bare - water, 0.0)
+    if ndvi is not None:
+        open_ground = grass + bare
+        grass = np.clip(vegetation_cover(ndvi) - tree, 0.0, open_ground)
+        bare = open_ground - grass
     out = np.zeros((len(tree), len(TILES)))
     for name, share in (("tree", tree), ("grass", grass), ("bare", bare), ("roof", roof), ("road", road),
                         ("paved", paved), ("water", water)):
@@ -547,7 +566,7 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
         roads = cells["roads"] * 1000.0 * FALLBACK_ROAD_WIDTH_M / 1e6
 
     fraction = tile_fractions(cells["tree"], cells["built"], cells["bare"], water,
-                              roof_share(cells["volume"], cells["height"]), roads)
+                              roof_share(cells["volume"], cells["height"]), roads, ndvi=cells.get("ndvi"))
 
     moments = cache.get_or_compute(
         "landsat_times", lambda: weather.landsat_moments(tuple(document["city"]["bbox"]), document["period"]["label"]))
