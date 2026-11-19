@@ -129,6 +129,67 @@ The city's final XGBoost model, for "что если" in the browser. Loaded onl
   `left` when x < `value` (compared as float32), else to `left + 1`; a missing x goes left when `defaultLeft` is 1.
 - `check`: sample cells and the booster's own predictions (°C), to verify an evaluator to 1e-5.
 
+## `web/public/data/physics.json`
+
+Optional. The physics model (a per-tile surface energy balance, `pipeline/uzha/seb/`) per city, written by
+`python -m pipeline.seb_check --all`. The method page shows its section only when the file and the city are present.
+
+```json
+{
+  "tashkent": {
+    "skill": {
+      "physics": { "r2": 0.31, "mae": 2.1, "bias": -0.1 },
+      "hybrid": { "r2": 0.7, "mae": 1.3, "bias": 0.0 },
+      "inside": { "physics": { "r2": 0.2, "mae": 1.9, "bias": 0.1 }, "hybrid": { "r2": 0.6, "mae": 1.2, "bias": 0.0 } }
+    },
+    "params": { "kb_inv": 6.44, "rs_min_tree": 40.0, "d_t_air": 4.61 },
+    "converged": 0.998,
+    "fluxes": {
+      "inside": { "rn": 520.3, "h": 260.1, "le": 110.4, "dqs": 170.2, "qf": 20.4 },
+      "ring": { "rn": 500.0, "h": 220.0, "le": 160.0, "dqs": 125.0, "qf": 5.0 }
+    },
+    "budget": {
+      "observed": 1.9,
+      "groups": [{ "id": "albedo", "contribution": 0.2 }],
+      "other": 0.4, "modelGap": 0.3, "referenceState": 0.1, "model": 1.6,
+      "sample": { "inside": 1500, "ring": 1500, "cellsInside": 15780, "cellsRing": 4666 },
+      "efficiencyK": 1e-12
+    },
+    "scenarios": [
+      { "id": "cool_roofs", "treatedDT": [-4.1, -3.6, -3.2], "wholeDT": [-0.9, -0.8, -0.7], "areaShare": 0.25,
+        "settings": { "albedo": 0.55, "emissivity": null },
+        "assumptions": [{ "id": "albedo", "text": "Every treated roof reaches albedo 0.55 (aged coating, not fresh)." }] }
+    ],
+    "replicates": 10,
+    "interval": [5, 95]
+  }
+}
+```
+
+- Temperatures and their changes are in K (= °C for differences). `bias` is model − observed.
+- `skill`: out of fold on 2 km blocks (5 folds), the same check as the main model's `r2Cv`. `physics` is the energy
+  balance alone, `hybrid` the energy balance plus a small XGBoost correction trained on the published factors; `inside`
+  repeats both for the cells inside the city outline only.
+- `params`: the seven calibrated parameters (`pipeline/uzha/seb/types.py`, `Params`), fitted on all cells.
+  `converged`: share of cells where every tile's balance closed.
+- `fluxes`: mean cell flux, W/m², inside the outline and in the ring: net radiation `rn`, sensible `h`, latent `le`,
+  storage `dqs`, anthropogenic `qf`. `rn + qf = h + le + dqs` up to the solver tolerance.
+- `budget`: city minus ring, area-weighted means (theory Eq. 60–63). `groups` are exact Shapley contributions over the
+  8 factor groups (`albedo`, `shade`, `transpiration`, `sealing`, `geometry`, `storage`, `anthropogenic`, `water`), each
+  reset to the ring's median; `observed = Σ groups + other`. `other = modelGap + referenceState`: what the model misses
+  (observed − modelled contrast) plus what stays when every group is at the ring's value (the forcing and inputs no group
+  owns). Computed on a stratified sample (`sample`: cells drawn per side, evenly across LST quintiles, each weighted by
+  the cells it stands for), so `observed` is the sample's estimate. `efficiencyK` is the largest per-cell gap between Σ φ
+  and T(all observed) − T(all at reference).
+- `scenarios`: one entry per scenario id (`cool_roofs`, `cool_pavements`, `trees`, `green_roofs`, `permeable`,
+  `waste_heat`), applied to every eligible cell inside the outline. `treatedDT`: mean change on the treated surfaces;
+  `wholeDT`: mean change of the cell temperature over all cells inside; each `[low, estimate, high]`, the estimate with
+  the final parameters, low/high the `interval` percentiles over `replicates` parameter sets refitted on block-bootstrap
+  resamples (widened to include the estimate). `treatedDT` is null when nothing was treated. `areaShare`: share of the
+  city's area treated. `settings`: the scenario's parameters (`pipeline/uzha/seb/scenarios.py`; null = left as
+  observed). `assumptions`: `{id, text}` in English; the site words the known ids itself in each language from
+  `settings` and shows the file's text for any other id.
+
 ## Language
 
 The texts in the files (`label`, `description`, `unit`, `period`, `weather.period`, district names) are Russian.

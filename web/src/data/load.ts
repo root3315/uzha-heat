@@ -2,6 +2,7 @@ import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary, TreeModel } from './contract';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
+import { parsePhysics, type Physics } from './physics';
 import { parsePlanUncertainty, type PlanUncertainty } from './planUncertainty';
 import { parseValidation, type Validation } from './validation';
 
@@ -78,6 +79,14 @@ let validation: Promise<Validation | null> | null = null;
 export function loadValidation(): Promise<Validation | null> {
   validation ??= fetchJson('validation.json').then(parseValidation, () => null);
   return validation;
+}
+
+let physics: Promise<Physics> | null = null;
+
+/** The physics model of each city (`physics.json`); empty when the file is missing or unreadable. Fetched once. */
+export function loadPhysics(): Promise<Physics> {
+  physics ??= fetchJson('physics.json').then(parsePhysics, () => ({}));
+  return physics;
 }
 
 let planUncertainty: Promise<PlanUncertainty | null> | null = null;
