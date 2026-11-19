@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ANSWER_TEXTS } from './answers.texts';
 import { causeWords } from './causes';
 import { formats } from './format';
 import { hasIcon } from '../ui/icons';
@@ -23,5 +24,13 @@ describe('building height and volume', () => {
     }
     expect(plain(causeWords({ key: 'height', label: '', unit: 'м' }, 'ru').measure(17.6))).toBe('дома в среднем 18 м высотой');
     expect(plain(causeWords({ key: 'volume', label: '', unit: 'м³/га' }, 'ru').measure(30_049))).toBe('30 000 м³ зданий на га');
+  });
+});
+
+describe('a factor that is not a lever', () => {
+  it('agrees the English verb with a plural subject', () => {
+    const sentence = (key: string) => ANSWER_TEXTS.en.advice.notLever(causeWords({ key, label: '', unit: '' }, 'en'), '+0.9°').join('');
+    expect(sentence('height')).toMatch(/^Tall buildings add \+0\.9°/);
+    expect(sentence('elevation')).toMatch(/^Terrain adds \+0\.9°/);
   });
 });
