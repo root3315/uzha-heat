@@ -21,7 +21,8 @@ from .landsat import KELVIN, Period, period_ranges
 log = logging.getLogger(__name__)
 
 COLLECTION = "modis-11A2-061"
-SINUSOIDAL = CRS.from_proj4("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs")
+SPHERE_RADIUS_M = 6371007.181
+SINUSOIDAL = CRS.from_proj4(f"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R={SPHERE_RADIUS_M} +units=m +no_defs")
 GRID_X0 = -20015109.355798
 GRID_Y0 = 10007554.677899
 TILE_M = 1111950.519667
