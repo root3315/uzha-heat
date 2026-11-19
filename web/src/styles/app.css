@@ -1501,6 +1501,10 @@ summary.rest__summary:hover,
     flex-direction: column;
     gap: 12px;
   }
+  /* In a column the desktop flex basis would set the height, not the width. */
+  .section__answer {
+    flex: none;
+  }
   .section__tools {
     justify-content: flex-start;
     margin-left: 0;
