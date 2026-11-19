@@ -17,6 +17,7 @@ from .types import Forcing, Params, SebInputs
 
 TRAIN_CELLS = 2500  # cells per fit: enough for seven parameters, and each fit stays within minutes
 HUBER_K = 1.5  # K: past this a misfit counts linearly, so runways and reservoirs do not steer the parameters
+FIT_EXTRA = ()  # optional parameters (Params.OPTIONAL_BOUNDS) fitted by default, e.g. ("kb_inv_bare",)
 
 
 def subset(inputs: SebInputs, forcing: Forcing, cells: np.ndarray) -> tuple:
@@ -35,26 +36,32 @@ def predict(inputs: SebInputs, forcing: Forcing, params: Params) -> np.ndarray:
 
 
 def fit(inputs: SebInputs, forcing: Forcing, observed: np.ndarray, cells: np.ndarray, start: Params = Params(),
-        seed: int = 0) -> Params:
-    """The parameters that bring the model closest to the observed LST on `cells` (a sample of them), within bounds."""
+        seed: int = 0, names: tuple = None) -> Params:
+    """The parameters that bring the model closest to the observed LST on `cells` (a sample of them), within bounds.
+
+    `names` are the parameters fitted (default: Params.BOUNDS, plus FIT_EXTRA); the others keep their `start` value.
+    """
     rng = np.random.default_rng(seed)
     cells = np.asarray(cells)
     if len(cells) > TRAIN_CELLS:
         cells = rng.choice(cells, TRAIN_CELLS, replace=False)
     part, forced = subset(inputs, forcing, cells)
     target = observed[cells]
-    names = list(Params.BOUNDS)
-    lower, upper = np.array([Params.BOUNDS[n][0] for n in names]), np.array([Params.BOUNDS[n][1] for n in names])
+    names = list(names or (*Params.BOUNDS, *FIT_EXTRA))
+    lower = np.array([Params.bounds(n)[0] for n in names])
+    upper = np.array([Params.bounds(n)[1] for n in names])
     scale = upper - lower
 
     def residuals(unit):
-        misfit = predict(part, forced, Params.from_vector(lower + unit * scale)) - target
+        misfit = predict(part, forced, Params.from_vector(lower + unit * scale, names, start)) - target
         return np.where(np.isfinite(misfit), misfit, 10.0)  # a cell the solver could not close counts as a large miss
 
-    unit0 = np.clip((start.vector() - lower) / scale, 0.0, 1.0)
+    initial = start.vector(names)
+    initial = np.where(np.isfinite(initial), initial, start.kb_inv)  # an unset kb_inv_bare starts from kb_inv
+    unit0 = np.clip((initial - lower) / scale, 0.0, 1.0)
     result = least_squares(residuals, unit0, bounds=(0.0, 1.0), loss="huber", f_scale=HUBER_K, diff_step=0.02,
                            x_scale="jac", max_nfev=60)
-    return Params.from_vector(lower + result.x * scale)
+    return Params.from_vector(lower + result.x * scale, names, start)
 
 
 @dataclass
