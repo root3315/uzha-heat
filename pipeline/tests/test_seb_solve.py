@@ -252,4 +252,4 @@ def test_speed_20000_cells():
     state = solve(inputs, f, Params())
     elapsed = time.perf_counter() - start
     assert state.converged.mean() > 0.999
-    assert elapsed < 10.0, f"{elapsed:.1f} s"
+    assert elapsed < 30.0, f"{elapsed:.1f} s"  # ~6 s on a quiet laptop; loose so a busy machine does not fail it
