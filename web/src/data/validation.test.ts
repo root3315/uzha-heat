@@ -17,6 +17,12 @@ describe('parseValidation', () => {
     expect(v?.cities.tashkent?.terra).toBeUndefined();
   });
 
+  it('reads the agreement inside the city outline, and leaves it null in an older file without it', () => {
+    const inside = { n: 734, r: 0.85, bias: 0.4, rmse: 1.69 };
+    expect(parseValidation({ cities: { tashkent: { aqua: { ...platform, dayInsideCity: inside } } } })?.cities.tashkent?.aqua?.dayInsideCity).toEqual(inside);
+    expect(parseValidation({ cities: { tashkent: { aqua: platform } } })?.cities.tashkent?.aqua?.dayInsideCity).toBeNull();
+  });
+
   it('keeps the heat island when the day comparison is missing', () => {
     const v = parseValidation({ cities: { bukhara: { aqua: { ...platform, day: { n: 2, r: null, bias: null, rmse: null } } } } });
     expect(v?.cities.bukhara?.aqua?.day).toBeNull();
