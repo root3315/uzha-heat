@@ -243,10 +243,10 @@ Hosting: [docs/deploy.md](docs/deploy.md).
 
 | Member | Role |
 |---|---|
-| Stepan | ROLE |
-| Amira | ROLE |
-| Oliya | ROLE |
-| Maksim | ROLE |
-| Shakhina | ROLE |
+| Amira Mirbabaeva | Team leader, engineer |
+| Oliya Bakhtiyorbekova | Physics researcher |
+| Stepan Ionichev | Chief programmer |
+| Maksim Salikhov | Programmer, engineer |
+| Shokhina Samandarova | Engineer, researcher |
 
 How we work with code and git: [CONTRIBUTING.md](CONTRIBUTING.md).
