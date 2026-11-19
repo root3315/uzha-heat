@@ -17,29 +17,33 @@ ATTEMPTS = 3
 RETRY_DELAY_S = 20
 
 
-def hourly(lon: float, lat: float, start: str, end: str, sleep=time.sleep) -> dict:
-    """Hourly series from `start` to `end` (ISO dates, inclusive), local time.
+def hourly(lon: float, lat: float, start: str, end: str, sleep=time.sleep, variables: tuple = VARIABLES,
+           model: str = "era5", timezone: str = TIMEZONE) -> dict:
+    """Hourly series from `start` to `end` (ISO dates, inclusive), in `timezone` (local time by default).
 
-    Returns {"time": [...], <variable>: [...], "point": [lon, lat] of the ERA5 grid point}.
-    Wind is in m/s, radiation in W/m² (mean over the preceding hour), cloud cover in %.
+    Returns {"time": [...], <variable>: [...], "point": [lon, lat] of the ERA5 grid point, "elevation": m}.
+    `elevation` is the height Open-Meteo corrected the 2 m temperature to (its DEM at the requested point).
+    Wind is in m/s, radiation in W/m² (mean over the preceding hour; `*_instant` variables are instantaneous),
+    cloud cover in %. `model` is "era5" or "era5_land" (Open-Meteo model names).
     """
     params = {
         "latitude": lat,
         "longitude": lon,
         "start_date": start,
         "end_date": end,
-        "hourly": ",".join(VARIABLES),
-        "models": "era5",
+        "hourly": ",".join(variables),
+        "models": model,
         "wind_speed_unit": "ms",
-        "timezone": TIMEZONE,
+        "timezone": timezone,
     }
     for attempt in range(1, ATTEMPTS + 1):
         try:
             response = requests.get(ARCHIVE_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_S)
             response.raise_for_status()
             payload = response.json()
-            series = {key: payload["hourly"][key] for key in ("time", *VARIABLES)}
+            series = {key: payload["hourly"][key] for key in ("time", *variables)}
             series["point"] = [payload["longitude"], payload["latitude"]]
+            series["elevation"] = payload.get("elevation")
             return series
         except (requests.RequestException, ValueError, KeyError) as error:
             log.warning("Open-Meteo attempt %d/%d failed: %s", attempt, ATTEMPTS, error)

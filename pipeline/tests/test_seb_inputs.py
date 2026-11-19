@@ -1,0 +1,185 @@
+import json
+import math
+from datetime import datetime, timedelta, timezone
+
+import numpy as np
+import pytest
+
+from pipeline.uzha.seb import inputs
+from pipeline.uzha.seb.types import TILE, TILES, Forcing, SebInputs
+
+RNG = np.random.default_rng(7)
+
+
+def _random_cells(n=500):
+    tree = RNG.uniform(0, 60, n)
+    built = RNG.uniform(0, 100 - tree)
+    bare = RNG.uniform(0, 100 - tree - built)
+    height = RNG.choice([0.0, 4.0, 9.0, 30.0], n)
+    volume = RNG.uniform(0, 0.6, n) * height * inputs.M2_PER_HA
+    return dict(tree=tree, built=built, bare=bare, water=RNG.uniform(0, 0.3, n),
+                roof=inputs.roof_share(volume, height), road=RNG.uniform(0, 0.4, n), height=height, volume=volume)
+
+
+def _fractions(cells):
+    return inputs.tile_fractions(cells["tree"], cells["built"], cells["bare"], cells["water"], cells["roof"],
+                                 cells["road"])
+
+
+def test_fractions_are_non_negative_and_sum_to_one():
+    f = _fractions(_random_cells())
+    assert f.shape[1] == len(TILES)
+    assert (f >= 0).all()
+    np.testing.assert_allclose(f.sum(axis=1), 1.0, atol=1e-12)
+
+
+def test_roof_and_road_fit_inside_built_and_paved_is_the_rest():
+    f = inputs.tile_fractions([10], [50], [0], [0], [0.3], [0.4])
+    assert f[0, TILE["roof"]] == pytest.approx(0.3)
+    assert f[0, TILE["road"]] == pytest.approx(0.2)  # cut to built − roof
+    assert f[0, TILE["paved"]] == pytest.approx(0.0)
+    assert f[0, TILE["grass"]] == pytest.approx(0.4)
+
+
+def test_roof_share_is_volume_over_height():
+    assert inputs.roof_share([0.25 * 12 * 1e4, 5000], [12, 0]).tolist() == [pytest.approx(0.25), 0.0]
+
+
+def test_inverted_albedo_reproduces_the_cell_albedo_where_not_clipped():
+    cells = _random_cells()
+    f = _fractions(cells)
+    cell_albedo = RNG.uniform(0.12, 0.30, len(f))
+    a = inputs.albedo_matrix(cell_albedo, f)
+    a_imp = a[:, TILE["roof"]]
+    f_imp = f[:, [TILE[t] for t in ("roof", "road", "paved")]].sum(axis=1)
+    low, high = inputs.IMPERVIOUS_ALBEDO_RANGE
+    free = (f_imp >= inputs.MIN_IMPERVIOUS_FOR_INVERSION) & (a_imp > low) & (a_imp < high)
+    assert free.sum() > 50
+    np.testing.assert_allclose((f * a).sum(axis=1)[free], cell_albedo[free], atol=1e-12)
+    assert ((a_imp >= low) & (a_imp <= high)).all()
+
+
+def test_ah4guc_redistribution_keeps_the_1km_total():
+    pixel_id = np.array([1, 1, 1, 1, 2, 2, 3])
+    pixel_qf = np.array([40.0, 40, 40, 40, 10, 10, 25])
+    volume = np.array([0.0, 1000, 3000, 6000, 0, 0, 500])
+    qf = inputs.redistribute_by_volume(pixel_qf, pixel_id, volume)
+    for pid in (1, 2, 3):
+        cells = pixel_id == pid
+        assert qf[cells].sum() == pytest.approx(pixel_qf[cells].sum())
+    assert qf[0] == 0.0 and qf[3] == pytest.approx(2 * qf[2])
+    np.testing.assert_allclose(qf[4:6], 10.0)  # no buildings: spread evenly
+
+
+def test_ah4guc_pixel_index_matches_the_global_grid():
+    row, col = inputs.ah4guc_index([69.2797, -179.999], [41.3111, 89.999])
+    assert (row[0], col[0]) == (5842, 29913)  # 90 − 41.3111 = 48.6889° → 5842.67; 249.2797° → 29913.56
+    assert (row[1], col[1]) == (0, 0)
+
+
+def test_opendap_ascii_is_parsed():
+    text = "Dataset: x\nband_1.band_1[0], 1479142, 2668568\nband_1.band_1[1], 2948175, 3300237\n"
+    np.testing.assert_array_equal(inputs.parse_opendap_ascii(text), [[1479142, 2668568], [2948175, 3300237]])
+
+
+def test_lapse_correction_cools_higher_cells():
+    t = inputs.lapse_corrected(300.0, 450.0, [350.0, 450.0, 550.0])
+    np.testing.assert_allclose(t, [300.65, 300.0, 299.35])
+
+
+def test_sky_view_is_within_bounds_and_falls_with_aspect():
+    aspect = np.array([0.0, 0.5, 1.0, 3.0, inputs.MAX_ASPECT])
+    svf = inputs.sky_view(aspect)
+    assert svf[0] == 1.0 and (svf > 0).all() and (svf <= 1).all()
+    assert (np.diff(svf) < 0).all()
+    assert svf[2] == pytest.approx(math.cos(math.atan(2.0)))
+
+
+def test_canyon_shade_limits():
+    zenith = math.radians(30)
+    shade = inputs.canyon_shade(np.array([0.0, 0.5, 2.0, 50.0]), zenith)
+    assert shade[0] == 0.0
+    assert shade[1] == pytest.approx(2 / math.pi * 0.5 * math.tan(zenith))  # shallow canyon: 2a/π
+    assert (np.diff(shade) > 0).all() and shade[-1] <= 1.0
+
+
+def test_macdonald_matches_the_paper_limits():
+    z0, zd = inputs.macdonald([10.0, 10.0], [0.0, 1.0], [0.0, 1.0])
+    assert zd.tolist() == [0.0, pytest.approx(10.0)] and z0.tolist() == [0.0, pytest.approx(0.0)]
+    z0, zd = inputs.macdonald([10.0], [0.25], [0.25])
+    assert 0.0 < zd[0] < 10.0 and 0.5 < z0[0] < 2.0  # ~ z0/H 0.1 near the peak of the curve
+
+
+def test_roughness_is_positive_and_below_height():
+    cells = _random_cells()
+    f = _fractions(cells)
+    side = inputs.building_side(f[:, TILE["roof"]], np.full(len(f), 5.0))
+    z0, zd = inputs.roughness(f, cells["height"], side)
+    assert (z0 > 0).all() and (zd >= 0).all()
+    assert (zd <= np.maximum(cells["height"], inputs.TREE_HEIGHT_M)).all()
+
+
+def test_solar_zenith_at_tashkent_midsummer_noon():
+    # 21 June, solar noon at 69.28° E is ~07:23 UTC: zenith ≈ latitude − declination = 41.31 − 23.44
+    sun = inputs.solar_position(41.31, 69.28, 172, 12 - 69.28 / 15 + 0.03)
+    assert math.degrees(sun["zenith"]) == pytest.approx(17.9, abs=0.3)
+    assert inputs.clear_sky_tendency(800.0, inputs.solar_position(41.31, 69.28, 190, 5.9)) > 0  # rising sun
+
+
+def test_wind_grows_with_height():
+    assert inputs.wind_at(2.0, 10.0) == pytest.approx(2.0)
+    assert inputs.wind_at(2.0) > 2.0
+
+
+def test_at_moments_interpolates_in_time():
+    series = {"time": ["2024-07-03T05:00", "2024-07-03T06:00"], "a": [100.0, 200.0], "dew_point_2m": [10.0, 10.0]}
+    out = inputs.at_moments(series, [datetime(2024, 7, 3, 5, 45, tzinfo=timezone.utc)], ("a", "dew_point_2m"))
+    assert out["a"] == pytest.approx(175.0)
+    assert out["vapour_kpa"] == pytest.approx(1.228, abs=3e-3)  # e_s(10 °C), FAO-56 Annex 2: 1.228 kPa
+
+
+def test_build_with_mocked_downloads(monkeypatch, tmp_path):
+    n = 6
+    lon = 69.2797 + 0.004 * np.arange(n)
+    lat = np.full(n, 41.3111)
+    values = {"tree": [10, 20, 0, 50, 5, 0], "built": [80, 60, 100, 20, 90, 0], "bare": [0, 5, 0, 0, 0, 90],
+              "roads": [10, 20, 5, 0, 15, 0], "buildings": [8, 4, 2, 0, 12, 0], "height": [9, 15, 40, 0, 6, 0],
+              "volume": [27000, 45000, 160000, 0, 18000, 0], "water_dist": [300, 50, 900, 20, 400, 2000],
+              "elevation": [420, 440, 460, 430, 450, 470], "ndvi": [0.2, 0.3, 0.1, 0.6, 0.15, 0.05],
+              "albedo": [0.2, 0.19, 0.22, 0.16, 0.21, 0.27]}
+    document = {"city": {"id": "tashkent", "center": [69.2797, 41.3111], "bbox": [69.1, 41.1, 69.5, 41.4]},
+                "period": {"label": "июнь–август 2023–2025"}, "grid": {"cellSizeM": 200},
+                "cells": {"lon": lon.tolist(), "lat": lat.tolist(), "lst": [45, 43, 47, 35, 46, 50],
+                          "values": values}}
+    (tmp_path / "tashkent.json").write_text(json.dumps(document), encoding="utf-8")
+
+    moments = [datetime(2024, 7, 3, 5, 50, tzinfo=timezone.utc), datetime(2024, 8, 4, 5, 55, tzinfo=timezone.utc)]
+    start = datetime(2024, 7, 3)
+    hours = [start + timedelta(hours=h) for h in range(24 * 33)]
+
+    def hourly(lon, lat, s, e, variables=(), model="era5", timezone="GMT", **_):
+        series = {"time": [h.strftime("%Y-%m-%dT%H:%M") for h in hours], "point": [69.25, 41.25], "elevation": 449.0}
+        fill = {"temperature_2m": 30.0, "dew_point_2m": 10.0, "wind_speed_10m": 1.5, "surface_pressure": 955.0,
+                "shortwave_radiation_instant": 850.0, "direct_normal_irradiance_instant": 860.0,
+                "diffuse_radiation_instant": 140.0, "soil_moisture_0_to_7cm": 0.17}
+        series.update({v: [fill[v]] * len(hours) for v in variables})
+        return series
+
+    monkeypatch.setattr(inputs.weather, "landsat_moments", lambda bbox, label: moments)
+    monkeypatch.setattr(inputs.era5, "hourly", hourly)
+    monkeypatch.setattr(inputs, "fetch_water_share", lambda bbox, grid: np.full(grid.shape, 0.02))
+    monkeypatch.setattr(inputs, "fetch_road_area", lambda bbox, grid: np.full(grid.shape, 0.15))
+    monkeypatch.setattr(inputs, "fetch_ah4guc", lambda window: np.full((window[1] - window[0] + 1,
+                                                                        window[3] - window[2] + 1), 30.0))
+
+    seb, force, lst_k, inside = inputs.build("tashkent", tmp_path, tmp_path / "cache")
+    assert isinstance(seb, SebInputs) and isinstance(force, Forcing)
+    np.testing.assert_allclose(seb.fraction.sum(axis=1), 1.0)
+    np.testing.assert_allclose(lst_k[0], 318.15)
+    assert inside.all() and not seb.rural.any() and seb.irrigated.all()
+    assert seb.soil_moisture[0] == pytest.approx(0.17)
+    assert np.mean(seb.qf) == pytest.approx(30.0)  # one or two 1 km pixels at 30 W/m², mean kept
+    assert force.t_air[0] > force.t_air[-1]  # lower cell is warmer
+    assert force.diffuse_fraction[0] == pytest.approx(140 / 850)
+    assert 20 < math.degrees(force.zenith) < 40 and force.dk_dt > 0
+    assert (tmp_path / "cache" / "seb" / "tashkent_summary.json").exists()
