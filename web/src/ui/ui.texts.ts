@@ -222,7 +222,7 @@ export const WHAT_IF_TEXTS = texts(
     hint: 'move a slider and the model recalculates the surface temperature',
     reset: 'Reset',
     caveat: 'From the model: an association in the data, not an experiment; surface, not air.',
-    treesNote: ' “Trees” here is only the crown share; grass and leaves under them count in NDVI, so greenery changes more.',
+    treesNote: ' “Trees” here is only the crown share; grass and leaves under them count in NDVI, so greenery changes more. New crowns take the place of bare ground first, then of built-up.',
     title: 'What if',
     recalc: 'recalculate with the model',
   },
@@ -248,7 +248,7 @@ export const WHAT_IF_TEXTS = texts(
     hint: 'подвиньте ползунок, модель пересчитает температуру поверхности',
     reset: 'Вернуть как есть',
     caveat: 'По модели: связь в данных, не эксперимент; поверхность, не воздух.',
-    treesNote: ' «Деревья» здесь только доля крон; трава и листва под ними идут в NDVI, поэтому зелень меняет больше.',
+    treesNote: ' «Деревья» здесь только доля крон; трава и листва под ними идут в NDVI, поэтому зелень меняет больше. Новые кроны занимают место сначала голого грунта, потом застройки.',
     title: 'Что если',
     recalc: 'пересчитать по модели',
   },
@@ -261,7 +261,7 @@ export const PLAN_TEXTS = texts(
     none: 'There are no cells in the city where trees would noticeably cool housing.',
     forPeople: (people: string) => `for ${people}`,
     caveat:
-      'Planting on each cell: +20 pp tree crowns and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
+      'Planting on each cell: +20 pp tree crowns (in place of bare ground, then built-up) and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
       'From the model: surface, not air.',
     title: 'Where to plant first',
     compute: 'whole city, by the model',
@@ -273,7 +273,7 @@ export const PLAN_TEXTS = texts(
     none: 'В городе нет участков, где деревья заметно охладили бы жильё.',
     forPeople: (people) => `для ${people}`,
     caveat:
-      'Посадка на каждом участке: +20 п.п. крон и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
+      'Посадка на каждом участке: +20 п.п. крон (на месте голого грунта, потом застройки) и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
       'По модели: поверхность, не воздух.',
     title: 'Где сажать первым',
     compute: 'весь город, по модели',
