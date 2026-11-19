@@ -22,7 +22,8 @@ import type { LonLat, Transect } from '../domain/transect';
 import { useLocale } from '../ui/locale';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
-import { classOf } from '../domain/isotherms';
+import { classOf, type LabelAnchor } from '../domain/isotherms';
+import type { MapOverlay } from '../domain/layers';
 import { facilityImage, facilityImageId } from './facilityImages';
 import { buildingsUrl } from './buildingsData';
 import { followView, hasBuildingsFile } from './fileBuildings';
@@ -81,6 +82,8 @@ interface CityMapProps {
   threeD?: boolean;
   /** Numbered places over the map (the planting list); a click opens the place, as the list does. */
   marks?: readonly MapMark[];
+  /** Another quantity drawn instead of the surface temperature: a flux of the energy balance, or the night. */
+  overlay?: MapOverlay | null;
   /** Text of the small readout under the pointer, or null where there is nothing to say. */
   describe(point: LonLat): string | null;
   /** The basemap finished loading tiles for the current view. */
@@ -185,7 +188,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, marks = NO_MARKS } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, marks = NO_MARKS, overlay = null } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -196,6 +199,9 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   // A drag that drew a section ends in a click; neither the map nor a mark may treat it as picking a place.
   const suppressClickRef = useRef(false);
   const tokensRef = useRef<MapTokens | null>(null);
+  const labelLayerRef = useRef<IsothermLabelLayer | null>(null);
+  /** The isotherm labels of the temperature, kept to come back to from another layer. */
+  const isothermAnchorsRef = useRef<LabelAnchor[]>([]);
   const locale = useLocale();
   const t = MAP_TEXTS[locale];
   const latest = useRef(props);
@@ -255,6 +261,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const { source } = model;
     const anchors = model.isotherms.anchors.filter((a) => source.cellAt(a.at as LonLat) >= 0 && source.inside(a.at as LonLat));
     const labels = new IsothermLabelLayer(map, labelSvg, anchors);
+    labelLayerRef.current = labels;
+    isothermAnchorsRef.current = anchors;
     const updateLabels = () => labels.update();
     map.on('move', updateLabels);
     map.on('resize', updateLabels);
@@ -368,6 +376,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       handles.forEach((marker) => marker.remove());
       map.remove();
       mapRef.current = null;
+      labelLayerRef.current = null;
       labelSvg.replaceChildren();
     };
   }, [model]);
@@ -395,17 +404,33 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    const contours = overlay?.kind === 'contours' ? overlay : null;
+    const pixels = overlay?.kind === 'pixels' ? overlay : null;
     const apply = () => {
       const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-      show(LAYER.isolines, view.isolines);
+      setData(map, SOURCE.overlayBands, contours ? contours.bands : EMPTY);
+      setData(map, SOURCE.overlayLines, contours ? contours.lines : EMPTY);
+      setData(map, SOURCE.night, pixels ? pixels.pixels : EMPTY);
+      show(LAYER.bands, !overlay);
+      show(LAYER.isolines, view.isolines && !overlay);
+      show(LAYER.overlayBands, contours !== null);
+      show(LAYER.overlayLines, view.isolines && contours !== null);
+      show(LAYER.night, pixels !== null);
       show(LAYER.transect, view.transect);
       show(LAYER.transectCasing, view.transect);
+      // Flux lines carry bare numbers, the legend gives the unit; the night pixels need no lines to read.
+      if (overlay) labelLayerRef.current?.show(contours ? contours.anchors : [], '');
+      else labelLayerRef.current?.show(isothermAnchorsRef.current, '°');
     };
-    if (map.isStyleLoaded()) apply();
+    // Not isStyleLoaded: right after a layer switch its source is still loading, and the load event will not come again.
+    if (map.getLayer(LAYER.night)) apply();
     else map.once('load', apply);
     frameRef.current?.classList.toggle('has-isolines', view.isolines);
     frameRef.current?.classList.toggle('has-transect', view.transect);
-  }, [view.isolines, view.transect, model]);
+    return () => {
+      map.off('load', apply);
+    };
+  }, [view.isolines, view.transect, model, overlay]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -1,6 +1,7 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary, TreeModel } from './contract';
+import { parseNight, type NightGrid } from './night';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
 import { parsePhysics, type Physics } from './physics';
 import { parsePlanUncertainty, type PlanUncertainty } from './planUncertainty';
@@ -109,6 +110,18 @@ export function loadTreeModel(id: string): Promise<TreeModel> {
     treeModels.set(id, model);
   }
   return model;
+}
+
+const nights = new Map<string, Promise<NightGrid | null>>();
+
+/** The city's MODIS night grid, `night-<id>.json`, fetched once per city; null when missing or unreadable. */
+export function loadNight(id: string): Promise<NightGrid | null> {
+  let night = nights.get(id);
+  if (!night) {
+    night = fetchJson(`night-${encodeURIComponent(id)}.json`).then(parseNight, () => null);
+    nights.set(id, night);
+  }
+  return night;
 }
 
 export async function loadCities(): Promise<CitySummary[]> {

@@ -212,6 +212,7 @@ python -m venv .venv && source .venv/bin/activate     # Git Bash: .venv/Scripts/
 pip install -r pipeline/requirements-lock.txt         # точные версии, с которыми мы считали; или requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
+PYTHONUTF8=1 python -m pipeline.night --all            # night-<город>.json для карты (MODIS Aqua, 1 км)
 PYTHONUTF8=1 python -m pipeline.buildings              # здания для 3D (скачивает OSM и контуры Microsoft)
 python -m pytest pipeline/tests -q                     # 125 тестов, меньше минуты
 ```
