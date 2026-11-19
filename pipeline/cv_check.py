@@ -21,7 +21,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .uzha.cities import CITIES
-from .uzha.cv import buffered_folds, out_of_fold, spatial_folds
+from .uzha import boundary
+from .uzha.cv import buffered_folds, out_of_fold, out_of_fold_predictions, score, spatial_folds
 from .uzha.grid import WGS84, utm_crs_for
 from .uzha.model import BLOCK_SIZE_M, CV_FOLDS, PARAMS
 
@@ -52,17 +53,30 @@ def load(city_id: str, data_dir: Path = DATA_DIR) -> tuple:
     return features, np.asarray(cells["lst"], float), np.asarray(x), np.asarray(y), keys
 
 
-def check(city_id: str, data_dir: Path = DATA_DIR) -> list:
+def check(city_id: str, data_dir: Path = DATA_DIR, inside: np.ndarray = None) -> list:
+    """`inside`: which cells lie in the city outline (default: from pipeline/boundaries); the main design is then also
+    scored on the city alone and on the ring alone, since what a reader acts on lies inside."""
     features, lst, x, y, keys = load(city_id, data_dir)
+    if inside is None:
+        inside = _inside_outline(city_id, data_dir)
     ndvi = features[:, [keys.index("ndvi")]]
     rows = []
 
-    def add(name, make, data, folds):
-        r2, mae = out_of_fold(make, data, lst, folds)
+    def row(name, r2, mae):
         rows.append({"check": name, "r2": round(r2, 3), "mae": round(mae, 3)})
 
+    def add(name, make, data, folds):
+        row(name, *out_of_fold(make, data, lst, folds))
+
     for block in BLOCK_SIZES_M:
-        add(f"XGBoost, {block / 1000:g} km blocks", _xgboost, features, spatial_folds(x, y, block, CV_FOLDS))
+        name = f"XGBoost, {block / 1000:g} km blocks"
+        if block != BLOCK_SIZE_M or inside is None:
+            add(name, _xgboost, features, spatial_folds(x, y, block, CV_FOLDS))
+            continue
+        predicted = out_of_fold_predictions(_xgboost, features, lst, spatial_folds(x, y, block, CV_FOLDS))
+        row(name, *score(lst, predicted))
+        row(f"{name}, cells inside the city outline", *score(lst, predicted, inside))
+        row(f"{name}, cells in the ring around it", *score(lst, predicted, ~inside))
     add(f"XGBoost, {BLOCK_SIZE_M / 1000:g} km blocks, {BUFFER_M:g} m buffer", _xgboost, features,
         buffered_folds(x, y, BLOCK_SIZE_M, CV_FOLDS, BUFFER_M))
     add("XGBoost, random cells (not spatial)", _xgboost, features,
@@ -70,6 +84,15 @@ def check(city_id: str, data_dir: Path = DATA_DIR) -> list:
     add(f"Linear, all factors, {BLOCK_SIZE_M / 1000:g} km blocks", _linear, features, spatial_folds(x, y, BLOCK_SIZE_M, CV_FOLDS))
     add(f"Linear, NDVI only, {BLOCK_SIZE_M / 1000:g} km blocks", _linear, ndvi, spatial_folds(x, y, BLOCK_SIZE_M, CV_FOLDS))
     return rows
+
+
+def _inside_outline(city_id: str, data_dir: Path):
+    """Cells inside the city's outline, or None when the outline file is missing."""
+    outline = boundary.load(city_id)
+    if outline is None:
+        return None
+    document = json.loads((data_dir / f"{city_id}.json").read_text(encoding="utf-8"))
+    return boundary.inside(outline, np.asarray(document["cells"]["lon"], float), np.asarray(document["cells"]["lat"], float))
 
 
 def main() -> None:
@@ -85,7 +108,7 @@ def main() -> None:
         result[city_id] = check(city_id)
         print(city_id)
         for row in result[city_id]:
-            print(f"  {row['check']:<44} R² {row['r2']:.2f}   MAE {row['mae']:.2f} °C")
+            print(f"  {row['check']:<62} R² {row['r2']:.2f}   MAE {row['mae']:.2f} °C")
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"written: {OUT_PATH}")
