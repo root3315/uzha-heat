@@ -1,16 +1,55 @@
 import { useEffect, useState } from 'react';
-import type { CityDetail, LonLat } from '../data/contract';
+import type { CityDetail, LonLat, TreeModel } from '../data/contract';
 import type { MapMark } from '../map/CityMap';
 import { formatPeople } from '../domain/people';
-import { plantingPlan, type PlantingPlace } from '../domain/plantingPlan';
+import type { PlantingPlace } from '../domain/plantingPlan';
+import { computePlan } from './planInWorker';
 import { useFormats, useLocale } from './locale';
 import { PLAN_TEXTS } from './ui.texts';
 import { useTreeModel } from './WhatIf';
 
 const PLACES = 5;
 
-/** A city's plan, once calculated: reopening the block (or coming back to the city view) shows it at once. */
-const planCache = new WeakMap<CityDetail, PlantingPlace[]>();
+type ByOutline<V> = WeakMap<readonly boolean[], V>;
+
+/**
+ * A city's plan by its cells and its outline: once calculated, reopening the block (or coming back to the city view)
+ * shows it at once; while it is being calculated, a block opened again waits for it instead of starting another.
+ * A plan that failed is forgotten, so the next opening tries again.
+ */
+const planCache = new WeakMap<CityDetail, ByOutline<PlantingPlace[]>>();
+const pendingPlans = new WeakMap<CityDetail, ByOutline<Promise<PlantingPlace[]>>>();
+
+const knownPlan = (detail: CityDetail, inside: readonly boolean[]) => planCache.get(detail)?.get(inside) ?? null;
+
+function byOutline<V>(outer: WeakMap<CityDetail, ByOutline<V>>, detail: CityDetail): ByOutline<V> {
+  let map = outer.get(detail);
+  if (!map) {
+    map = new WeakMap();
+    outer.set(detail, map);
+  }
+  return map;
+}
+
+function planFor(model: TreeModel, detail: CityDetail, inside: readonly boolean[]): Promise<PlantingPlace[]> {
+  const pendings = byOutline(pendingPlans, detail);
+  let pending = pendings.get(inside);
+  if (!pending) {
+    pending = computePlan(model, detail, inside, PLACES).then(
+      (computed) => {
+        byOutline(planCache, detail).set(inside, computed);
+        pendings.delete(inside);
+        return computed;
+      },
+      (error: unknown) => {
+        pendings.delete(inside);
+        throw error;
+      },
+    );
+    pendings.set(inside, pending);
+  }
+  return pending;
+}
 
 interface PlantingPlanProps {
   detail: CityDetail;
@@ -28,23 +67,26 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
   const t = PLAN_TEXTS[locale];
   const { formatDegSigned } = useFormats();
   const state = useTreeModel(detail.city.id);
-  const [plan, setPlan] = useState<PlantingPlace[] | null>(() => planCache.get(detail) ?? null);
+  const [plan, setPlan] = useState<PlantingPlace[] | null>(() => knownPlan(detail, inside));
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
-    const known = planCache.get(detail);
+    const known = knownPlan(detail, inside);
+    setFailed(false);
     if (known) {
       setPlan(known);
       return;
     }
     setPlan(null);
-    // The whole city through the model takes a moment: let the panel paint "calculating" first.
-    const timer = window.setTimeout(() => {
-      const computed = plantingPlan(state.model, detail, inside, PLACES);
-      planCache.set(detail, computed);
-      setPlan(computed);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    let alive = true;
+    planFor(state.model, detail, inside).then(
+      (computed) => alive && setPlan(computed),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
   }, [state, detail, inside]);
 
   useEffect(() => {
@@ -58,7 +100,7 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
     );
   }, [plan, onPlan, t, formatDegSigned, locale]);
 
-  if (state.status === 'failed') return <p className="whatif__status">{t.failed}</p>;
+  if (state.status === 'failed' || failed) return <p className="whatif__status">{t.failed}</p>;
   if (!plan) return <p className="whatif__status">{t.computing}</p>;
   if (!plan.length) return <p className="whatif__status">{t.none}</p>;
 

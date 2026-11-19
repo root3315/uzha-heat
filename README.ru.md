@@ -162,7 +162,7 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # 321 юнит-тест (Vitest), около 15 секунд
+npm test           # 329 юнит-тестов (Vitest), около 15 секунд
 npm run build      # результат в web/dist
 ```
 
