@@ -162,11 +162,14 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
 
       <g className="profile__mean">
         <line x1={M.left} x2={width - M.right} y1={y(cityMean)} y2={y(cityMean)} />
+      </g>
+      <path className="profile__curve" d={curve(false)} />
+      {/* Over the curve, which may run through it. */}
+      <g className="profile__mean">
         <text x={width - M.right} y={y(cityMean) - 5} textAnchor="end">
           {t.mean(formatDeg(cityMean))}
         </text>
       </g>
-      <path className="profile__curve" d={curve(false)} />
 
       <g className="profile__ribbon">
         {profile.segments.map((segment) => (

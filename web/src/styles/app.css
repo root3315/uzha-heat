@@ -823,8 +823,13 @@ select {
   stroke-opacity: 0.55;
   stroke-dasharray: 3 3;
 }
-.profile__mean text {
+/* The curve may run through the label: a halo of the ground keeps it legible. */
+.profile .profile__mean text {
   fill: var(--ink);
+  stroke: var(--card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 .profile__curve {
   fill: none;

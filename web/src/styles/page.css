@@ -202,6 +202,9 @@
 .why__chart .profile__label-bg {
   fill: var(--paper-2);
 }
+.why__chart .profile .profile__mean text {
+  stroke: var(--paper-2);
+}
 .why__foot {
   display: flex;
   flex-wrap: wrap;
