@@ -315,8 +315,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           {!narrow && <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact={false} />}
           {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. On a phone
               only the layer's key does: the others go under the section. */}
-          {(overlay || (!narrow && (mode === 'causes' || people))) && (
+          {(overlay || planMarks || (!narrow && (mode === 'causes' || people))) && (
             <div className="map-legend">
+              <MarksKey plan={planMarks?.length ?? 0} words={t.marksKey} />
               {overlay && <LayerKey overlay={overlay} hour={detail.energy?.localHour ?? 11} night={night} />}
               {!narrow && mode === 'causes' && <CauseKey model={model} />}
               {!narrow && people && <PeopleKey model={model} />}
@@ -347,5 +348,24 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
     </main>
+  );
+}
+
+/** What the letters and numbers on the map are: the section's ends, and the plan's places when it is open. */
+function MarksKey({ plan, words }: { plan: number; words: { section: string; plan: string } }) {
+  return (
+    <p className="marks-key">
+      <span className="marks-key__item">
+        <span className="marks-key__glyph marks-key__glyph--end" aria-hidden="true">A</span>
+        <span className="marks-key__glyph marks-key__glyph--end" aria-hidden="true">B</span>
+        {words.section}
+      </span>
+      {plan > 0 && (
+        <span className="marks-key__item">
+          <span className="marks-key__glyph marks-key__glyph--plan" aria-hidden="true">{plan > 1 ? `1–${plan}` : '1'}</span>
+          {words.plan}
+        </span>
+      )}
+    </p>
   );
 }

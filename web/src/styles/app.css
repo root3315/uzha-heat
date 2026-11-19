@@ -623,6 +623,40 @@ select {
   background: var(--card);
   box-shadow: 0 0 0 1px var(--line);
 }
+/* The key to the letters and numbers on the map, in the marks' own dress. */
+.marks-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font: 400 0.78rem/1.4 var(--font-body);
+  color: var(--ink-2);
+}
+.marks-key__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.marks-key__glyph {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  font: 600 10px/1 var(--font-mono);
+}
+.marks-key__glyph--end {
+  background: var(--ink);
+  color: var(--paper);
+}
+.marks-key__glyph--plan {
+  background: var(--cool);
+  color: var(--card);
+}
+.map-legend .marks-key + * {
+  margin-top: 10px;
+}
 .map-legend .cause-key {
   margin: 0;
 }
