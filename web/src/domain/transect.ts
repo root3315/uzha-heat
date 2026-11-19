@@ -132,12 +132,6 @@ export function mergeSegments(distances: readonly number[], tags: readonly (stri
   });
 }
 
-export function transectLength(source: TransectSource, [a, b]: Transect): number {
-  const [ax, ay] = source.toMetres(a);
-  const [bx, by] = source.toMetres(b);
-  return Math.hypot(bx - ax, by - ay);
-}
-
 export function sampleTransect(source: TransectSource, [a, b]: Transect, options: ProfileOptions = {}): Profile {
   const { stepM = 50, smoothWindow = 5, minSegmentM = 350 } = options;
   const [ax, ay] = source.toMetres(a);

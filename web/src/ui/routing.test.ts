@@ -31,4 +31,9 @@ describe('hrefs', () => {
     expect(parseRoute(toolHref('samarkand', '/'))).toEqual({ view: 'tool', cityId: 'samarkand' });
     expect(parseRoute(methodHref('bukhara', '/'))).toEqual({ view: 'method', cityId: 'bukhara' });
   });
+
+  it('reads a broken escape in the address as no city rather than failing to start', () => {
+    expect(parseRoute('/map/%E0%A4')).toEqual({ view: 'tool', cityId: null });
+    expect(parseRoute('/', '#/city/%E0')).toEqual({ view: 'tool', cityId: null });
+  });
 });

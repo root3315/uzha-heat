@@ -2,20 +2,27 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 're
 
 export type AsyncState<T> = { status: 'loading' } | { status: 'ready'; data: T } | { status: 'error'; message: string };
 
+const sameDeps = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+
+/**
+ * A promise's state, loaded again whenever `deps` change. Until the new load settles it reads as loading, never as the
+ * data of the old deps: otherwise the render right after a change (another city) would show the old city's data.
+ */
 export function useAsync<T>(load: () => Promise<T>, deps: readonly unknown[]): AsyncState<T> {
-  const [state, setState] = useState<AsyncState<T>>({ status: 'loading' });
+  const [state, setState] = useState<{ deps: readonly unknown[]; value: AsyncState<T> }>({ deps, value: { status: 'loading' } });
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
+    setState({ deps, value: { status: 'loading' } });
     load().then(
-      (data) => !cancelled && setState({ status: 'ready', data }),
-      (error: unknown) => !cancelled && setState({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
+      (data) => !cancelled && setState({ deps, value: { status: 'ready', data } }),
+      (error: unknown) =>
+        !cancelled && setState({ deps, value: { status: 'error', message: error instanceof Error ? error.message : String(error) } }),
     );
     return () => {
       cancelled = true;
     };
   }, deps);
-  return state;
+  return sameDeps(state.deps, deps) ? state.value : { status: 'loading' };
 }
 
 /** Width of an element in CSS px, kept current with a ResizeObserver; for SVG drawn at true size. */

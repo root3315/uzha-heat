@@ -95,4 +95,12 @@ describe('formatPeople', () => {
     expect(formatPeople(417, 'en')).toBe('420 people');
     expect(formatPeople(1, 'en')).toBe('1 person');
   });
+
+  it('picks the form from the rounded figure, so neighbours on either side of a boundary read alike', () => {
+    expect(formatPeople(996, 'en')).toBe('1.0 thousand people');
+    expect(formatPeople(1004, 'en')).toBe('1.0 thousand people');
+    expect(formatPeople(9960, 'en')).toBe('10 thousand people');
+    expect(formatPeople(10_000, 'en')).toBe('10 thousand people');
+    expect(formatPeople(994, 'en')).toBe('990 people');
+  });
 });
