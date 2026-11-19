@@ -349,6 +349,10 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
       addPatterns();
       setData(map, SOURCE.transect, lineOf(latest.current.transect));
       setData(map, SOURCE.found, pointsOf(latest.current.found));
+      // Set before the style finished loading, these found no source yet: a place from a link, a probe kept
+      // across a language switch.
+      setData(map, SOURCE.place, pointOf(latest.current.place));
+      setData(map, SOURCE.probe, pointOf(latest.current.probe));
       updateLabels();
     });
 
