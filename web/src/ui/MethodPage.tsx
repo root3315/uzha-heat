@@ -8,6 +8,7 @@ import { formatWatts } from '../domain/energy';
 import { groupShares, islandBudget } from '../domain/factorGroups';
 import type { Formats } from '../domain/format';
 import { cutAmount, leverByKey } from '../domain/whatIf';
+import { referenceIsland } from '../domain/heatIsland';
 import { islandByRingWidth, ringSpread } from '../domain/ringSensitivity';
 import type { Locale } from '../i18n/locale';
 import { useAsync } from './hooks';
@@ -99,6 +100,10 @@ function Robustness({ model }: { model: CityModel }) {
     [detail, inside, outline],
   );
   const groups = useMemo(() => groupShares(detail, locale, inside), [detail, locale, inside]);
+  const reference = useMemo(
+    () => (outline ? referenceIsland(detail.cells.lst, detail.cells.values, inside) : null),
+    [detail, inside, outline],
+  );
   const budget = useMemo(() => (outline ? islandBudget(detail, locale, inside) : null), [detail, locale, inside, outline]);
   const spread = ringSpread(rings);
   // Without the outline there is no ring and no "inside": nothing here would mean what it says.
@@ -142,6 +147,20 @@ function Robustness({ model }: { model: CityModel }) {
               </div>
             ))}
           </dl>
+        </>
+      )}
+      {reference?.island && (
+        <>
+          <p>{t.reference(formatDegSigned(reference.island.intensity))}</p>
+          <dl className="method__factors">
+            {reference.rules.map((rule) => (
+              <div key={rule.id}>
+                <dt>{t.rule[rule.id]}</dt>
+                <dd>{rule.island ? t.ruleValue(formatDegSigned(rule.island.intensity), formatNumber(rule.removed, 0)) : t.tooFew}</dd>
+              </div>
+            ))}
+          </dl>
+          <p>{t.referenceNote}</p>
         </>
       )}
       {budget && (

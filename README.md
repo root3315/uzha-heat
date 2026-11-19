@@ -32,8 +32,14 @@ Inside the city outline the surface is hotter in summer than in the ring around 
 
 Heat island: median of the cells inside the outline minus the median of the ring around it. Its sign holds for every ring
 width; its size grows with the width (Tashkent +1.3 → +1.8 °C from 0.5 to 1.5 km), and MODIS keeps rising out to 5 km in
-Tashkent and Samarkand (Samarkand by day +1.6 → +3.0 °C). The 1.5 km ring is itself partly suburban, so these figures are
-lower bounds.
+Tashkent and Samarkand (Samarkand by day +1.6 → +3.0 °C). The 1.5 km ring is itself partly suburban, so a wider ring gives
+more; a reference picked by rule gives less (below). The size depends on what the city is compared with; the sign does not.
+
+The reference can also be picked by rule, as the team's theory notes ask: ring cells at the city's height (within 50 m), not
+by water (200 m), not irrigated fields (NDVI above 0.45 with under 10 % built-up), not mostly bare ground. Against that
+reference the island is +0.6 / +1.6 / +2.5 °C. Nearly all of Tashkent's drop comes from leaving out irrigated fields
+(38.8 °C), the coolest surface around these oasis cities: against them the city stands out more, against dry land less.
+The method page lists each rule's effect.
 
 NDVI is the single strongest factor in all three cities; in Samarkand built-up land is close behind (37 % against 39 %
 for vegetation and soil). Grouping correlated factors, vegetation and bare soil take 39–64 % of the
@@ -185,7 +191,7 @@ All sources are open; no API keys are needed.
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # 348 unit tests (Vitest), about 15 seconds
+npm test           # 350 unit tests (Vitest), about 15 seconds
 npm run build      # output in web/dist
 ```
 
