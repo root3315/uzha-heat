@@ -167,13 +167,27 @@ pip install -r pipeline/requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
-python -m pytest pipeline/tests -q                     # 92 tests, about a minute
+python -m pytest pipeline/tests -q                     # 103 tests, one to two minutes
 ```
 
 The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.
 A first run of Tashkent takes roughly 10–20 minutes, mostly Sentinel-2 reads; a rerun with the cache takes about a minute.
 `pipeline.buildings` downloads the Geofabrik extract of Uzbekistan (~130 MB), Microsoft footprints (~45 MB per tile) and a
 GHSL tile. Details: [pipeline/README.md](pipeline/README.md).
+
+**Checking against data you hand us** (offline, seconds; reads `web/public/data/<city>.json`):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points stations.csv   # lon/lat columns found by name
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif  # any CRS and resolution
+```
+
+Points go to the 200 m cell they fall in (the value column is found automatically, or `--value t_max`; `;` and
+decimal commas are fine). A raster finer than our cells is averaged into each cell; a coarser one is compared at its own
+pixels, our cells averaged into them. Kelvin is detected; `--scale` and `--offset` undo scaled integers. It prints
+n, Pearson r, Spearman ρ, mean difference, RMSE and how much of our hottest 10 % is also in theirs, and writes
+`pipeline/cache/compare-<city>-<file>.json`. For air temperature the difference is expected; r and the hottest-10 %
+overlap say whether the heat is in the same places.
 
 Hosting: [docs/deploy.md](docs/deploy.md).
 
