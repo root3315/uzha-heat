@@ -9,7 +9,8 @@
 **How to view the demo** (two minutes):
 1. Open https://uzha.mydevbox.xyz/map/tashkent and click any coloured place on the map.
 2. In the panel on the right move the "What if" sliders: the city model recalculates that place.
-3. Click "Whole city", then "Where to plant first": five places, each opens on the map.
+3. Under the city's answer, "Where to plant first" lists five places, numbered on the map (open from the start on a wide
+   screen; tap it on a phone). Each opens with its own "what if".
 
 A map of summer surface overheating in Tashkent, with the same pipeline run on Samarkand and Bukhara (each city gets its own model). For every
 200 × 200 m cell it shows how hot the surface is, which factors heat or cool that place and by how many degrees, and what
@@ -187,7 +188,7 @@ Commands are for bash or Git Bash. In PowerShell set `$env:PYTHONUTF8=1` and use
 **Data pipeline** (Python 3.10+, no keys):
 
 ```bash
-python -m venv .venv && source .venv/bin/activate     # PowerShell: .venv\Scripts\Activate.ps1
+python -m venv .venv && source .venv/bin/activate     # Git Bash: .venv/Scripts/activate; PowerShell: .venv\Scripts\Activate.ps1
 pip install -r pipeline/requirements-lock.txt         # the exact versions we ran; or requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
@@ -205,11 +206,12 @@ GHSL tile. Details: [pipeline/README.md](pipeline/README.md).
 **Checking against data you hand us** (offline, seconds; reads `web/public/data/<city>.json`):
 
 ```bash
-PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points stations.csv   # lon/lat columns found by name
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points pipeline/examples/stations.csv   # lon/lat columns found by name
 PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif  # any CRS and resolution
 ```
 
-Points go to the 200 m cell they fall in (the value column is found automatically, or `--value t_max`; `;` and
+`pipeline/examples/stations.csv` holds made-up values, only to show a file the command takes as it is (`;`, decimal
+commas, a name column). Points go to the 200 m cell they fall in (the value column is found automatically, or `--value t_max`; `;` and
 decimal commas are fine). A raster finer than our cells is averaged into each cell; a coarser one is compared at its own
 pixels, our cells averaged into them. Kelvin is detected; `--scale` and `--offset` undo scaled integers. It prints
 n, Pearson r, Spearman ρ, mean difference, RMSE and how much of our hottest 10 % is also in theirs, and writes
