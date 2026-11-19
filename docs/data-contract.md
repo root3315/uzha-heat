@@ -190,6 +190,40 @@ Optional. The physics model (a per-tile surface energy balance, `pipeline/uzha/s
   observed). `assumptions`: `{id, text}` in English; the site words the known ids itself in each language from
   `settings` and shows the file's text for any other id.
 
+## `web/public/data/night-<id>.json`
+
+The summer night surface temperature around the city from NASA MODIS Aqua (MYD11A2, band `LST_Night_1km`, about
+01:30 local), for the map's night layer. Optional: without the file the layer is not offered. Written by
+`python -m pipeline.night --all` from the same summer 8-day composites as `pipeline/validate.py` (and its cache).
+
+```json
+{
+  "format": "uzha-night-1",
+  "product": "MYD11A2",
+  "band": "LST_Night_1km",
+  "overpassLocal": "~01:30",
+  "period": "июнь–август 2023–2025",
+  "composites": 25,
+  "minComposites": 5,
+  "grid": { "projection": "sinusoidal", "radiusM": 6371007.181, "x0": 5748784.185, "y0": 4614594.658,
+            "pixelM": 926.625433, "nx": 94, "ny": 50 },
+  "bounds": [68.58996, 41.08333, 70.07535, 41.5],
+  "stats": { "min": 15.5, "median": 18.1, "max": 22.8 },
+  "values": [18.6, null, 18.1]
+}
+```
+
+- The pixels are MODIS's own 1 km pixels on its sinusoidal grid, not resampled. `x0`, `y0` are the grid's top-left
+  corner in sinusoidal metres, `pixelM` the pixel size; pixel (`col`, `row`) spans `x0 + col·pixelM … + pixelM` and
+  `y0 − row·pixelM … − pixelM`. To lon/lat (radians, sphere of radius `radiusM`): lat = y / R, lon = x / (R cos lat).
+  In lon/lat the pixels are slightly sheared quadrilaterals; draw them as they are, do not smooth.
+- `values`: `nx × ny` numbers, row-major from the north-west corner, °C with 1 decimal. `null` where the pixel had
+  fewer than `minComposites` good composites (QC as in the MODIS check), or where its centre is outside the lon/lat
+  box of the city outline grown by 8 km, the area MODIS is fetched for (the sinusoidal box around it is a sheared
+  parallelogram in lon/lat, reaching tens of kilometres past the city).
+- `bounds` is [west, south, east, north] of the whole grid in degrees; `stats` are over the non-null values.
+- `period` is the Landsat period of `<id>.json` (Russian, as there); `composites` the 8-day periods found in it.
+
 ## Language
 
 The texts in the files (`label`, `description`, `unit`, `period`, `weather.period`, district names) are Russian.

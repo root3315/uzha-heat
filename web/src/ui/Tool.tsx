@@ -4,6 +4,7 @@ import { sourcesLine } from '../domain/answers';
 import type { CityModel } from '../domain/cityModel';
 import { cityName } from '../domain/dataTexts';
 import { cellsToCsv, cellsToGeoJson } from '../domain/exportCells';
+import { availableLayers, type MapLayer } from '../domain/layers';
 import { refinePlace, type PickedPlace } from '../domain/pickedPlace';
 import { PRECISION } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
@@ -14,9 +15,11 @@ import { CitySwitcher } from './CitySwitcher';
 import { downloadText } from './download';
 import { prefersReducedMotion, useViewport } from './hooks';
 import { readSharedView, sharedViewQuery } from '../domain/shareLink';
+import { LayerKey, LayerSwitch } from './LayerSwitch';
 import { Link } from './Link';
 import { useLocale } from './locale';
 import { MapHint } from './MapHint';
+import { useNight, useOverlay } from './mapLayers';
 import { Panel } from './panel/Panel';
 import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
@@ -71,7 +74,13 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const { width } = useViewport();
   const narrow = width < NARROW_PX;
   const { detail } = model;
-  const { cellUnder, describe } = useReadout(model);
+  // What the map colours. The temperature unless the reader picks a flux or the night; the night shows once its file is in.
+  const [chosenLayer, setLayer] = useState<MapLayer>('lst');
+  const night = useNight(detail.city.id);
+  const layers = useMemo(() => availableLayers(detail, night), [detail, night]);
+  const layer = layers.includes(chosenLayer) ? chosenLayer : 'lst';
+  const overlay = useOverlay(model, layer, night);
+  const { cellUnder, describe } = useReadout(model, layer, night);
   const hasPeople = detail.cells.pop !== undefined;
 
   const profile = useMemo(() => sampleTransect(model.source, transect), [model, transect]);
@@ -250,12 +259,14 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           people={people}
           threeD={threeD}
           marks={planMarks ?? undefined}
+          overlay={overlay}
           describe={describe}
           onIdle={refineName}
         >
           {narrow && (
             <div className="map-bar" role="toolbar" aria-label={t.mapToolbar}>
               {switcher}
+              <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact />
               <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={toggleDrawing}>
                 {drawing ? t.drawing : t.section}
               </button>
@@ -273,11 +284,14 @@ export function Tool({ model, cities, onCity }: ToolProps) {
             </div>
           )}
           {!narrow && threeDButton}
-          {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. */}
-          {!narrow && (mode === 'causes' || people) && (
+          {!narrow && <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact={false} />}
+          {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. On a phone
+              only the layer's key does: the others go under the section. */}
+          {(overlay || (!narrow && (mode === 'causes' || people))) && (
             <div className="map-legend">
-              {mode === 'causes' && <CauseKey model={model} />}
-              {people && <PeopleKey model={model} />}
+              {overlay && <LayerKey overlay={overlay} hour={detail.energy?.localHour ?? 11} night={night} />}
+              {!narrow && mode === 'causes' && <CauseKey model={model} />}
+              {!narrow && people && <PeopleKey model={model} />}
             </div>
           )}
           <MapHint touch={narrow || isTouch()} />

@@ -581,6 +581,90 @@ select {
 .map-legend .cause-key {
   margin: 0;
 }
+.map-legend .layer-key + .cause-key,
+.map-legend .layer-key + .people-key,
+.map-legend .layer-key + .cause-key + .people-key {
+  margin-top: 10px;
+}
+/* What the map colours: a row of pills on the map, top-left on a wide screen, in the toolbar's dress. */
+.map-layers {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 80px);
+}
+.map-layers .pill {
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  padding: 0 12px;
+}
+.map-layers .pill:hover {
+  background: var(--paper-2);
+}
+.map-layers .pill[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+/* The first-time hint steps down below the layer pills. */
+.map:has(.map-layers) .map-hint {
+  top: 62px;
+}
+.layer-key {
+  max-width: 330px;
+}
+.layer-key__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 500 0.78rem/1.3 var(--font-body);
+}
+.layer-key__unit {
+  color: var(--ink-2);
+  font: 400 0.66rem/1 var(--font-mono);
+}
+.layer-key__steps {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.layer-key__steps li {
+  display: grid;
+  gap: 3px;
+}
+.layer-key__swatch {
+  display: block;
+  height: 10px;
+  margin-right: 1px;
+}
+.layer-key__tick {
+  height: 1em;
+  color: var(--ink-2);
+  font: 400 0.62rem/1 var(--font-mono);
+  transform: translateX(-50%);
+}
+.layer-key__note {
+  margin-top: 6px;
+  color: var(--ink-2);
+  font: 400 0.66rem/1.5 var(--font-mono);
+}
+/* On a phone only the layer's key sits on the map, across its foot, clear of the attribution button. */
+@media (max-width: 860px) {
+  .map-legend {
+    bottom: 34px;
+    max-width: calc(100% - 20px);
+    padding: 8px 12px;
+  }
+  .layer-key {
+    max-width: none;
+  }
+}
 .map-legend .cause-key + .people-key {
   margin-top: 10px;
 }

@@ -17,8 +17,8 @@ export interface PlacedLabel {
   major: boolean;
 }
 
-/** Screen positions for the anchors in view: upright, along the line, never crowded. */
-export function placeLabels(map: MapLibreMap, anchors: readonly LabelAnchor[]): PlacedLabel[] {
+/** Screen positions for the anchors in view: upright, along the line, never crowded. `unit` follows each number. */
+export function placeLabels(map: MapLibreMap, anchors: readonly LabelAnchor[], unit = '°'): PlacedLabel[] {
   const { clientWidth: w, clientHeight: h } = map.getContainer();
   const placed: PlacedLabel[] = [];
   for (const anchor of anchors) {
@@ -29,28 +29,38 @@ export function placeLabels(map: MapLibreMap, anchors: readonly LabelAnchor[]): 
     let angle = (Math.atan2(toward.y - at.y, toward.x - at.x) * 180) / Math.PI;
     if (angle > 90) angle -= 180;
     if (angle < -90) angle += 180;
-    placed.push({ x: at.x, y: at.y, angle, text: `${formatNumber(anchor.t, 0)}°`, major: anchor.major });
+    placed.push({ x: at.x, y: at.y, angle, text: `${formatNumber(anchor.t, 0)}${unit}`, major: anchor.major });
   }
   return placed;
 }
+
+const majorFirst = (anchors: readonly LabelAnchor[]): LabelAnchor[] => [...anchors].sort((a, b) => Number(b.major) - Number(a.major));
 
 /**
  * Isotherm labels set in the page's own serif. MapLibre can only draw its glyph fonts,
  * so the labels live in an SVG over the canvas and follow every frame.
  */
 export class IsothermLabelLayer {
-  private readonly anchors: LabelAnchor[];
+  private anchors: LabelAnchor[];
+  private unit = '°';
 
   constructor(
     private readonly map: MapLibreMap,
     private readonly svg: SVGSVGElement,
     anchors: readonly LabelAnchor[],
   ) {
-    this.anchors = [...anchors].sort((a, b) => Number(b.major) - Number(a.major));
+    this.anchors = majorFirst(anchors);
+  }
+
+  /** Label other lines from now on: another layer's, with its own unit after the number. */
+  show(anchors: readonly LabelAnchor[], unit: string): void {
+    this.anchors = majorFirst(anchors);
+    this.unit = unit;
+    this.update();
   }
 
   update(): void {
-    const labels = placeLabels(this.map, this.anchors);
+    const labels = placeLabels(this.map, this.anchors, this.unit);
     const nodes = this.svg.children;
     labels.forEach((label, i) => {
       let node = nodes[i] as SVGTextElement | undefined;

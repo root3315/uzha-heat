@@ -49,25 +49,44 @@ def period_of(document: dict) -> Period:
     raise ValueError(f"no Landsat period labelled {label!r}")
 
 
+def city_document(city: City) -> dict:
+    return json.loads((DATA_DIR / f"{city.id}.json").read_text(encoding="utf-8"))
+
+
+def city_outline(city: City):
+    outline = boundary.load(city.id)
+    if outline is None:
+        raise FileNotFoundError(f"no boundary for {city.id}: the heat island needs pipeline/boundaries/{city.id}.geojson")
+    return outline
+
+
+def fetch_bbox_of(outline) -> tuple:
+    """The lon/lat box MODIS is fetched for: the outline with the widest heat-island ring around it."""
+    return tuple(round(v, 4) for v in boundary.buffered(outline, MODIS_FETCH_MARGIN_M).bounds)
+
+
+def modis_products(city: City, outline, period: Period) -> dict:
+    """Terra and Aqua summer composites around the city, from the cache when they were fetched before."""
+    fetch_bbox = fetch_bbox_of(outline)
+    cache = Cache(CACHE_ROOT / f"modis_{city.id}_{_key(fetch_bbox, period)}")
+    return {platform: cache.get_or_compute(f"mod11a2_{platform}",
+                                           lambda p=platform: modis.summer_lst(fetch_bbox, period, p))
+            for platform in modis.PLATFORMS}
+
+
 def validate_city(city: City) -> dict:
-    document = json.loads((DATA_DIR / f"{city.id}.json").read_text(encoding="utf-8"))
+    document = city_document(city)
     period = period_of(document)
     cells = document["cells"]
     lon, lat = np.asarray(cells["lon"], float), np.asarray(cells["lat"], float)
     lst = np.asarray(cells["lst"], dtype=float)
 
-    outline = boundary.load(city.id)
-    if outline is None:
-        raise FileNotFoundError(f"no boundary for {city.id}: the heat island needs pipeline/boundaries/{city.id}.geojson")
+    outline = city_outline(city)
     utm = utm_crs_for(*city.center)
     to_utm = Transformer.from_crs(WGS84, utm, always_xy=True).transform
     outline_utm = transform_geometry(to_utm, outline)
 
-    fetch_bbox = tuple(round(v, 4) for v in boundary.buffered(outline, MODIS_FETCH_MARGIN_M).bounds)
-    cache = Cache(CACHE_ROOT / f"modis_{city.id}_{_key(fetch_bbox, period)}")
-    products = {platform: cache.get_or_compute(f"mod11a2_{platform}",
-                                               lambda p=platform: modis.summer_lst(fetch_bbox, period, p))
-                for platform in modis.PLATFORMS}
+    products = modis_products(city, outline, period)
     raster = products["aqua"].raster
 
     # our cells: rings in UTM, aggregation on the MODIS sinusoidal grid

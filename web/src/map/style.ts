@@ -20,6 +20,9 @@ export const SOURCE = {
   people: 'people',
   facilities: 'facilities',
   buildings: 'buildings',
+  overlayBands: 'overlay-bands',
+  overlayLines: 'overlay-lines',
+  night: 'night',
 } as const;
 
 export const LAYER = {
@@ -32,6 +35,9 @@ export const LAYER = {
   facilities: 'facilities',
   buildings: 'buildings-3d',
   buildingsFile: 'buildings-3d-file',
+  overlayBands: 'overlay-bands',
+  overlayLines: 'overlay-lines',
+  night: 'night',
 } as const;
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
@@ -80,6 +86,15 @@ function facilityData(model: CityModel) {
 
 /** In 3D the buildings carry the colour; the ground keeps only a trace of it, so no hot area lies over them as a slab. */
 const THREE_D_GROUND = 0.14;
+
+/** Colour and strength of a shape on an extra layer by its palette step `c` (the layer has already turned its scale round). */
+function stepColor(tokens: MapTokens): ExpressionSpecification {
+  return ['match', ['get', 'c'], ...tokens.classes.flatMap((color, c) => [c, color]), tokens.ground] as unknown as ExpressionSpecification;
+}
+
+function stepOpacity(tokens: MapTokens): ExpressionSpecification {
+  return ['match', ['get', 'c'], ...tokens.classOpacity.flatMap((o, c) => [c, o]), 1] as unknown as ExpressionSpecification;
+}
 
 function classOpacity(tokens: MapTokens, scale: number): ExpressionSpecification {
   return ['match', ['get', 'k'], ...tokens.classOpacity.flatMap((o, k) => [k, o * scale]), scale] as unknown as ExpressionSpecification;
@@ -141,6 +156,9 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       [SOURCE.found]: { type: 'geojson', data: EMPTY },
       [SOURCE.people]: { type: 'geojson', data: peopleData(model) },
       [SOURCE.facilities]: { type: 'geojson', data: facilityData(model) },
+      [SOURCE.overlayBands]: { type: 'geojson', data: EMPTY },
+      [SOURCE.overlayLines]: { type: 'geojson', data: EMPTY },
+      [SOURCE.night]: { type: 'geojson', data: EMPTY },
     },
     layers: [
       { id: 'ground', type: 'background', paint: { 'background-color': tokens.ground } },
@@ -149,6 +167,14 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         type: 'fill',
         source: SOURCE.bands,
         paint: { 'fill-color': classColor, 'fill-opacity': bandOpacity(tokens, 'temperature'), 'fill-antialias': false },
+      },
+      // A flux of the energy balance, drawn as the temperature is: stepped bands over a smooth surface. Off until chosen.
+      {
+        id: LAYER.overlayBands,
+        type: 'fill',
+        source: SOURCE.overlayBands,
+        layout: { visibility: 'none' },
+        paint: { 'fill-color': stepColor(tokens), 'fill-opacity': stepOpacity(tokens), 'fill-antialias': false },
       },
       {
         id: LAYER.causes,
@@ -162,6 +188,13 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         type: 'line',
         layout: { 'line-join': 'round', visibility: 'none' },
         source: SOURCE.isolines,
+        paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
+      },
+      {
+        id: LAYER.overlayLines,
+        type: 'line',
+        layout: { 'line-join': 'round', visibility: 'none' },
+        source: SOURCE.overlayLines,
         paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
       },
       // People as quiet ink dots, never as colour: colour stays temperature.
@@ -179,6 +212,15 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
       // Inside the city but without a satellite reading: a flat shade, so a gap never reads as a temperature.
       { id: 'outside-data', type: 'fill', source: SOURCE.outsideData, paint: { 'fill-color': tokens.shade } },
       { id: 'outside-city', type: 'fill', source: SOURCE.outsideCity, paint: { 'fill-color': tokens.ground } },
+      // The night from MODIS: one square per 1 km pixel, over the countryside too, since the night island is the city
+      // against it. Above the masks, under the water and the roads; a faint hairline between pixels shows the grid.
+      {
+        id: LAYER.night,
+        type: 'fill',
+        source: SOURCE.night,
+        layout: { visibility: 'none' },
+        paint: { 'fill-color': stepColor(tokens), 'fill-opacity': stepOpacity(tokens), 'fill-outline-color': withAlpha(tokens.ink, 0.12) },
+      },
       { id: 'water', type: 'fill', source: SOURCE.basemap, 'source-layer': 'water', paint: { 'fill-color': tokens.water } },
       {
         id: 'waterway',
