@@ -1,3 +1,5 @@
+English: see the [project README](../README.md); this file is the web app's notes in Russian.
+
 # Острова тепла: веб-приложение
 
 Где город перегревается летом и почему. Карта изотерм температуры поверхности, разрез по линии А–Б с причинами
