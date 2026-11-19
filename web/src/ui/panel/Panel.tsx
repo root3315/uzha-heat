@@ -12,6 +12,7 @@ import { CauseIcon } from '../icons';
 import { directionOf, HatchSwatch, usePatternFill } from '../patterns';
 import { Phrase } from '../Phrase';
 import { PlantingPlanBlock } from '../PlantingPlan';
+import { SurfacesBlock } from '../Surfaces';
 import { WhatIfBlock } from '../WhatIf';
 import { Ramp } from './Ramp';
 
@@ -154,6 +155,7 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
           </details>
         ))}
       {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
+      {content.whatIfCell !== null && !expanded && <SurfacesBlock detail={model.detail} cell={content.whatIfCell} />}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
       <AdviceBlock advice={content.advice} expanded={expanded} />

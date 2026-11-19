@@ -5,6 +5,7 @@ import { parseNight, type NightGrid } from './night';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
 import { parsePhysics, type Physics } from './physics';
 import { parsePlanUncertainty, type PlanUncertainty } from './planUncertainty';
+import { parseSeb, type SebCity } from './seb';
 import { parseValidation, type Validation } from './validation';
 
 const BASE = import.meta.env.BASE_URL;
@@ -122,6 +123,23 @@ export function loadNight(id: string): Promise<NightGrid | null> {
     nights.set(id, night);
   }
   return night;
+}
+
+const sebFiles = new Map<string, Promise<SebCity>>();
+
+/**
+ * The city's physics inputs per cell, `seb-<id>.json`: fetched once, only when the reader opens "Surfaces (physics)".
+ * Rejects when the file is missing or of no use to the solver.
+ */
+export function loadSeb(id: string): Promise<SebCity> {
+  let seb = sebFiles.get(id);
+  if (!seb) {
+    seb = fetchJson(`seb-${encodeURIComponent(id)}.json`).then((raw) => parseSeb(raw) ?? Promise.reject(new Error(`seb-${id}.json is not usable`)));
+    // A failed download may be retried on the next open.
+    seb.catch(() => sebFiles.delete(id));
+    sebFiles.set(id, seb);
+  }
+  return seb;
 }
 
 export async function loadCities(): Promise<CitySummary[]> {

@@ -250,6 +250,16 @@ It writes `web/public/data/physics.json` ([contract](../docs/data-contract.md)).
 `pipeline/cache/seb/<id>_check/`, keyed by a hash of the inputs; a first run of Tashkent takes about 16 minutes
 (cross-validation 3, Shapley 3, scenarios 10), a rerun seconds.
 
+Then, for the place panel's "Surfaces (physics)" block:
+
+```bash
+PYTHONUTF8=1 python -m pipeline.seb_export --city tashkent   # or --all: every city in physics.json
+```
+
+`seb_export.py` writes `web/public/data/seb-<id>.json`: the same inputs per cell as fixed-point columns, the weather and
+the parameters `seb_check` fitted, plus check cells with the Python solver's temperature, which the browser's solver
+must reproduce. Tashkent: 1.1 MB (0.34 MB gzipped); the rounding moves no converged cell by more than 0.035 K.
+
 Scenario settings: roof albedo 0.55; road albedo 0.30; 10 % canopy from paving and bare ground; 50 % of roofs greened
 and watered; 50 % of paving to grass pavers; human-made heat −30 %.
 

@@ -224,6 +224,53 @@ The summer night surface temperature around the city from NASA MODIS Aqua (MYD11
 - `bounds` is [west, south, east, north] of the whole grid in degrees; `stats` are over the non-null values.
 - `period` is the Landsat period of `<id>.json` (Russian, as there); `composites` the 8-day periods found in it.
 
+## `web/public/data/seb-<id>.json`
+
+Optional. The physics model's inputs for every cell, so the place panel can solve the picked cell's energy balance in
+the browser ("Surfaces (physics)": roof and road albedo, green roofs). Written by `python -m pipeline.seb_export`
+from the inputs of `pipeline/uzha/seb/inputs.py` and the `params` of `physics.json` (run `seb_check` first); only
+for cities in `physics.json`, and the site offers the block only for those. Fetched only when the reader opens it.
+
+```json
+{
+  "format": "uzha-seb-1",
+  "tiles": ["tree", "grass", "bare", "roof", "road", "paved", "water"],
+  "cells": 20446,
+  "params": { "kbInv": 6.44, "rsMinTree": 40.0, "rsMinGrass": 34.1, "rsMinCrop": 20.6, "soilResistanceScale": 0.49,
+              "ohmA1Scale": 1.2, "dTAir": 4.61 },
+  "forcing": { "kDown": 840.5, "diffuseFraction": 0.16, "eAir": 1.45, "wind": 2.13, "zRef": 60.0, "zenith": 0.527,
+               "dkDt": 66.7, "tAir": { "offset": 304.27, "step": 0.01, "values": [12, 140] }, "lDown": {}, "pressure": {} },
+  "tile": {
+    "emissivity": [0.98, 0.95, 0.93, 0.91, 0.95, 0.9, 0.96],
+    "ohm": [[0.11, 0.11, -12.3], [0.32, 0.54, -27.4]],
+    "albedo": { "tree": 0.16, "grass": 0.21, "bare": 0.25, "water": 0.08 },
+    "imperviousTiles": ["roof", "road", "paved"],
+    "canyonTiles": ["road", "paved", "grass", "bare"]
+  },
+  "cell": {
+    "fraction": { "tree": { "offset": 0.0, "step": 0.001, "values": [120, 0] }, "bare": 0.0 },
+    "imperviousAlbedo": {}, "canyonShade": {}, "skyView": {}, "z0m": {}, "zd": {}, "soilMoisture": 0.214,
+    "qf": {}, "irrigated": { "offset": 0.0, "step": 1.0, "values": [1, 0] }, "rural": {}
+  },
+  "check": { "cells": [12545, 115], "tCell": [309.911523, 309.060631] },
+  "roundingK": 0.0345
+}
+```
+
+- A column is either one number (the same for every cell) or `{offset, step, values}`: one integer per cell in the
+  order of `<id>.json`'s `cells`, value = `offset + step × int`. Steps: tile shares 0.001 (each cell's shares sum to
+  exactly 1000 steps), albedo, shade, sky view and soil moisture 0.001, `z0m` 0.00001 m, `zd` 0.01 m, `qf` 0.1 W/m²,
+  `tAir` 0.01 K, `lDown` 0.1 W/m², `pressure` 0.01 kPa. `irrigated` and `rural` are 0/1.
+- Names and units are those of the solver (`web/src/domain/seb/types.ts`, `pipeline/uzha/seb/types.py`): `params` are
+  the seven calibrated parameters; `forcing` the overpass weather, one value for the city except the air temperature,
+  incoming longwave and pressure, which follow the cell's elevation (K, W/m², kPa; `zenith` in rad, `dkDt` W m⁻² h⁻¹).
+- `tile`: what does not vary by cell, in `tiles` order. Albedo: the natural tiles have one value for the city
+  (`albedo`), the `imperviousTiles` share the cell's `imperviousAlbedo`. Shade: the `canyonTiles` share the cell's
+  `canyonShade`, the other tiles are unshaded.
+- `check`: built-up cells (roofs and roads at least 1 % each) spread over the cell temperature, and two ring cells,
+  with the Python solver's radiance-weighted cell temperature (K) on exactly these decoded inputs; a port must
+  reproduce it to 1e-5 K. `roundingK`: the largest change of a converged cell's temperature that the rounding causes.
+
 ## Language
 
 The texts in the files (`label`, `description`, `unit`, `period`, `weather.period`, district names) are Russian.
