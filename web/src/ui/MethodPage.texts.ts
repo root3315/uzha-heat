@@ -73,6 +73,14 @@ export const METHOD_TEXTS = texts(
         'so the parts add up). The model splits that by group of factors. "Other" is what the groups leave unexplained: the observed ' +
         'difference minus their sum, that is, where the model misses the satellite. It is a remainder, not a heat source of its own.',
       other: 'Other, unexplained',
+      reference: (all: string) =>
+        `The reference can also be chosen by rule rather than as the whole ring: ring cells at the city's height (within 50 m), not by water ` +
+        `(200 m), not irrigated fields (NDVI above 0.45 with under 10% built-up) and not mostly bare ground (over 50%). Against that reference ` +
+        `the heat island is ${all}. Each rule alone:`,
+      rule: { water: 'without cells by water', irrigated: 'without irrigated fields', bare: 'without bare ground', height: 'without cells at another height' },
+      ruleValue: (island: string, removed: string) => `${island}, ${removed} ring cells left out`,
+      referenceNote:
+        'Irrigated fields are the coolest surface around these oasis cities. Compared with them the city stands out more; compared with dry land, less. Both are true; which one matters depends on the question.',
     },
     modis: {
       title: 'Check against MODIS, and the night',
@@ -204,6 +212,14 @@ export const METHOD_TEXTS = texts(
         'чтобы части складывались). Модель делит её по группам факторов. «Прочее» — то, что группы не объясняют: наблюдаемая разница ' +
         'минус их сумма, то есть то, где модель расходится со спутником. Это остаток, а не отдельный источник тепла.',
       other: 'Прочее, необъяснённое',
+      reference: (all) =>
+        `Эталон можно выбрать и по правилу, а не брать всё кольцо: участки кольца на высоте города (в пределах 50 м), не у воды (200 м), ` +
+        `не орошаемые поля (NDVI выше 0,45 при застройке меньше 10 %) и не преимущественно голый грунт (больше 50 %). Против такого эталона ` +
+        `остров тепла ${all}. Каждое правило по отдельности:`,
+      rule: { water: 'без участков у воды', irrigated: 'без орошаемых полей', bare: 'без голого грунта', height: 'без участков на другой высоте' },
+      ruleValue: (island, removed) => `${island}, исключено ${removed} участков кольца`,
+      referenceNote:
+        'Орошаемые поля — самая прохладная поверхность вокруг этих городов-оазисов. На их фоне город выделяется сильнее, на фоне сухой земли — слабее. Верно и то и другое; что важнее, зависит от вопроса.',
     },
     modis: {
       title: 'Сверка с MODIS и ночь',
