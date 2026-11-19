@@ -26,7 +26,15 @@ function offsetOf(value: number, cellSizeM: number): number {
 export function buildCellGrid(lon: readonly number[], lat: readonly number[], cellSizeM: number, pad = GRID_PAD): CellGrid {
   const n = lon.length;
   if (n === 0) throw new Error('No cells');
-  const zone = utmZone(lon[0] ?? 0);
+  // The zone of the middle of the cells, as the pipeline gridded the city in the zone of its extent's centre: a city
+  // whose edge cell lies across a zone line still snaps to its own grid.
+  let west = Infinity;
+  let east = -Infinity;
+  for (const x of lon) {
+    west = Math.min(west, x);
+    east = Math.max(east, x);
+  }
+  const zone = utmZone((west + east) / 2);
   const xs = new Float64Array(n);
   const ys = new Float64Array(n);
   for (let i = 0; i < n; i++) {

@@ -106,3 +106,18 @@ describe('hottestPatch', () => {
     expect(hottestPatch(values, w, w, () => false, 2, 1)).toBeNull();
   });
 });
+
+describe('sampleTransect off the data', () => {
+  it('counts a sample with no temperature as outside, so the profile never plots NaN', () => {
+    const city = planarCity();
+    const source: TransectSource = { ...city, temperatureAt: (point) => (point[0] > 9000 ? Number.NaN : city.temperatureAt(point)) };
+    const profile = sampleTransect(source, [
+      [1000, 50],
+      [9900, 50],
+    ]);
+    const off = profile.samples.filter((sample) => sample.point[0] > 9000);
+    expect(off.length).toBeGreaterThan(0);
+    expect(off.every((sample) => !sample.inside && sample.contributions === null)).toBe(true);
+    expect(profile.samples.filter((sample) => sample.inside).every((sample) => Number.isFinite(sample.t))).toBe(true);
+  });
+});

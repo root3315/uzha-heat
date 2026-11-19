@@ -10,8 +10,9 @@ export function useReadout(model: CityModel) {
   const locale = useLocale();
   const cellUnder = useCallback(
     (point: LonLat) => {
+      // Inside by the cell's centre, the same test the hunt counts its targets with, so a find is always one of them.
       const cell = model.source.cellAt(point);
-      return cell >= 0 && model.source.inside(point) ? cell : -1;
+      return cell >= 0 && model.inside[cell] ? cell : -1;
     },
     [model],
   );

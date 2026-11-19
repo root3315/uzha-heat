@@ -221,7 +221,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
       {probe && (
         <g className="profile__probe">
           <line x1={x(probe.d)} x2={x(probe.d)} y1={M.top} y2={ribbonY + RIBBON_H} />
-          <circle cx={x(probe.d)} cy={y(probe.t)} r={3.5} />
+          {Number.isFinite(probe.t) && <circle cx={x(probe.d)} cy={y(probe.t)} r={3.5} />}
           <text x={x(probe.d) + (probeAnchor === 'end' ? -8 : 8)} y={M.top - 8} textAnchor={probeAnchor}>
             {probeText}
           </text>

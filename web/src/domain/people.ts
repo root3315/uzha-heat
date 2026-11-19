@@ -94,10 +94,12 @@ export function facilityTitle(facility: Facility, locale: Locale): string {
 function roundPeople(n: number, locale: Locale): { figure: string; count: number } {
   const { formatNumber } = formats(locale);
   const { thousands } = PEOPLE_TEXTS[locale];
-  if (n >= 10_000) return { figure: thousands(formatNumber(Math.round(n / 1000), 0)), count: 0 };
-  if (n >= 1000) return { figure: thousands(formatNumber(n / 1000, 1)), count: 0 };
+  // The form is chosen from the rounded figure, so 996 and 1004 both read "1.0 thousand", and 9,960 "10 thousand".
   const count = n >= 100 ? Math.round(n / 10) * 10 : Math.round(n);
-  return { figure: formatNumber(count, 0), count };
+  if (count < 1000) return { figure: formatNumber(count, 0), count };
+  const tenths = Math.round(n / 100) / 10;
+  if (tenths < 10) return { figure: thousands(formatNumber(tenths, 1)), count: 0 };
+  return { figure: thousands(formatNumber(Math.round(n / 1000), 0)), count: 0 };
 }
 
 /** The number alone, for a big figure with its noun in a caption: "323 thousand", "420". */

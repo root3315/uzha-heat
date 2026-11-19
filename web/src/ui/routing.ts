@@ -8,14 +8,23 @@ export type Route = { view: 'story' | 'tool' | 'method'; cityId: string | null }
 
 const BASE = import.meta.env.BASE_URL;
 
+/** A city id from the address; a broken escape (a link cut short) reads as no id, not as a crash at start. */
+function decodeId(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function parseRoute(pathname: string, hash = '', base = '/'): Route {
   const legacy = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (legacy[0] === 'city' && legacy[1]) {
-    return { view: legacy[2] === 'method' ? 'method' : 'tool', cityId: decodeURIComponent(legacy[1]) };
+    return { view: legacy[2] === 'method' ? 'method' : 'tool', cityId: decodeId(legacy[1]) };
   }
   const path = pathname.startsWith(base) ? pathname.slice(base.length) : pathname.replace(/^\//, '');
   const [first, id] = path.split('/').filter(Boolean);
-  const cityId = id ? decodeURIComponent(id) : null;
+  const cityId = id ? decodeId(id) : null;
   if (first === 'map') return { view: 'tool', cityId };
   if (first === 'method') return { view: 'method', cityId };
   return { view: 'story', cityId: null };

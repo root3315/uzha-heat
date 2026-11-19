@@ -81,25 +81,48 @@ describe('computePlan', () => {
     expect(await computePlan(STUMP, detail, all, 2)).toEqual(expected);
   });
 
-  it('stops a worker that fails and starts a fresh one for the next request', async () => {
+  it('computes on the page from then on when the worker cannot start', async () => {
     const { FakeWorker, created } = fakeWorker((_, worker) => worker.dispatchEvent(new Event('error')));
     vi.stubGlobal('Worker', FakeWorker);
     const computePlan = await freshComputePlan();
     expect(await computePlan(STUMP, detail, all, 2)).toEqual(expected);
     expect(created[0]?.terminated).toBe(true);
-    await computePlan(STUMP, detail, all, 2);
-    expect(created).toHaveLength(2);
+    expect(await computePlan(STUMP, detail, all, 2)).toEqual(expected);
+    expect(created).toHaveLength(1);
   });
 
-  it('gives up on a worker that never answers', async () => {
+  it('gives the worker one plan at a time, so a plan waiting its turn is not timed while it waits', async () => {
+    vi.useFakeTimers();
+    const posted: PlanRequest[] = [];
+    const { FakeWorker, created } = fakeWorker((request) => posted.push(request));
+    vi.stubGlobal('Worker', FakeWorker);
+    vi.resetModules();
+    const { computePlan, WORKER_TIMEOUT_MS } = await import('./planInWorker');
+    const first = computePlan(STUMP, detail, all, 2);
+    const second = computePlan(STUMP, detail, all, 1);
+    await vi.advanceTimersByTimeAsync(WORKER_TIMEOUT_MS - 1);
+    expect(posted).toHaveLength(1);
+    created[0]?.reply({ id: posted[0]?.id ?? 0, plan: expected });
+    expect(await first).toEqual(expected);
+    await vi.advanceTimersByTimeAsync(WORKER_TIMEOUT_MS - 1); // the second has its own full time
+    expect(posted).toHaveLength(2);
+    created[0]?.reply({ id: posted[1]?.id ?? 0, plan: expected.slice(0, 1) });
+    expect(await second).toEqual(expected.slice(0, 1));
+  });
+
+  it('reports a plan the worker never answers as failed, without computing the whole city on the page', async () => {
     vi.useFakeTimers();
     const { FakeWorker, created } = fakeWorker(() => undefined);
     vi.stubGlobal('Worker', FakeWorker);
     vi.resetModules();
-    const { computePlan, WORKER_TIMEOUT_MS } = await import('./planInWorker');
-    const pending = computePlan(STUMP, detail, all, 2);
+    const { computePlan, PlanTimeoutError, WORKER_TIMEOUT_MS } = await import('./planInWorker');
+    const failed = expect(computePlan(STUMP, detail, all, 2)).rejects.toBeInstanceOf(PlanTimeoutError);
     await vi.advanceTimersByTimeAsync(WORKER_TIMEOUT_MS);
-    expect(await pending).toEqual(expected);
+    await failed;
     expect(created[0]?.terminated).toBe(true);
+    void computePlan(STUMP, detail, all, 2).catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(created).toHaveLength(2); // a fresh worker for the next plan
+    await vi.advanceTimersByTimeAsync(WORKER_TIMEOUT_MS);
   });
 });

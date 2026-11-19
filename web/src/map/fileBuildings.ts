@@ -66,8 +66,10 @@ export function followView(map: MapLibreMap, options: Options): () => void {
     const bounds = map.getBounds();
     const box: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
     const center = map.getCenter().toArray() as LonLat;
-    if (covers(loaded, viewRect(box, center, HALF_SPANS_M[HALF_SPANS_M.length - 1]))) return;
+    // Stop a read for a view left behind first: back over what is loaded, it would still land and replace it.
     controller?.abort();
+    controller = null;
+    if (covers(loaded, viewRect(box, center, HALF_SPANS_M[HALF_SPANS_M.length - 1]))) return;
     const current = new AbortController();
     controller = current;
     try {
