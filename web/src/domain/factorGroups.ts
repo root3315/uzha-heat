@@ -42,3 +42,39 @@ export function groupShares(detail: CityDetail, locale: Locale, inside?: readonl
   const sum = groups.reduce((s, group) => s + group.meanAbs, 0) || 1;
   return groups.map((group) => ({ ...group, share: group.meanAbs / sum })).sort((a, b) => b.meanAbs - a.meanAbs);
 }
+
+export interface IslandBudget {
+  /** Mean surface inside the outline minus the mean around it, °C (a mean, so the parts below add up to it). */
+  observed: number;
+  /** Each group's share of that difference by the model, °C: its mean contribution inside minus around. */
+  groups: { id: FactorGroupId; label: string; contribution: number }[];
+  /**
+   * What the factors leave unexplained, °C: the observed difference minus the sum of the groups. With SHAP the parts add
+   * up to the model's own difference, so this is where the model misses the satellite, not a heat source of its own.
+   */
+  other: number;
+}
+
+/**
+ * The city's heat over its ring split by factor group, plus what is left over (Eq. 63 of the team's theory notes:
+ * observed contrast minus the sum of the contributions). Null without an outline or with too few cells on a side.
+ */
+export function islandBudget(detail: CityDetail, locale: Locale, inside: readonly boolean[], minCells = 20): IslandBudget | null {
+  const { shap, lst } = detail.cells;
+  const sides = [[], []] as [number[], number[]];
+  lst.forEach((t, i) => {
+    if (Number.isFinite(t)) sides[inside[i] ? 0 : 1].push(i);
+  });
+  const [within, around] = sides;
+  if (within.length < minCells || around.length < minCells) return null;
+  const mean = (cells: number[], at: (i: number) => number) => cells.reduce((sum, i) => sum + at(i), 0) / cells.length;
+  const contrast = (at: (i: number) => number) => mean(within, at) - mean(around, at);
+  const observed = contrast((i) => lst[i] ?? 0);
+  const groups = FACTOR_GROUPS.flatMap((group) => {
+    const columns = group.keys.flatMap((key) => (shap[key] ? [shap[key]] : []));
+    if (!columns.length) return [];
+    const contribution = contrast((i) => columns.reduce((sum, column) => sum + (column[i] ?? 0), 0));
+    return [{ id: group.id, label: GROUP_TEXTS[locale][group.id], contribution }];
+  }).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  return { observed, groups, other: observed - groups.reduce((sum, group) => sum + group.contribution, 0) };
+}
