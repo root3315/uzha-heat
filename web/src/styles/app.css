@@ -1576,7 +1576,7 @@ summary.rest__summary:hover,
   margin-top: 8px;
 }
 
-/* ---------- Narrow screens: map, then the answer, then the section ---------- */
+/* ---------- Narrow screens: map, then the section, then the answer ---------- */
 @media (max-width: 860px) {
   /* Slider ends readable on a phone. */
   .whatif__ends {
@@ -1653,6 +1653,7 @@ summary.rest__summary:hover,
   }
   .tool__panel {
     overflow: visible;
+    scroll-margin-top: calc(var(--bar-h) + 8px);
   }
   /* The draw and causes buttons live on the map here. */
   .tool .section__tools .pill:not(:nth-child(2)) {
