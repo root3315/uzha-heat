@@ -252,6 +252,54 @@ export const WHAT_IF_TEXTS = texts(
   },
 );
 
+/** "Surfaces (physics)": the energy-balance model of the picked place, with what its roofs and roads are made of. */
+export const SURFACES_TEXTS = texts(
+  {
+    title: 'Surfaces (physics)',
+    recalc: 'by the energy balance',
+    levers: {
+      roofAlbedo: { label: 'Roof albedo', spoken: (v: string) => `roof albedo ${v}` },
+      roadAlbedo: { label: 'Road albedo', spoken: (v: string) => `road albedo ${v}` },
+      greenRoofs: { label: 'Green roofs', spoken: (v: string) => `${v} of the roof area green` },
+    } as Record<'roofAlbedo' | 'roadAlbedo' | 'greenRoofs', LeverWords>,
+    limits: {
+      roofAlbedo: (to: string) => `up to ${to}: a new white coating`,
+      roadAlbedo: (to: string) => `up to ${to}: light concrete`,
+      greenRoofs: (to: string) => `up to ${to}: every roof`,
+    } as Record<'roofAlbedo' | 'roadAlbedo' | 'greenRoofs', (to: string) => string>,
+    loading: 'Loading the physics of the city…',
+    failed: 'The physics did not load. Close the block and open it again.',
+    nothing: 'No roofs or roads here to change.',
+    unsettled: 'The energy balance does not close for this place, so the model gives no number here.',
+    treated: (delta: string, share: string) => `on the changed surfaces themselves ${delta}; they cover ${share} of the place`,
+    skill: (share: string) => `Physics model: it explains ${share} of the pattern of surface heat in this city. `,
+    assumptions:
+      'Assumed: the weather of the Landsat days; only the albedo changes, not the heat stored in roofs and roads; green roofs are watered and behave like the grass here. Surface, not air.',
+  },
+  {
+    title: 'Поверхности (физика)',
+    recalc: 'по балансу энергии',
+    levers: {
+      roofAlbedo: { label: 'Альбедо крыш', spoken: (v) => `альбедо крыш ${v}` },
+      roadAlbedo: { label: 'Альбедо дорог', spoken: (v) => `альбедо дорог ${v}` },
+      greenRoofs: { label: 'Зелёные крыши', spoken: (v) => `зелёные ${v} площади крыш` },
+    },
+    limits: {
+      roofAlbedo: (to) => `до ${to} — новое белое покрытие`,
+      roadAlbedo: (to) => `до ${to} — светлый бетон`,
+      greenRoofs: (to) => `до ${to} — все крыши`,
+    },
+    loading: 'Загружаю физику города…',
+    failed: 'Физика не загрузилась. Закройте и откройте блок ещё раз.',
+    nothing: 'Здесь нет крыш и дорог, которые можно поменять.',
+    unsettled: 'Баланс энергии здесь не сходится, поэтому модель не даёт числа.',
+    treated: (delta, share) => `на самих изменённых поверхностях ${delta}; это ${share} площади места`,
+    skill: (share) => `Физическая модель: объясняет ${share} картины нагрева поверхности в этом городе. `,
+    assumptions:
+      'Допущения: погода дней съёмки Landsat; меняется только альбедо, а не тепло, запасённое крышами и дорогами; зелёные крыши поливаются и ведут себя как здешняя трава. Поверхность, не воздух.',
+  },
+);
+
 export const PLAN_TEXTS = texts(
   {
     failed: 'The model did not load. Close the block and open it again.',
