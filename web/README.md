@@ -6,9 +6,9 @@
 
 Читает только статические файлы (формат: `../docs/data-contract.md`). Бэкенда нет.
 
-![Главная: живая карта Ташкента](../docs/screenshots/00-landing.png)
+![Главная: живая карта Ташкента](../docs/screenshots/00-landing-ru.png)
 
-![Карта целиком](../docs/screenshots/01-city.png)
+![Карта целиком](../docs/screenshots/01-city-ru.png)
 
 ## Запуск
 
