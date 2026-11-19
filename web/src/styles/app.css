@@ -126,6 +126,15 @@ select {
   padding: 0 14px;
   font-size: 0.82rem;
 }
+.pill--swap {
+  display: inline-grid;
+}
+.pill__label {
+  grid-area: 1 / 1;
+}
+.pill__label--off {
+  visibility: hidden;
+}
 .pill[aria-pressed='true'] {
   background: var(--ink);
   color: var(--paper);
@@ -758,13 +767,17 @@ select {
 .panel__header {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 28px;
 }
 .panel__links {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+  margin-left: auto;
 }
 .panel__title {
   margin: 0 0 8px;
