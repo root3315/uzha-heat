@@ -75,13 +75,14 @@ export function Slider({ id, label, from, to, step, value, say, spoken, limit, o
           className="whatif__range"
           type="range"
           min={0}
-          max={span}
-          step={span / steps}
-          value={amount}
+          max={steps}
+          step={1}
+          value={span > 0 ? Math.round((amount / span) * steps) : 0}
           aria-valuetext={t.spokenNow(spoken(say(value)), say(from))}
           aria-describedby={`${id}-limit`}
           onChange={(event) => {
-            const moved = Number(event.currentTarget.value);
+            // Whole steps, so the far end is reached exactly: a fractional step makes the browser stop one short of it.
+            const moved = (Number(event.currentTarget.value) / steps) * span;
             onChange(up ? from + moved : from - moved);
           }}
         />
