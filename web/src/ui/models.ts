@@ -31,6 +31,9 @@ export function watchLoad(id: string, listener: Listener): () => void {
   return () => set.delete(listener);
 }
 
+/** Past this the surface worker is taken as lost and the page computes the surface itself. */
+const SURFACE_TIMEOUT_MS = 30_000;
+
 let worker: Worker | null | undefined;
 let nextRequest = 0;
 
@@ -52,20 +55,31 @@ function surfaceInWorker(bytes: Uint8Array, outline: Outline | null): Promise<Ci
   const id = ++nextRequest;
   return new Promise((resolve) => {
     const done = (surface: CitySurface | null) => {
+      clearTimeout(timer);
       target.removeEventListener('message', onMessage);
       target.removeEventListener('error', onError);
+      target.removeEventListener('messageerror', onError);
       resolve(surface);
     };
     const onMessage = ({ data }: MessageEvent<SurfaceReply>) => {
       if (data.id === id) done('surface' in data ? data.surface : null);
     };
-    // A worker that cannot start (old browser, strict CSP) is not an error: the page computes the surface itself.
+    // A worker that cannot start (old browser, strict CSP) or cannot pass its answer back is not an error: the page
+    // computes the surface itself.
     const onError = () => {
+      target.terminate();
       worker = null;
       done(null);
     };
+    // Silent too long (a phone may kill it for memory): the page computes the surface itself rather than load forever.
+    const timer = setTimeout(() => {
+      target.terminate();
+      if (worker === target) worker = undefined;
+      done(null);
+    }, SURFACE_TIMEOUT_MS);
     target.addEventListener('message', onMessage);
     target.addEventListener('error', onError);
+    target.addEventListener('messageerror', onError);
     const copy = bytes.slice().buffer;
     const request: SurfaceRequest = { id, bytes: copy, outline };
     target.postMessage(request, [copy]);

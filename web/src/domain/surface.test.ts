@@ -78,6 +78,22 @@ describe('field edge', () => {
     expect(fieldAt(field, lon[9] ?? 0, lat[9] ?? 0)).toBeCloseTo(45, 3);
   });
 
+  it('has no temperature off the data, so buildings there stay uncoloured', () => {
+    const { lon, lat, lst } = utmCells(10, 10, () => 45, [
+      [8, 8],
+      [9, 8],
+      [8, 9],
+      [9, 9],
+    ]);
+    const grid = buildCellGrid(lon, lat, CELL);
+    const field = buildField(grid, lst);
+    const [farLon, farLat] = fromUtm(470_100 + 30 * CELL, 4_570_100 + 30 * CELL, 42);
+    const [gapLon, gapLat] = fromUtm(470_100 + 9 * CELL, 4_570_100 - 9 * CELL, 42);
+    expect(fieldAt(field, farLon, farLat)).toBeNaN();
+    expect(fieldAt(field, gapLon, gapLat)).toBeNaN();
+    expect(fieldAt(field, lon[0] ?? 0, lat[0] ?? 0)).toBeCloseTo(45, 3);
+  });
+
   it('marks only covered slots, closing single missing cells', () => {
     const { lon, lat } = utmCells(5, 5, () => 40, [[2, 2]]);
     const grid = buildCellGrid(lon, lat, CELL, 1);

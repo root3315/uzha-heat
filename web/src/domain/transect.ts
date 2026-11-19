@@ -29,6 +29,7 @@ export interface Sample {
   point: LonLat;
   cell: number;
   inside: boolean;
+  /** NaN off the data. */
   t: number;
   /** °C each factor adds here; null outside the data or the city. */
   contributions: Record<string, number> | null;
@@ -132,12 +133,6 @@ export function mergeSegments(distances: readonly number[], tags: readonly (stri
   });
 }
 
-export function transectLength(source: TransectSource, [a, b]: Transect): number {
-  const [ax, ay] = source.toMetres(a);
-  const [bx, by] = source.toMetres(b);
-  return Math.hypot(bx - ax, by - ay);
-}
-
 export function sampleTransect(source: TransectSource, [a, b]: Transect, options: ProfileOptions = {}): Profile {
   const { stepM = 50, smoothWindow = 5, minSegmentM = 350 } = options;
   const [ax, ay] = source.toMetres(a);
@@ -149,14 +144,15 @@ export function sampleTransect(source: TransectSource, [a, b]: Transect, options
     const f = s / (count - 1);
     const point = source.fromMetres([ax + (bx - ax) * f, ay + (by - ay) * f]);
     const cell = source.cellAt(point);
-    const inside = cell >= 0 && source.inside(point);
+    const t = source.temperatureAt(point);
+    const inside = cell >= 0 && Number.isFinite(t) && source.inside(point);
     const contributions = inside ? source.contributionsOf(cell) : null;
     samples.push({
       d: f * length,
       point,
       cell,
       inside,
-      t: source.temperatureAt(point),
+      t,
       contributions,
       cause: contributions ? dominantCause(contributions) : null,
     });
