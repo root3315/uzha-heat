@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { EnergyMethod } from '../data/contract';
-import { loadValidation } from '../data/load';
+import { loadPhysics, loadValidation } from '../data/load';
+import { PHYSICS_FLUX_KEYS, type CityPhysics, type Range } from '../data/physics';
 import type { CityValidation, ModisPlatform } from '../data/validation';
 import type { CityModel } from '../domain/cityModel';
 import { cityName, featureLabel, featureUnit, periodText, surfaceLabel } from '../domain/dataTexts';
@@ -9,6 +10,8 @@ import { groupShares, islandBudget } from '../domain/factorGroups';
 import type { Formats } from '../domain/format';
 import { cutAmount, leverByKey } from '../domain/whatIf';
 import { referenceIsland } from '../domain/heatIsland';
+import { assumptionTexts, budgetRows, compareSkill, orderedScenarios, scenarioLabel } from '../domain/physics';
+import { PHYSICS_TEXTS } from '../domain/physics.texts';
 import { islandByRingWidth, ringSpread } from '../domain/ringSensitivity';
 import type { Locale } from '../i18n/locale';
 import { useAsync } from './hooks';
@@ -247,6 +250,93 @@ function ModisCheck({ check }: { check: CityValidation }) {
   );
 }
 
+/** The physics model: its skill against the statistical one, where the energy goes, the heat island by physical factor and the measures. */
+function PhysicsSection({ physics, main }: { physics: CityPhysics; main: { r2: number; mae: number } }) {
+  const locale = useLocale();
+  const t = useTexts(METHOD_TEXTS).physics;
+  const words = useTexts(PHYSICS_TEXTS);
+  const { formatDeg, formatDegSigned, formatNumber, formatPercent } = useFormats();
+  const { skill, fluxes, budget } = physics;
+  const r2 = (value: number) => formatNumber(value, 2);
+  const range = (r: Range) => t.range(formatDegSigned(r.mid, 2), formatDegSigned(r.low, 2), formatDegSigned(r.high, 2));
+  const scenarios = orderedScenarios(physics.scenarios);
+  return (
+    <>
+      <h2 className="method__subtitle">{t.title}</h2>
+      <p>{t.intro}</p>
+      <p>{t.skillLead}</p>
+      <dl className="method__factors">
+        <div>
+          <dt>{t.main}</dt>
+          <dd>{t.skill(r2(main.r2), formatDeg(main.mae), null)}</dd>
+        </div>
+        <div>
+          <dt>{t.alone}</dt>
+          <dd>{t.skill(r2(skill.physics.r2), formatDeg(skill.physics.mae), skill.insidePhysics && r2(skill.insidePhysics.r2))}</dd>
+        </div>
+        {skill.hybrid && (
+          <div>
+            <dt>{t.hybrid}</dt>
+            <dd>{t.skill(r2(skill.hybrid.r2), formatDeg(skill.hybrid.mae), skill.insideHybrid && r2(skill.insideHybrid.r2))}</dd>
+          </div>
+        )}
+      </dl>
+      <p>
+        {t.verdict[compareSkill(skill.physics.r2, main.r2)]}
+        {skill.hybrid && ` ${t.hybridNote}`}
+      </p>
+      {fluxes && (
+        <>
+          <p>{t.fluxesLead}</p>
+          <dl className="method__factors">
+            {PHYSICS_FLUX_KEYS.map((key) => (
+              <div key={key}>
+                <dt>{words.fluxes[key]}</dt>
+                <dd>{t.flux(formatWatts(fluxes.inside[key], locale), formatWatts(fluxes.ring[key], locale))}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
+      {budget && (
+        <>
+          <p>{t.budget(formatDeg(budget.observed), formatNumber(budget.sample?.inside ?? 0, 0), formatNumber(budget.sample?.ring ?? 0, 0))}</p>
+          <dl className="method__factors">
+            {budgetRows(budget, locale).map((row) => (
+              <div key={row.id}>
+                <dt>{row.label}</dt>
+                <dd>{formatDegSigned(row.contribution, 2)}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>{t.other}</dt>
+              <dd>{formatDegSigned(budget.other, 2)}</dd>
+            </div>
+          </dl>
+          {budget.modelGap !== null && <p>{t.otherNote(formatDegSigned(budget.modelGap, 2))}</p>}
+        </>
+      )}
+      {scenarios.length > 0 && (
+        <>
+          <p>{t.scenariosLead(physics.interval?.[0] ?? 5, physics.interval?.[1] ?? 95, physics.replicates ?? 0)}</p>
+          <dl className="method__factors">
+            {scenarios.map((scenario) => (
+              <div key={scenario.id}>
+                <dt>{scenarioLabel(scenario.id, locale)}</dt>
+                <dd>
+                  {t.scenario(scenario.treated && range(scenario.treated), range(scenario.whole), scenario.areaShare === null ? null : formatPercent(scenario.areaShare))}
+                  <p className="whatif__caveat">{assumptionTexts(scenario, locale).join(' ')}</p>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="whatif__caveat">{t.caveat}</p>
+        </>
+      )}
+    </>
+  );
+}
+
 /** How the map was made, in the same plain voice as the map. Every number comes from the city's data. */
 export function MethodPage({ model }: { model: CityModel }) {
   const locale = useLocale();
@@ -259,6 +349,8 @@ export function MethodPage({ model }: { model: CityModel }) {
   const step = (levels.thresholds[1] ?? 0) - (levels.thresholds[0] ?? 0);
   const validation = useAsync(loadValidation, []);
   const check = validation.status === 'ready' ? validation.data?.cities[city.id] : undefined;
+  const physics = useAsync(loadPhysics, []);
+  const cityPhysics = physics.status === 'ready' ? physics.data[city.id] : undefined;
   return (
     <main className="method">
       <h1 className="method__title">{t.title}</h1>
@@ -288,6 +380,7 @@ export function MethodPage({ model }: { model: CityModel }) {
       {check && <ModisCheck check={check} />}
 
       {detail.energy && <EnergySection energy={detail.energy} />}
+      {cityPhysics && <PhysicsSection physics={cityPhysics} main={{ r2: fit.r2Cv, mae: fit.maeCv }} />}
 
       <h2 className="method__subtitle">{t.limitsTitle}</h2>
       <ul className="method__limits">

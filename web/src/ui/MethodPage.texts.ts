@@ -137,6 +137,46 @@ export const METHOD_TEXTS = texts(
         { name: 'Heating the air', formula: 'H = Rn − G − LE: what does not go into the ground or evaporation heats the air', cite: 'Bastiaanssen et al. 1998, SEBAL' },
       ] as StepWords[],
     },
+    physics: {
+      title: 'Physics: the energy balance',
+      intro:
+        'Next to the statistical model there is a physical one. Each cell is split into surfaces: trees, grass, bare ground, roofs, roads, paving and water. ' +
+        'For each surface the model finds the temperature at which the energy at the Landsat overpass balances: sunlight and heat from the sky coming in, ' +
+        'heating of the air, evaporation and heat stored in roofs, walls and ground going out, plus human-made heat. Seven parameters for the whole city ' +
+        '(how readily leaves and soil give off water, how much heat the built fabric takes, an offset of the air temperature and others), each within its ' +
+        'range from the literature, are fitted to the Landsat temperature.',
+      skillLead: 'Scored the same way as the model above, on blocks of the city it has not seen:',
+      main: 'Statistical model (above)',
+      alone: 'Physics alone',
+      hybrid: 'Physics with a learned correction',
+      skill: (r2: string, error: string, inside: string | null) => `R² ${r2}, mean error ${error}` + (inside ? `; inside the city line R² ${inside}` : ''),
+      verdict: {
+        less:
+          'Physics alone explains less than the statistical model. It knows only what its equations and inputs contain, and the inputs are coarse: land cover, ' +
+          'building heights, one weather point for the whole city. Its use is elsewhere: it says why, in watts, and it can try changes the data have never seen.',
+        same: 'Physics alone explains about as much as the statistical model, while saying why, in watts.',
+        more: 'Physics alone explains more than the statistical model here.',
+      },
+      hybridNote: 'The correction is a small boosted model trained on what the physics misses, on the training blocks only.',
+      fluxesLead: 'Where the energy goes at the Landsat overpass, mean over the cells, inside the city line against the ring around it:',
+      flux: (inside: string, ring: string) => `${inside} inside, ${ring} around`,
+      budget: (observed: string, inside: string, ring: string) =>
+        `The physics splits the heat island too. On average the surface inside the line is ${observed} warmer than the ring (computed on ${inside} cells inside ` +
+        `and ${ring} in the ring, drawn evenly across temperatures). Each group of physical factors is set to the ring's typical value, and its part is averaged ` +
+        'over every order of doing so (Shapley values), so the parts add up.',
+      other: 'Other, unexplained',
+      otherNote: (gap: string) =>
+        `Other is what the groups leave: where the physics misses the satellite (${gap} of it), and what stays when every group is at the ring's value, such as the ` +
+        'air temperature at the height of each cell. It is a remainder, not a heat source of its own.',
+      scenariosLead: (low: number, high: number, replicates: number) =>
+        'Physics estimate: what each measure would do if applied to every suitable surface inside the city at once. Two numbers: the change on the treated ' +
+        `surfaces themselves and over the whole city. In brackets, ${low}–${high}% of the spread over ${replicates} refits of the parameters on resampled blocks of the city.`,
+      scenario: (treated: string | null, whole: string, area: string | null) =>
+        (treated ? `treated surfaces ${treated}, ` : '') + `whole city ${whole}` + (area ? `; ${area} of the city's area treated` : ''),
+      range: (mid: string, low: string, high: string) => `${mid} (${low} … ${high})`,
+      caveat:
+        'Physics estimate of the surface at about 11:00, not of the air, and not a forecast: it is only as good as the skill above. The assumptions are listed under each measure.',
+    },
     limitsTitle: 'What the map does not know',
     limits: [
       'This is the temperature of the surface, not the air. By day it is higher and changes more sharply.',
@@ -286,6 +326,45 @@ export const METHOD_TEXTS = texts(
         { name: 'Горячее и прохладное место', formula: 'опорные участки внутри города, выбранные по NDVI и температуре; то же сделано в SSEB', cite: 'Senay и др. 2007' },
         { name: 'Нагрев воздуха', formula: 'H = Rn − G − LE: что не ушло в грунт и на испарение, греет воздух', cite: 'Bastiaanssen и др. 1998, SEBAL' },
       ],
+    },
+    physics: {
+      title: 'Физика: энергетический баланс',
+      intro:
+        'Рядом со статистической моделью стоит физическая. Каждый участок разбит на поверхности: деревья, трава, голый грунт, крыши, дороги, покрытия и вода. ' +
+        'Для каждой модель находит температуру, при которой сходится энергия в момент съёмки Landsat: приходят солнце и тепло от неба, уходят нагрев ' +
+        'воздуха, испарение и тепло, запасённое в крышах, стенах и грунте, плюс тепло от людей. Семь параметров на весь город (насколько охотно листья ' +
+        'и почва отдают воду, сколько тепла берёт застройка, поправка температуры воздуха и другие), каждый в пределах из литературы, подобраны по температуре Landsat.',
+      skillLead: 'Проверка та же, что у модели выше, на блоках города, которых модель не видела:',
+      main: 'Статистическая модель (выше)',
+      alone: 'Только физика',
+      hybrid: 'Физика с обученной поправкой',
+      skill: (r2, error, inside) => `R² ${r2}, средняя ошибка ${error}` + (inside ? `; в черте города R² ${inside}` : ''),
+      verdict: {
+        less:
+          'Одна физика объясняет меньше, чем статистическая модель. Она знает только то, что есть в её уравнениях и данных, а данные грубые: покрытие земли, ' +
+          'высоты домов, одна точка погоды на весь город. Её польза в другом: она объясняет почему, в ваттах, и может проверить изменения, которых в данных не было.',
+        same: 'Одна физика объясняет примерно столько же, сколько статистическая модель, и при этом говорит почему, в ваттах.',
+        more: 'Здесь одна физика объясняет больше, чем статистическая модель.',
+      },
+      hybridNote: 'Поправка — небольшая модель бустинга, обученная на том, что упускает физика, только на обучающих блоках.',
+      fluxesLead: 'Куда уходит энергия в момент съёмки Landsat, среднее по участкам, в черте города против кольца вокруг:',
+      flux: (inside, ring) => `${inside} в черте, ${ring} вокруг`,
+      budget: (observed, inside, ring) =>
+        `Физика тоже делит остров тепла. В среднем поверхность в черте теплее кольца на ${observed} (посчитано на ${inside} участках в черте ` +
+        `и ${ring} в кольце, взятых равномерно по температуре). Каждая группа физических факторов ставится на типичное для кольца значение, и её доля ` +
+        'усредняется по всем порядкам такой замены (значения Шепли), поэтому части складываются.',
+      other: 'Прочее, необъяснённое',
+      otherNote: (gap) =>
+        `Прочее — то, что оставляют группы: где физика расходится со спутником (${gap} из него), и что остаётся, когда все группы на уровне кольца, например ` +
+        'температура воздуха на высоте участка. Это остаток, а не отдельный источник тепла.',
+      scenariosLead: (low, high, replicates) =>
+        'Физическая оценка: что дала бы каждая мера, если применить её сразу на всех подходящих поверхностях в черте города. Два числа: изменение на самих ' +
+        `обработанных поверхностях и по всему городу. В скобках ${low}–${high} % разброса по ${replicates} переподборам параметров на перевыбранных блоках города.`,
+      scenario: (treated, whole, area) =>
+        (treated ? `обработанные поверхности ${treated}, ` : '') + `весь город ${whole}` + (area ? `; обработано ${area} площади города` : ''),
+      range: (mid, low, high) => `${mid} (${low} … ${high})`,
+      caveat:
+        'Физическая оценка поверхности около 11:00, не воздуха, и не прогноз: она точна настолько, насколько точна проверка выше. Допущения перечислены под каждой мерой.',
     },
     limitsTitle: 'Чего карта не знает',
     limits: [
