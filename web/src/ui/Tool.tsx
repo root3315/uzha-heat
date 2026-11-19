@@ -32,6 +32,8 @@ interface ToolProps {
 }
 
 const VIEW = { isolines: true, transect: true, interactive: true };
+/** The hunt's found quarters belong to the landing; one empty list, so the map is not handed a new one each render. */
+const NO_FOUND: LonLat[] = [];
 /** Below this width the panel and the section go under the map, and the controls move onto it. */
 const NARROW_PX = 860;
 
@@ -243,7 +245,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           place={picked?.point ?? null}
           onPick={pick}
           probe={probe?.point ?? null}
-          found={[]}
+          found={NO_FOUND}
           mode={mode}
           people={people}
           threeD={threeD}
