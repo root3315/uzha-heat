@@ -8,7 +8,7 @@ import { PRECISION, type NamePrecision } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
 import type { Site } from '../domain/sites';
 import { sampleTransect, type LonLat, type Sample, type Transect } from '../domain/transect';
-import { CityMap, type CityMapHandle, type MapMode } from '../map/CityMap';
+import { CityMap, type CityMapHandle, type MapMark, type MapMode } from '../map/CityMap';
 import { Report } from '../report/Report';
 import { CitySwitcher } from './CitySwitcher';
 import { downloadText } from './download';
@@ -84,6 +84,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     writeThreeD(on);
   };
   const [picked, setPicked] = useState<PickedPlace | null>(null);
+  // The planting places stay on the map while the reader opens them one by one from the list.
+  const [planMarks, setPlanMarks] = useState<MapMark[] | null>(null);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
   const { width } = useViewport();
@@ -262,6 +264,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           mode={mode}
           people={people}
           threeD={threeD}
+          marks={planMarks ?? undefined}
           describe={describe}
           onIdle={refineName}
         >
@@ -313,7 +316,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
         />
       </div>
       <aside ref={panelRef} className="tool__panel" aria-label={t.panel}>
-        <Panel model={model} content={content} header={header} footer={footer} onPick={pick} />
+        <Panel model={model} content={content} header={header} footer={footer} onPick={pick} onPlan={setPlanMarks} planShown={planMarks !== null} />
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
     </main>
