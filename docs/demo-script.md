@@ -23,20 +23,20 @@ their phones from the QR code.
 
 Say: "UzHa answers one question for Tashkent: where to plant first. Here is the answer."
 
-1. In the panel: **Where to plant first**. The five places appear on the map as blue numbers 1–5. Point at the list: **−3.7, −3.1, −2.7, −2.6, −2.6 °C**, each for about
-   **1,200–1,400** residents.
+1. In the panel: **Where to plant first**. The five places appear on the map as blue numbers 1–5. Point at the list: **−4.7, −3.0, −2.6, −2.6, −2.5 °C**, for about
+   **800–1,400** residents each.
    Say: "Every inhabited 200 metre cell gets the same greening: tree crowns plus grass and watering, that is plus 20 points
-   of crown and plus 0.1 NDVI. The city's own model gives the cooling. We rank by degrees times residents, at least 1 km apart,
-   not by how hot the cell is today."
-2. Click place **1**, in the list or on the map. The panel opens **Near Small Ring Road**, **43.5 °C**, and a ring marks it on the map.
+   of crown and plus 0.1 NDVI. New crowns take the place of bare ground, then of paving, so a cell never passes 100 per cent.
+   The city's own model gives the cooling. We rank by degrees times residents, at least 1 km apart, not by how hot the cell is today."
+2. Click place **1**, in the list or on the map. The panel opens **Bektemir district**, **45.5 °C**, and a ring marks it on the map.
 
 ### 1:00–2:15 · What if, in this place
 
 1. Open **What if**.
-2. Drag **Trees** from 3 % to **23 %** only. Point at the result: about **−0.5 °C**.
-   Say: "Crowns alone do little here."
-3. Drag **Greenery, NDVI** from 0.14 to **0.24**. Result **−3.7 °C**, "about 39.9 °C instead of 43.5 °C".
-   Say: "The model links the cooler surface with greening as a whole: crowns plus grass and watering. NDVI alone gives about −3.1.
+2. Drag **Trees** from 0 % to **20 %** only. Point at the result: about **−1.3 °C**.
+   Say: "A block that is 93 per cent built-up. Crowns alone give about a degree."
+3. Drag **Greenery, NDVI** from 0.24 to **0.34**. Result **−4.7 °C**, "about 40.8 °C instead of 45.5 °C".
+   Say: "The model links the cooler surface with greening as a whole: crowns plus grass and watering. NDVI alone gives about −3.7.
    This is the city's XGBoost model, running in the browser. Sliders stop at what the city already has, 5th to 95th percentile.
    It is an association in the data, not an experiment."
 4. Point at the measure card below: "Each measure links to a published study."
@@ -107,16 +107,16 @@ Thank you. The site is open on your phones now."
 | Mean surface: city + 1.5 km ring (site summary); inside the outline | 43.6 / 42.7 / 41.4 °C; 43.9 / 43.4 / 42.7 °C |
 | People inside the city on the map's hottest 10% (above 48.1 / 47.0 / 45.6 °C) | 313,000 / ~7,000 / 55,000; city's own hottest 10%: 260,000 / 5,000 / 27,000 |
 | Share of SHAP inside the outline: vegetation and soil; built-up | 64 / 39 / 50 %; 21 / 37 / 27 % |
-| Planting list, Tashkent top five | −3.7, −3.1, −2.7, −2.6, −2.6 °C; 1.2–1.4 thousand people each |
-| Place 1 (Small Ring Road): crowns only / NDVI only / both | −0.5 / −3.1 / −3.7 °C; crowns to the city's top (34 %) alone: −0.8 °C |
-| Place 1: surface; NDVI; residents | 43.5 °C (inside mean 43.9 °C); 0.14, lowest fifth of inhabited cells; ~1,300 |
+| Planting list, Tashkent top five | −4.7, −3.0, −2.6, −2.6, −2.5 °C; about 780, 1,200, 1,330, 1,290, 1,370 people |
+| Place 1 (Bektemir district): crowns only / NDVI only / both | −1.3 / −3.7 / −4.7 °C; crowns to the city's top (34 %) alone: −1.3 °C |
+| Place 1: surface; cover; NDVI; residents | 45.5 °C (city 43.6 °C); 93 % built-up, no tree cover; 0.24, the median of inhabited cells; ~780 |
 | Tests | 109 pipeline + 312 web |
 
 ## Jury Q&A
 
 **The trees slider barely moves the temperature. So trees do not help?**
-The measure is greening as a whole: tree crowns plus grass and watering, which shows up in NDVI. Crowns alone give under
-1 °C at this place (−0.5 °C for +20 points, −0.8 °C even at the city's top). The model shows an association, not an
+The measure is greening as a whole: tree crowns plus grass and watering, which shows up in NDVI. Crowns alone give about
+1 °C at place 1 (−1.3 °C for +20 points, the same at the city's top). The model shows an association, not an
 experiment. The next step is a pilot: green one block and measure before and after.
 
 **Your own source (Mukhamedjanov 2024) says crowns cool most and lawns barely. Your model says NDVI. Which is it?**
@@ -124,10 +124,14 @@ Both, for different things. That study measured air at 1.5 m in 30 Tashkent squa
 11:00. Watered grass cools the surface by evaporation; crowns cool the air by shade. And ESA WorldCover labels each 10 m pixel
 by its main class, so narrow rows of street trees can end up as built-up; their leaves then show up in NDVI.
 
-**Place 1 is not hot: 43.5 °C, about the city mean. Why is it first?**
-The ranking is cooling × residents, not how hot the cell is today. NDVI there is 0.14, in the lowest fifth of inhabited
-cells, and about 1,300 people live in the cell: the same planting buys the most degrees for the most people. The hottest
-cells are built-up or open land with few residents: each of the 20 hottest has fewer than 100.
+**Place 3 is about the city average (43.5 °C). Why is it on the list?**
+The ranking is cooling × residents, not how hot the cell is today: about 1,330 people live there, so the same planting buys
+many degrees for many people. Place 1 is both: a hot, 93 % built-up block. The hottest cells are built-up or open land
+with few residents: each of the 20 hottest has fewer than 100.
+
+**More trees on a built-up block: where do they go?**
+New crowns take the place of bare ground first, then of built-up, so a cell's shares never pass 100 %. Crowns over streets
+and yards count as tree cover in WorldCover; the model never sees a cell that could not exist.
 
 **NDVI dominates. That is known. What is new?**
 NDVI dominates, as expected. What is new is where, by how many degrees per cell, for how many people, and a what-if anyone

@@ -64,11 +64,12 @@ Taking the hottest tenth of the city's own cells instead gives about 260, 27 and
 are mostly empty open land, hence the small figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
 
 **Where to plant first.** The same greening on every inhabited 200 m cell: tree crowns plus grass and watering, that is
-+20 percentage points of tree crown and +0.1 NDVI (never past the city's 95th percentile), run through the city model. In
-Tashkent the model gives the top five places a 2.6–3.7 °C cooler surface, for roughly 1.2–1.4 thousand residents each.
-The ranking is cooling × residents, not how hot the cell is today: the first place, near the Small Ring Road, is an
-average block (43.5 °C; mean inside the outline 43.9 °C) with low NDVI (0.14) and about 1,300 residents. There: crowns only −0.5 °C,
-NDVI only −3.1 °C, both −3.7 °C (surface 43.5 → 39.9 °C).
++20 percentage points of tree crown and +0.1 NDVI (never past the city's 95th percentile), run through the city model. The new
+crowns take the place of bare ground first, then of built-up, so a cell's land-cover shares never pass 100 %. In Tashkent the
+model gives the top five places a 2.5–4.7 °C cooler surface, for roughly 0.8–1.4 thousand residents each. The ranking is
+cooling × residents, not how hot the cell is today. The first place, in Bektemir district, is a dense block (93 % built-up,
+no tree cover, NDVI 0.24) at 45.5 °C, 1.9 °C above the city average, with about 780 residents. There: crowns only −1.3 °C,
+NDVI only −3.7 °C, both −4.7 °C (surface 45.5 → 40.8 °C).
 
 On the surface most of it shows up as greenery (NDVI), not crowns. A survey of 30 green squares in Tashkent (Mukhamedjanov et al.,
 2024) found crown area cools most and lawns barely; that study measured air at 1.5 m, between 12:00 and 15:00. We map the
@@ -93,7 +94,7 @@ up in NDVI rather than in the tree share.
 
 | Where to plant first | What if, place 1 |
 |---|---|
-| ![Where to plant first: five places ranked by cooling × residents](docs/screenshots/02-plant-first.png) | ![What if: crowns +20 pp and NDVI +0.1 give −3.7 °C](docs/screenshots/03-what-if.png) |
+| ![Where to plant first: five places ranked by cooling × residents](docs/screenshots/02-plant-first.png) | ![What if: crowns +20 pp and NDVI +0.1 give −4.7 °C](docs/screenshots/03-what-if.png) |
 
 | 3D buildings | On a phone |
 |---|---|
