@@ -758,12 +758,14 @@ select {
 .panel__header {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 28px;
 }
 .panel__links {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .panel__title {
