@@ -118,8 +118,40 @@ export function whatIf(model: TreeModel, cell: FactorValues, changes: FactorValu
     changed[key] = bounds ? clamp(value, bounds) : value;
   }
   const before = predict(model, cell);
-  const after = predict(model, changed);
+  const after = predict(model, balanceCover(cell, changed));
   return { before, after, delta: after - before };
+}
+
+/** WorldCover shares of the same cell, %: they add up to at most 100 with whatever else covers it. */
+const COVER = ['tree', 'built', 'bare'] as const;
+/** How far below the cell's own value built-up may go: a lighter block, not a demolished one. */
+export const BUILT_CUT_POINTS = 25;
+
+const finite = (value: number | undefined): value is number => value !== undefined && Number.isFinite(value);
+const coverSum = (values: FactorValues): number => COVER.reduce((sum, key) => sum + (finite(values[key]) ? values[key] : 0), 0);
+
+/**
+ * Keeps a cell's land-cover shares possible after a change, so they never add up to more than 100 % (or to the cell's
+ * own sum when rounding already left it over). More crowns take their area from bare ground first, then from
+ * built-up, but built-up never goes more than BUILT_CUT_POINTS below the cell's value, the same limit its own slider
+ * has; whatever is still missing, the crowns do without.
+ */
+export function balanceCover(cell: FactorValues, changed: FactorValues): FactorValues {
+  let excess = coverSum(changed) - Math.max(100, coverSum(cell));
+  if (excess <= 0) return changed;
+  const balanced = { ...changed };
+  const take = (key: 'bare' | 'built', floor: number) => {
+    const value = balanced[key];
+    if (excess <= 0 || !finite(value)) return;
+    const taken = Math.min(excess, Math.max(0, value - Math.max(0, floor)));
+    balanced[key] = value - taken;
+    excess -= taken;
+  };
+  take('bare', 0);
+  take('built', finite(cell.built) ? cell.built - BUILT_CUT_POINTS : 0);
+  const tree = balanced.tree;
+  if (excess > 0 && finite(tree)) balanced.tree = Math.max(finite(cell.tree) ? cell.tree : 0, tree - excess);
+  return balanced;
 }
 
 /** A factor the reader may move, and which way makes sense to move it. */
@@ -139,7 +171,7 @@ export const LEVERS: readonly Lever[] = [
   { key: 'tree', direction: 'up', step: 1 },
   { key: 'ndvi', direction: 'up', step: 0.01 },
   { key: 'albedo', direction: 'up', step: 0.01 },
-  { key: 'built', direction: 'down', step: 1, cut: { points: 25 } },
+  { key: 'built', direction: 'down', step: 1, cut: { points: BUILT_CUT_POINTS } },
   { key: 'roads', direction: 'down', step: 0.5, cut: { share: 0.25 } },
 ];
 
