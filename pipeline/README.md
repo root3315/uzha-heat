@@ -234,6 +234,39 @@ PYTHONUTF8=1 python -m pipeline.uzha.seb.inputs --city tashkent
 | zenith | Eq. 17 at the city centre for the mean day and UTC time of the acquisitions; declination and equation of time from Spencer (1971) via Iqbal (1983) | |
 | dK↓/dt | K↓ · d(cos θz)/dt / cos θz, transmissivity held fixed, W m⁻² h⁻¹ | |
 
+## Physics model on the site
+
+```bash
+PYTHONUTF8=1 python -m pipeline.seb_check --city tashkent   # or --all
+```
+
+`seb_check.py` builds the inputs above, then: scores physics alone and physics plus an XGBoost correction on the
+11 published factors out of fold (2 km blocks, 5 folds, `calibrate.cross_validate_hybrid`); fits the final parameters
+on all cells and solves; splits the city-minus-ring contrast by factor group with exact Shapley values (all 2⁸
+coalitions) on a stratified sample of 1 500 cells inside and 1 500 in the ring (even across LST quintiles, each cell
+weighted by the cells it stands for; the efficiency identity is checked per cell); runs the six scenarios on every
+eligible cell inside the outline, with a 5–95 % range over 10 parameter sets refitted on block-bootstrap resamples.
+It writes `web/public/data/physics.json` ([contract](../docs/data-contract.md)). The slow steps are cached in
+`pipeline/cache/seb/<id>_check/`, keyed by a hash of the inputs; a first run of Tashkent takes about 16 minutes
+(cross-validation 3, Shapley 3, scenarios 10), a rerun seconds.
+
+Scenario settings: roof albedo 0.55; road albedo 0.30; 10 % canopy from paving and bare ground; 50 % of roofs greened
+and watered; 50 % of paving to grass pavers; human-made heat −30 %.
+
+Tashkent (20 446 cells, 15 780 inside):
+
+| | R² | MAE | inside R² |
+|---|---|---|---|
+| XGBoost (main model) | 0.79 | 1.27 °C | |
+| physics alone | 0.42 | 2.15 °C | 0.45 |
+| physics + correction | 0.71 | 1.49 °C | 0.72 |
+
+Budget, inside minus ring, °C: observed +1.32 = sealing +2.01, geometry −1.06, transpiration −0.73, anthropogenic
++0.34, shade −0.10, albedo +0.04, water −0.01, storage 0.00, Other +0.83 (model gap +0.91, reference state −0.08).
+Several parameters sit at their bounds (minimum stomatal resistances at the floor, air offset +4.6 K), so the fit
+leans on the air offset to reach the LST level: read the scenario ranges as parameter spread only, not the whole
+uncertainty.
+
 ## Limitations
 
 - **LST is not air temperature.** It is the skin temperature of roofs, asphalt and soil at the
