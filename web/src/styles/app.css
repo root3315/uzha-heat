@@ -90,6 +90,7 @@ select {
   justify-content: center;
   gap: 0.5em;
   white-space: nowrap;
+  min-width: 44px;
   min-height: 44px;
   padding: 0 18px;
   border: 0;
@@ -1236,6 +1237,22 @@ summary.rest__summary:hover,
 .whatif__range:focus-visible::-moz-range-thumb {
   box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ink);
 }
+/* A finger needs 44 px to land on the thumb; the line and the thumb stay as they are. */
+@media (pointer: coarse) {
+  /* One rule per engine: a selector list with the other engine's pseudo-element would be dropped whole. */
+  .whatif__slider {
+    height: 44px;
+  }
+  .whatif__range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+  .whatif__range::-moz-range-track {
+    height: 44px;
+  }
+  .whatif__range::-webkit-slider-thumb {
+    margin-top: 15px;
+  }
+}
 .whatif__ends {
   display: flex;
   justify-content: space-between;
@@ -1263,7 +1280,7 @@ summary.rest__summary:hover,
   line-height: 1.35;
 }
 .whatif__reset {
-  min-height: 36px;
+  min-height: 44px;
   margin-top: 12px;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -1588,6 +1605,11 @@ summary.rest__summary:hover,
   }
   .bar__nav a:first-child {
     margin-left: 8px;
+  }
+  /* The scrolling row clips anything outside it: the focus ring goes inside the chip. */
+  .bar__nav a:focus-visible {
+    outline-offset: -2px;
+    border-radius: 999px;
   }
   .bar__open {
     padding: 0 14px;
