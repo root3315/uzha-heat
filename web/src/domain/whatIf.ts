@@ -21,16 +21,51 @@ export interface WhatIf {
 
 const f32 = Math.fround;
 
-function walk(tree: Tree, row: readonly number[]): number {
-  const { feature, value, left, defaultLeft } = tree;
-  let node = 0;
-  for (;;) {
-    const split = feature[node] ?? -1;
-    if (split < 0) return value[node] ?? 0;
-    const x = row[split] ?? Number.NaN;
-    const goLeft = Number.isNaN(x) ? defaultLeft[node] === 1 : f32(x) < f32(value[node] ?? 0);
-    node = (left[node] ?? 0) + (goLeft ? 0 : 1);
+/**
+ * Every tree of a model in one set of flat typed arrays, nodes numbered across trees. Thresholds and leaves are
+ * stored as float32, the precision XGBoost compares and adds them in. Walking these is several times faster than the
+ * nested arrays of the file, which matters when the whole city goes through the model ("Where to plant first").
+ */
+interface PackedTrees {
+  roots: Int32Array;
+  feature: Int32Array;
+  value: Float32Array;
+  left: Int32Array;
+  defaultLeft: Uint8Array;
+}
+
+const packedByModel = new WeakMap<TreeModel, PackedTrees>();
+
+function packTrees(trees: readonly Tree[]): PackedTrees {
+  const total = trees.reduce((sum, tree) => sum + tree.feature.length, 0);
+  const packed: PackedTrees = {
+    roots: new Int32Array(trees.length),
+    feature: new Int32Array(total),
+    value: new Float32Array(total),
+    left: new Int32Array(total),
+    defaultLeft: new Uint8Array(total),
+  };
+  let offset = 0;
+  trees.forEach((tree, t) => {
+    packed.roots[t] = offset;
+    tree.feature.forEach((split, node) => {
+      packed.feature[offset + node] = split;
+      packed.value[offset + node] = tree.value[node] ?? 0;
+      packed.left[offset + node] = (tree.left[node] ?? 0) + offset;
+      packed.defaultLeft[offset + node] = tree.defaultLeft[node] === 1 ? 1 : 0;
+    });
+    offset += tree.feature.length;
+  });
+  return packed;
+}
+
+function packed(model: TreeModel): PackedTrees {
+  let trees = packedByModel.get(model);
+  if (!trees) {
+    trees = packTrees(model.trees);
+    packedByModel.set(model, trees);
   }
+  return trees;
 }
 
 /**
@@ -38,8 +73,22 @@ function walk(tree: Tree, row: readonly number[]): number {
  * float32, so do we: summed in float64 the result drifts from the booster's by up to ~1e-4 °C over 400 trees.
  */
 export function predictRow(model: TreeModel, row: readonly number[]): number {
+  const { roots, feature, value, left, defaultLeft } = packed(model);
+  // The row in float32 too; a missing value (NaN, or past the row's end) stays NaN and takes the default branch.
+  const x = new Float32Array(model.features.length).fill(Number.NaN);
+  x.set(row.slice(0, x.length));
   let sum = f32(model.baseScore);
-  for (const tree of model.trees) sum = f32(sum + f32(walk(tree, row)));
+  for (const root of roots) {
+    let node = root;
+    let split = feature[node] as number;
+    while (split >= 0) {
+      const v = x[split] as number;
+      const goLeft = Number.isNaN(v) ? defaultLeft[node] === 1 : v < (value[node] as number);
+      node = (left[node] as number) + (goLeft ? 0 : 1);
+      split = feature[node] as number;
+    }
+    sum = f32(sum + (value[node] as number));
+  }
   return sum;
 }
 

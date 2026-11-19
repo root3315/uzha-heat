@@ -25,6 +25,9 @@ export interface PlantingPlace {
   people: number;
 }
 
+/** What the plan reads from a city's cells. */
+export type PlanCells = Pick<CityDetail['cells'], 'pop' | 'lon' | 'lat' | 'values'>;
+
 const valuesAt = (columns: Record<string, readonly number[]>, cell: number): FactorValues =>
   Object.fromEntries(Object.entries(columns).map(([key, column]) => [key, column[cell] ?? Number.NaN]));
 
@@ -32,7 +35,7 @@ const valuesAt = (columns: Record<string, readonly number[]>, cell: number): Fac
  * The `count` places where greening cools the most people the most: inhabited cells inside the outline, ranked by
  * cooling × people, at least `minGapM` apart.
  */
-export function plantingPlan(model: TreeModel, detail: CityDetail, inside: readonly boolean[], count = 5, minGapM = 1000): PlantingPlace[] {
+export function plantingPlan(model: TreeModel, detail: { cells: PlanCells }, inside: readonly boolean[], count = 5, minGapM = 1000): PlantingPlace[] {
   const { pop, lon, lat, values } = detail.cells;
   if (!pop) return [];
   const ranges = cityRanges(values);

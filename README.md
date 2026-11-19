@@ -166,7 +166,7 @@ All sources are open; no API keys are needed.
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # 321 unit tests (Vitest), about 15 seconds
+npm test           # 324 unit tests (Vitest), about 15 seconds
 npm run build      # output in web/dist
 ```
 

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { CityDetail, LonLat } from '../data/contract';
+import type { CityDetail, LonLat, TreeModel } from '../data/contract';
 import type { MapMark } from '../map/CityMap';
 import { formatPeople } from '../domain/people';
-import { plantingPlan, type PlantingPlace } from '../domain/plantingPlan';
+import type { PlantingPlace } from '../domain/plantingPlan';
+import { computePlan } from './planInWorker';
 import { useFormats, useLocale } from './locale';
 import { PLAN_TEXTS } from './ui.texts';
 import { useTreeModel } from './WhatIf';
@@ -11,6 +12,20 @@ const PLACES = 5;
 
 /** A city's plan, once calculated: reopening the block (or coming back to the city view) shows it at once. */
 const planCache = new WeakMap<CityDetail, PlantingPlace[]>();
+/** A plan still being calculated: a block opened again meanwhile waits for it instead of starting another. */
+const pendingPlans = new WeakMap<CityDetail, Promise<PlantingPlace[]>>();
+
+function planFor(model: TreeModel, detail: CityDetail, inside: readonly boolean[]): Promise<PlantingPlace[]> {
+  let pending = pendingPlans.get(detail);
+  if (!pending) {
+    pending = computePlan(model, detail, inside, PLACES).then((computed) => {
+      planCache.set(detail, computed);
+      return computed;
+    });
+    pendingPlans.set(detail, pending);
+  }
+  return pending;
+}
 
 interface PlantingPlanProps {
   detail: CityDetail;
@@ -38,13 +53,13 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
       return;
     }
     setPlan(null);
-    // The whole city through the model takes a moment: let the panel paint "calculating" first.
-    const timer = window.setTimeout(() => {
-      const computed = plantingPlan(state.model, detail, inside, PLACES);
-      planCache.set(detail, computed);
-      setPlan(computed);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    let alive = true;
+    void planFor(state.model, detail, inside).then((computed) => {
+      if (alive) setPlan(computed);
+    });
+    return () => {
+      alive = false;
+    };
   }, [state, detail, inside]);
 
   useEffect(() => {
