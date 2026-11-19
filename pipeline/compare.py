@@ -12,6 +12,7 @@ Usage (from the project root):
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -86,6 +87,8 @@ def _print(report: dict) -> None:
 
 
 def main() -> None:
+    # The summary prints ρ, ° and −; a Windows console in its default code page cannot, so never let it crash on them.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--city", choices=list(CITIES), required=True)
     source = parser.add_mutually_exclusive_group(required=True)

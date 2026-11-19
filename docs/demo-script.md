@@ -44,7 +44,7 @@ Say: "UzHa answers one question for Tashkent: where to plant first. Here is the 
 ### 2:15–3:30 · Why it is hot here (still tab 1)
 
 1. Click **Whole city**. Point at **43.6 °C** and the sentence under it: "Inside Tashkent the surface is 1.8 degrees hotter than
-   the ring around it. The hottest 10% of cells are above 48.1 °C; 313,000 people live in them."
+   the ring around it. The hottest 10% of the map is above 48.1 °C; 313,000 people live on those cells inside the city."
 2. Point at the first cause, **Lack of greenery, +3.2 °C**. Say: "This is SHAP: the model splits each cell's temperature into
    factors, in degrees."
 3. Point at the section (it already passes through the hottest point): the profile and the hatched band of causes under it.
@@ -83,7 +83,7 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
 3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-5`.
    "Python and the browser match the booster to 0.00001 degrees: we compare and add up in float32, like XGBoost. The web tests check the same rows."
-   Tests: 109 pipeline (one to two minutes) and 312 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
+   Tests: 109 pipeline (under a minute) and 312 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
 
@@ -105,7 +105,7 @@ Thank you. The site is open on your phones now."
 | Day heat island, MODIS, ring 1.5 km: Terra; Aqua | +2.0 / +1.6 / +2.1 °C; +2.3 / +2.0 / +2.5 °C |
 | Night heat island, Aqua ~01:30, ring 1.5 km | +2.4 / +1.2 / +1.8 °C |
 | Mean surface: city + 1.5 km ring (site summary); inside the outline | 43.6 / 42.7 / 41.4 °C; 43.9 / 43.4 / 42.7 °C |
-| People in the hottest 10% of cells | 313,000 / ~7,000 / 55,000 |
+| People inside the city on the map's hottest 10% (above 48.1 / 47.0 / 45.6 °C) | 313,000 / ~7,000 / 55,000; city's own hottest 10%: 260,000 / 5,000 / 27,000 |
 | Share of SHAP inside the outline: vegetation and soil; built-up | 64 / 39 / 50 %; 21 / 37 / 27 % |
 | Planting list, Tashkent top five | −3.7, −3.1, −2.7, −2.6, −2.6 °C; 1.2–1.4 thousand people each |
 | Place 1 (Small Ring Road): crowns only / NDVI only / both | −0.5 / −3.1 / −3.7 °C; crowns to the city's top (34 %) alone: −0.8 °C |
