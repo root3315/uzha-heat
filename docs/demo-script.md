@@ -154,11 +154,11 @@ where it is hot (r) and the city-vs-ring sign. Both hold with either satellite.
 The 200 m grid and the assembly of all factors onto it; spatial block cross-validation; SHAP grouping of correlated factors;
 the export of XGBoost to JSON and the in-browser evaluator, tested to 0.00001 °C; the planting ranking; the building-height
 model for 3D. Then each member names their part:
-- Amira: ROLE
-- Oliya: ROLE
-- Maksim: ROLE
-- Shakhina: ROLE
-- Stepan: ROLE
+- Amira Mirbabaeva: team leader, engineer
+- Oliya Bakhtiyorbekova: physics researcher
+- Maksim Salikhov: programmer, engineer
+- Shokhina Samandarova: engineer, researcher
+- Stepan Ionichev: chief programmer
 
 **Can you check it against our data?**
 Yes, now: `python -m pipeline.compare --city tashkent --points <your.csv>` or `--raster <your.tif>`. Any CSV with
