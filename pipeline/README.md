@@ -77,6 +77,18 @@ predictions are from the published `baseValue + ΣSHAP`, since the JSON values a
 PYTHONUTF8=1 python -m pipeline.run --all --only model
 ```
 
+Data handed to us (stations, sensors, another temperature raster) is compared with the published map without any
+downloads, in seconds:
+
+```bash
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points stations.csv [--value t_max]
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif [--scale 0.00341802 --offset 149]
+```
+
+`uzha/external.py` reads the CSV (lon/lat by name, `,` or `;`, decimal commas), puts points in their 200 m cell,
+averages a finer raster into cells or our cells into a coarser raster's pixels, detects Kelvin, and reports n, r,
+Spearman ρ, bias, RMSE and the overlap of the hottest 10 %.
+
 `PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
 
 Downloads are cached in `pipeline/cache/<city>_<grid-hash>/` (gitignored); a rerun with the same
