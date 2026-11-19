@@ -58,6 +58,20 @@ MODIS at 1 km also puts the city above its 1.5 km ring: by day +2.0 / +1.6 / +2.
 and Bukhara the night island is smaller than the day one.
 Command: `PYTHONUTF8=1 python -m pipeline.validate --all --web`.
 
+**How far to trust the model** (R² on held-out cells; Tashkent / Samarkand / Bukhara):
+
+| Check | R² |
+|---|---|
+| XGBoost, held-out blocks of 1 / 2 / 4 km | 0.80 / 0.79 / 0.77 · 0.80 / 0.77 / 0.75 · 0.71 / 0.69 / 0.67 |
+| XGBoost, 2 km blocks, no training cell within 400 m of a held-out one | 0.78 / 0.73 / 0.66 |
+| XGBoost, random cells (not spatial, for contrast: optimistic) | 0.82 / 0.83 / 0.76 |
+| Linear model, all factors, 2 km blocks | 0.67 / 0.55 / 0.60 |
+| Linear model, NDVI only, 2 km blocks | 0.65 / 0.35 / 0.50 |
+
+The published score (2 km blocks) loses 0.01–0.04 with a buffer and a little more with larger blocks, so neighbouring
+cells do not carry it; the model adds 0.09–0.22 over a linear one. Command: `python -m pipeline.cv_check --all`
+(published data only, under a minute).
+
 **People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
 inside the outline on cells hotter than 48.1 / 45.6 / 47.0 °C, the hottest tenth of the whole map (city plus its 1.5 km ring).
 Taking the hottest tenth of the city's own cells instead gives about 260, 27 and 5 thousand. In Samarkand the hottest cells
@@ -174,7 +188,7 @@ pip install -r pipeline/requirements-lock.txt         # the exact versions we ra
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
-python -m pytest pipeline/tests -q                     # 109 tests, under a minute
+python -m pytest pipeline/tests -q                     # 114 tests, under a minute
 ```
 
 The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.
