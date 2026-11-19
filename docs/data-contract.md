@@ -189,6 +189,7 @@ Optional. The physics model (a per-tile surface energy balance, `pipeline/uzha/s
   city's area treated. `settings`: the scenario's parameters (`pipeline/uzha/seb/scenarios.py`; null = left as
   observed). `assumptions`: `{id, text}` in English; the site words the known ids itself in each language from
   `settings` and shows the file's text for any other id.
+
 ## `web/public/data/night-<id>.json`
 
 The summer night surface temperature around the city from NASA MODIS Aqua (MYD11A2, band `LST_Night_1km`, about
