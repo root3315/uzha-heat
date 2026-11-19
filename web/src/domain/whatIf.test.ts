@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TreeModel } from '../data/contract';
 import { parseTreeModel } from '../data/parse';
-import { factorRanges, leversFor, predict, predictRow, whatIf } from './whatIf';
+import { balanceCover, factorRanges, leversFor, predict, predictRow, whatIf } from './whatIf';
 
 /**
  * Two stumps by hand: tree < 10 → +2 else −1; ndvi < 0.3 → +1 else −0.5 (missing ndvi goes right).
@@ -60,6 +60,36 @@ describe('whatIf', () => {
     expect(whatIf(TOY, lush, { tree: 30 }, ranges).delta).toBe(0);
     expect(whatIf(TOY, lush, { tree: 50 }, ranges).after).toBe(predict(TOY, lush));
     expect(whatIf(TOY, lush, { tree: 5 }, ranges).delta).toBe(3);
+  });
+});
+
+describe('balanceCover', () => {
+  it('takes added crowns from bare ground first, then from built-up', () => {
+    const cell = { tree: 5, built: 80, bare: 10, ndvi: 0.2 };
+    // 5 + 80 + 10 = 95 %: crowns to 25 % leave 15 points too many, 10 from bare ground and 5 from built-up.
+    expect(balanceCover(cell, { ...cell, tree: 25 })).toEqual({ tree: 25, built: 75, bare: 0, ndvi: 0.2 });
+    expect(balanceCover(cell, { ...cell, tree: 12 })).toEqual({ tree: 12, built: 80, bare: 8, ndvi: 0.2 });
+  });
+
+  it('leaves room that is already free alone', () => {
+    const cell = { tree: 5, built: 50, bare: 10 };
+    expect(balanceCover(cell, { ...cell, tree: 25 })).toEqual({ tree: 25, built: 50, bare: 10 });
+  });
+
+  it('keeps a cell whose shares already passed 100 % at its own sum', () => {
+    const cell = { tree: 10, built: 85, bare: 10 };
+    expect(balanceCover(cell, { ...cell, tree: 20 })).toEqual({ tree: 20, built: 85, bare: 0 });
+  });
+
+  it('does not take from a share the reader moved', () => {
+    const cell = { tree: 5, built: 90, bare: 5 };
+    expect(balanceCover(cell, { ...cell, tree: 25, built: 70 })).toEqual({ tree: 25, built: 70, bare: 5 });
+  });
+
+  it('is applied by whatIf', () => {
+    const shares: TreeModel = { ...TOY, features: ['tree', 'built', 'bare'], trees: [{ feature: [2, -1, -1], value: [5, 40, 45], left: [1, -1, -1], defaultLeft: [1, 0, 0] }], baseScore: 0 };
+    // Bare ground under 5 % predicts 40, else 45: planting on a cell with 10 % bare and no free room takes the bare first.
+    expect(whatIf(shares, { tree: 0, built: 90, bare: 10 }, { tree: 20 }).after).toBe(40);
   });
 });
 

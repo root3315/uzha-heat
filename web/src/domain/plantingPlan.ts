@@ -8,7 +8,8 @@ import { cityRanges, whatIf, type FactorValues } from './whatIf';
 
 /**
  * What one planting adds to a 200 m cell: a fifth of it under crowns (street rows and a yard or two), and the
- * greenery that comes with them. Never past the city's 95th percentile, the same end the sliders have.
+ * greenery that comes with them. Never past the city's 95th percentile, the same end the sliders have; the crowns
+ * take the place of bare ground, then of built-up (`balanceCover`), so the cell's shares stay possible.
  */
 export const PLANTING: Readonly<Record<string, number>> = { tree: 20, ndvi: 0.1 };
 

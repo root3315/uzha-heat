@@ -118,8 +118,34 @@ export function whatIf(model: TreeModel, cell: FactorValues, changes: FactorValu
     changed[key] = bounds ? clamp(value, bounds) : value;
   }
   const before = predict(model, cell);
-  const after = predict(model, changed);
+  const after = predict(model, balanceCover(cell, changed));
   return { before, after, delta: after - before };
+}
+
+/** WorldCover shares of the same cell, %: they add up to at most 100 with whatever else covers it. */
+const COVER = ['tree', 'built', 'bare'] as const;
+/** Where added cover comes from: bare ground first, then built-up. */
+const GIVES_WAY = ['bare', 'built'] as const;
+
+const coverSum = (values: FactorValues): number => COVER.reduce((sum, key) => sum + (Number.isFinite(values[key]) ? (values[key] ?? 0) : 0), 0);
+
+/**
+ * Keeps a cell's land-cover shares possible after a change: more crowns take their area from bare ground, then from
+ * built-up, never from a share the reader moved, until the shares add up to no more than 100 % (or to the cell's own
+ * sum when that was already over, as rounding can leave it).
+ */
+export function balanceCover(cell: FactorValues, changed: FactorValues): FactorValues {
+  let excess = coverSum(changed) - Math.max(100, coverSum(cell));
+  if (excess <= 0) return changed;
+  const balanced = { ...changed };
+  for (const key of GIVES_WAY) {
+    const value = balanced[key];
+    if (excess <= 0 || value === undefined || !Number.isFinite(value) || value !== cell[key]) continue;
+    const taken = Math.min(excess, value);
+    balanced[key] = value - taken;
+    excess -= taken;
+  }
+  return balanced;
 }
 
 /** A factor the reader may move, and which way makes sense to move it. */
