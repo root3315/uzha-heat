@@ -168,6 +168,12 @@ describe('leversFor', () => {
     expect(leversFor(TOY, { tree: 0, ndvi: 0.9, built: 0 }, {}, { tree: [0, 0], ndvi: [0, 0.8] })).toEqual([]);
   });
 
+  it('never offers albedo: in these cities it marks open ground rather than a surface one could lighten', () => {
+    const withAlbedo: TreeModel = { ...TOY, features: [...TOY.features, 'albedo'] };
+    const levers = leversFor(withAlbedo, { tree: 0, ndvi: 0.1, built: 0, albedo: 0.15 }, {}, { ...ranges, albedo: [0.1, 0.4] });
+    expect(levers.map((l) => l.lever.key)).not.toContain('albedo');
+  });
+
   it('leaves out a lever with no room left and a factor the model lacks', () => {
     const levers = leversFor(TOY, { tree: 60, ndvi: 0.1, built: 0, albedo: 0.2 }, {}, { ...ranges, albedo: [0.1, 0.4] });
     expect(levers.map((l) => l.lever.key)).toEqual(['ndvi']);

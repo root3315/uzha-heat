@@ -167,10 +167,13 @@ export interface Lever {
   cut?: { points: number } | { share: number };
 }
 
+/**
+ * No albedo lever: in these cities a bright surface is mostly bare dry ground, so the model's albedo stands for open
+ * ground rather than for a roof or a pavement one could lighten.
+ */
 export const LEVERS: readonly Lever[] = [
   { key: 'tree', direction: 'up', step: 1 },
   { key: 'ndvi', direction: 'up', step: 0.01 },
-  { key: 'albedo', direction: 'up', step: 0.01 },
   { key: 'built', direction: 'down', step: 1, cut: { points: BUILT_CUT_POINTS } },
   { key: 'roads', direction: 'down', step: 0.5, cut: { share: 0.25 } },
 ];
