@@ -8,7 +8,7 @@
 
 **How to view the demo** (two minutes):
 1. Open https://uzha.mydevbox.xyz/map/tashkent and click any coloured place on the map.
-2. In the panel on the right open "What if" and move the sliders: the city model recalculates that place.
+2. In the panel on the right move the "What if" sliders: the city model recalculates that place.
 3. Click "Whole city", then "Where to plant first": five places, each opens on the map.
 
 A map of summer surface overheating in Tashkent, with Samarkand and Bukhara as a check that the method transfers. For every
@@ -80,13 +80,19 @@ up in NDVI rather than in the tree share.
 - Line A–B draws a cross-section: the temperature profile and a band of causes under it (hatched).
 - "People" shows residents as dots, and schools, kindergartens and clinics on the hottest cells. Colour stays temperature.
 - "3D" tilts the map and raises the buildings, each coloured by the surface temperature under it.
-- "What if" on a place: more tree crown and greenery (NDVI), lighter roofs, less built-up. The city model recomputes the surface
-  temperature of that place. Sliders stay within what the city already has (5–95 % of cells); built-up can drop by at most
-  25 percentage points.
+- "What if" on a place: more tree crown and greenery (NDVI), lighter roofs, and, where built-up land or roads heat that place,
+  less of them. The city model recomputes the surface temperature of that place. Sliders stay within what the city already has
+  (5–95 % of cells); built-up can drop by at most 25 percentage points.
 - "Where to plant first" on the city view: five places, each opens on the map with its own "what if".
 - "Share" puts the place and the 3D view into the link. "Report" builds a printable page; city data downloads as CSV or GeoJSON.
 
-![Cross-section and causes](docs/screenshots/03-transect.png)
+| Where to plant first | What if, place 1 |
+|---|---|
+| ![Where to plant first: five places ranked by cooling × residents](docs/screenshots/02-plant-first.png) | ![What if: crowns +20 pp and NDVI +0.1 give −3.7 °C](docs/screenshots/03-what-if.png) |
+
+| 3D buildings | On a phone |
+|---|---|
+| ![3D: buildings coloured by the surface temperature under them](docs/screenshots/04-3d.png) | <img src="docs/screenshots/05-mobile.png" width="300" alt="The map on a phone"> |
 
 ## Method
 
