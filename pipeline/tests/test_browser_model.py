@@ -59,3 +59,29 @@ def test_document_check_rows_match_booster():
     rows = np.array(document["check"]["rows"])
     assert len(rows) == browser_model.CHECK_ROWS
     np.testing.assert_allclose(browser_model.predict(document, rows), document["check"]["prediction"], atol=1e-5)
+
+
+def test_refit_city_rewrites_shap_from_the_model_it_exports():
+    rng = np.random.default_rng(1)
+    n = 400
+    ndvi, built = rng.uniform(0, 0.6, n), rng.uniform(0, 100, n)
+    lst = 46 - 10 * ndvi + 0.03 * built + rng.normal(0, 0.3, n)
+    lon, lat = 69.2 + rng.uniform(0, 0.1, n), 41.3 + rng.uniform(0, 0.1, n)
+    square = {"type": "Polygon", "coordinates": [[[69.2, 41.3], [69.25, 41.3], [69.25, 41.35], [69.2, 41.35], [69.2, 41.3]]]}
+    city = {
+        "features": [{"key": "ndvi"}, {"key": "built"}],
+        "model": {"baseValue": 40.0},
+        "globalImportance": [],
+        "cells": {"lon": lon.tolist(), "lat": lat.tolist(), "lst": lst.tolist(),
+                  "values": {"ndvi": ndvi.round(3).tolist(), "built": built.round(3).tolist()},
+                  "shap": {"ndvi": [0.0] * n, "built": [0.0] * n}},
+        "districts": [{"name": "A", "geometry": square, "cellCount": 0, "shapMean": {}}],
+    }
+    updated, model, gap_max, _ = browser_model.refit_city(city)
+    rows = np.column_stack([updated["cells"]["values"][k] for k in ("ndvi", "built")])
+    published = updated["model"]["baseValue"] + sum(np.asarray(updated["cells"]["shap"][k]) for k in ("ndvi", "built"))
+    # The map's attributions add up to what the browser model predicts, up to the 3-decimal rounding of the file.
+    assert np.abs(browser_model.predict(model, rows) - published).max() < 0.01
+    assert gap_max > 1  # the old SHAP (all zero) was far off, and was replaced
+    assert [row["key"] for row in updated["globalImportance"]] == ["ndvi", "built"]
+    assert set(updated["districts"][0]["shapMean"]) == {"ndvi", "built"}

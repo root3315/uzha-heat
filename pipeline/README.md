@@ -70,8 +70,10 @@ Microsoft's footprints have no coverage around Bukhara (568 in its whole quadkey
 
 A full run also writes `model-<id>.json`: the final booster as a compact JSON the web app evaluates in
 the browser for "что если" (`uzha/browser_model.py`). When the raw downloads are no longer cached, refit it
-from the cell table already in `<id>.json` (same params and seed; the log prints how far the refit's
-predictions are from the published `baseValue + ΣSHAP`, since the JSON values are rounded):
+from the cell table already in `<id>.json` (same params and seed). The JSON values are rounded, so the refit differs
+a little from the full run's model; the step therefore also rewrites the SHAP columns, `baseValue`, `globalImportance`
+and the district means in `<id>.json` from the refit, so the map's attributions and "what if" come from one booster.
+The log prints how far the refit moved each cell's prediction:
 
 ```bash
 PYTHONUTF8=1 python -m pipeline.run --all --only model
