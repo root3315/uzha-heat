@@ -161,13 +161,27 @@ pip install -r pipeline/requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
 PYTHONUTF8=1 python -m pipeline.buildings              # здания для 3D (скачивает OSM и контуры Microsoft)
-python -m pytest pipeline/tests -q                     # 92 теста, около минуты
+python -m pytest pipeline/tests -q                     # 109 тестов, одна-две минуты
 ```
 
 Пайплайн читает Landsat и Sentinel-2 из Microsoft Planetary Computer и кеширует каждый слой в `pipeline/cache/`.
 Первый прогон Ташкента занимает примерно 10–20 минут, в основном чтение Sentinel-2; повторный с кешем — около минуты.
 `pipeline.buildings` скачивает выгрузку Geofabrik по Узбекистану (~130 МБ), контуры Microsoft (~45 МБ на тайл) и тайл
 GHSL. Подробнее: [pipeline/README.md](pipeline/README.md).
+
+**Сверка с вашими данными** (офлайн, секунды; читает `web/public/data/<город>.json`):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points stations.csv   # столбцы lon/lat находятся по имени
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif  # любая проекция и разрешение
+```
+
+Точки попадают в свою клетку 200 м (столбец значения находится сам или задаётся `--value t_max`; `;` и десятичные
+запятые подходят). Растр мельче наших клеток усредняется в каждую клетку; более крупный сравнивается по его собственным
+пикселям, куда усредняются наши клетки. Кельвины распознаются; `--scale` и `--offset` снимают масштабирование целых чисел.
+Команда печатает n, r Пирсона, ρ Спирмена, среднюю разницу, RMSE и долю наших самых горячих 10 %, которые есть и у них,
+и пишет `pipeline/cache/compare-<город>-<файл>.json`. Для температуры воздуха разница ожидаема; r и совпадение горячих
+10 % показывают, в тех же ли местах жара.
 
 Хостинг: [docs/deploy.md](docs/deploy.md).
 
