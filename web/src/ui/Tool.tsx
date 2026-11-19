@@ -45,25 +45,8 @@ interface PickedPlace {
 
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
-const THREE_D_KEY = 'uzha.3d';
 /** How long "Copied" stays on the button. */
 const SHARED_NOTE_MS = 2200;
-
-function readThreeD(): boolean {
-  try {
-    return window.sessionStorage.getItem(THREE_D_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function writeThreeD(on: boolean): void {
-  try {
-    window.sessionStorage.setItem(THREE_D_KEY, on ? '1' : '0');
-  } catch {
-    /* private mode: 3D is just not remembered */
-  }
-}
 
 /** The working map: isotherms, a draggable section, the panel with one answer for the city or a place. */
 export function Tool({ model, cities, onCity }: ToolProps) {
@@ -77,12 +60,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
-  // 3D stays on from one city to the next: the reader chose a way of looking, not a city.
-  const [threeD, setThreeDState] = useState(() => readSharedView(window.location.search).threeD || readThreeD());
-  const setThreeD = (on: boolean) => {
-    setThreeDState(on);
-    writeThreeD(on);
-  };
+  // 3D lives in the address: a reload, a shared link or the language switch keeps it; another city opens framed and flat,
+  // since a 3D camera kept from the last city would land on a close-up of the new one.
+  const [threeD, setThreeD] = useState(() => readSharedView(window.location.search).threeD);
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   // The planting places stay on the map while the reader opens them one by one from the list.
   const [planMarks, setPlanMarks] = useState<MapMark[] | null>(null);
