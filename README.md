@@ -40,6 +40,11 @@ for vegetation and soil). Grouping correlated factors, vegetation and bare soil 
 mean contribution inside the outline, built-up land 21–37 %. The hot places differ by city: dense building without trees in
 Tashkent, open nearly unbuilt land in Samarkand, building mixed with bare ground in Bukhara.
 
+Split the other way, by where the city's extra heat comes from: on average (means, so the parts add up) the surface inside
+the outline is 1.4 / 1.4 / 2.9 °C warmer than its ring. Vegetation and soil account for +1.0 / +1.5 / +1.5 °C of it,
+built-up land −0.1 / −0.8 / +0.9 °C, and +0.3 / +0.3 / +0.2 °C is left unexplained ("Other": the observed difference minus
+the factors' sum, where the model misses the satellite; a remainder, not a heat source). The method page shows this per city.
+
 This is the temperature of the surface itself at about 11:00, from satellite images, not the air temperature.
 
 **Check against NASA MODIS** (1 km, same summers, Tashkent / Samarkand / Bukhara):
@@ -180,7 +185,7 @@ All sources are open; no API keys are needed.
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # 346 unit tests (Vitest), about 15 seconds
+npm test           # 348 unit tests (Vitest), about 15 seconds
 npm run build      # output in web/dist
 ```
 

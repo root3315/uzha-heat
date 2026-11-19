@@ -68,6 +68,11 @@ export const METHOD_TEXTS = texts(
         'of related factors into groups (SHAP allows this: contributions add up) and look at which group carries more of the contribution in the cells ' +
         'inside the city line. These are shares of the mean contribution, not shares of variance.',
       group: (share: string, mean: string) => `${share} of the mean contribution, ±${mean}° per cell on average`,
+      budget: (observed: string) =>
+        `Where the difference comes from. On average the surface inside the line is ${observed} warmer than around it (a mean this time, ` +
+        'so the parts add up). The model splits that by group of factors. "Other" is what the groups leave unexplained: the observed ' +
+        'difference minus their sum, that is, where the model misses the satellite. It is a remainder, not a heat source of its own.',
+      other: 'Other, unexplained',
     },
     modis: {
       title: 'Check against MODIS, and the night',
@@ -194,6 +199,11 @@ export const METHOD_TEXTS = texts(
         'связанных факторов в группы (SHAP это позволяет: вклады складываются) и смотрим, на какую группу приходится больше вклада на участках ' +
         'в черте города. Это доли среднего вклада, а не доли дисперсии.',
       group: (share, mean) => `${share} среднего вклада, в среднем ±${mean}° на участок`,
+      budget: (observed) =>
+        `Откуда берётся разница. В среднем поверхность в черте города теплее, чем вокруг, на ${observed} (здесь среднее, ` +
+        'чтобы части складывались). Модель делит её по группам факторов. «Прочее» — то, что группы не объясняют: наблюдаемая разница ' +
+        'минус их сумма, то есть то, где модель расходится со спутником. Это остаток, а не отдельный источник тепла.',
+      other: 'Прочее, необъяснённое',
     },
     modis: {
       title: 'Сверка с MODIS и ночь',
