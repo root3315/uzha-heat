@@ -15,7 +15,7 @@ Stated assumptions (each is a modelling choice, not a law):
   share of K↓ (longwave changes slowly around the overpass, diffuse fraction held constant).
 - Params.d_t_air shifts the air temperature only; vapour pressure and L↓ are kept as given.
 - Water tiles take Params.kb_inv like the sealed surfaces (smooth surface under the cell's bluff-body roughness);
-  only trees and grass take kB⁻¹ = ln 10.
+  only trees and grass take kB⁻¹ = ln 10. Bare soil takes Params.kb_inv_bare when it is set (not NaN).
 - The grass tile of a rural cell is the ring's crop land and takes Params.rs_min_crop.
 - Stable stratification uses the long-tailed Beljaars–Holtslag functions instead of Dyer's linear ψ = −5ζ
   (reason next to the constants below); unstable stays Businger–Dyer/Paulson.
@@ -88,6 +88,18 @@ F2_MIN = 1e-3  # caps the canopy resistance at 1000·rs_min in soil drier than t
 # Table 1, https://doi.org/10.5194/hess-17-873-2013).
 SELLERS_A = 8.206
 SELLERS_B = 4.255
+
+# Bare-soil evaporation scheme. "sellers": LE through ra + r_ss with r_ss above. With the saturated e_s(T_s) at the
+# surface, r_ss of a few hundred s m⁻¹ lets dry loess evaporate ~300 W m⁻² at a hot overpass, where measured July
+# fluxes over dry bare loess are near zero. "beta": the moisture-availability form of Lee & Pielke (1992),
+# J. Appl. Meteorol. 31, 480–484, https://doi.org/10.1175/1520-0450(1992)031<0480:EBSEFA>2.0.CO;2:
+# LE = β·(ρcp/γ)·(e_s(T_s) − e_a)/ra with β = ¼·[1 − cos(π·θ/θ_fc)]² for θ < θ_fc and 1 above (θ_fc = THETA_CAP);
+# it falls as θ² near the air-dry end, so a surface θ of 0.03 gives β ≈ 0.02. Params.soil_resistance_scale
+# divides β (it multiplies the resistance in the "sellers" form). "beta" scored better out of fold on Tashkent
+# (physics R² 0.433 against 0.419, pipeline/README.md), a small gain; the published files and the browser solver
+# (web/src/domain/seb/soilResistance.ts) still use "sellers", so that stays the default until both are moved together.
+BARE_SOIL_SCHEMES = ("sellers", "beta")
+BARE_SOIL_SCHEME = "sellers"
 
 
 def saturation_vapour_pressure(t_k):
@@ -257,6 +269,7 @@ class Setup:
     z0m: np.ndarray
     z0h: np.ndarray
     rs: np.ndarray  # surface resistance, s m⁻¹; inf where there is no evaporation
+    beta: np.ndarray  # evaporation efficiency, 0..1, multiplies LE (bare soil under the "beta" scheme)
     a1: np.ndarray
     storage_offset: np.ndarray  # a2·dRn/dt + a3
     qf: np.ndarray
@@ -297,10 +310,31 @@ def surface_resistance(inputs: SebInputs, forcing: Forcing, params: Params, t_ai
     rs[:, [TILE["tree"]]] = params.rs_min_tree * np.exp(VPD_COEF_TREE * vpd) / f2
     grass_min = np.where(rural, params.rs_min_crop, params.rs_min_grass)
     rs[:, [TILE["grass"]]] = grass_min / f2
-    soil = np.exp(SELLERS_A - SELLERS_B * np.clip(theta / THETA_SAT, 0.0, 1.0))
-    rs[:, [TILE["bare"]]] = soil * params.soil_resistance_scale
+    if BARE_SOIL_SCHEME == "beta":
+        rs[:, TILE["bare"]] = 0.0  # the soil's limit is in β (evaporation_efficiency)
+    else:
+        soil = np.exp(SELLERS_A - SELLERS_B * np.clip(theta / THETA_SAT, 0.0, 1.0))
+        rs[:, [TILE["bare"]]] = soil * params.soil_resistance_scale
     rs[:, TILE["water"]] = 0.0
     return rs
+
+
+def lee_pielke_beta(theta) -> np.ndarray:
+    """β = ¼·[1 − cos(π·θ/θ_fc)]² below field capacity, 1 above (Lee & Pielke 1992)."""
+    ratio = np.clip(np.asarray(theta, dtype=float) / THETA_CAP, 0.0, 1.0)
+    return 0.25 * (1.0 - np.cos(np.pi * ratio)) ** 2
+
+
+def evaporation_efficiency(inputs: SebInputs, params: Params) -> np.ndarray:
+    """β per tile, multiplying LE: 1 except on bare soil under the "beta" scheme."""
+    if BARE_SOIL_SCHEME not in BARE_SOIL_SCHEMES:
+        raise ValueError(f"unknown bare-soil scheme {BARE_SOIL_SCHEME!r}")
+    n = len(inputs.z0m)
+    beta = np.ones((n, len(TILES)))
+    if BARE_SOIL_SCHEME == "beta":
+        soil = lee_pielke_beta(inputs.soil_moisture) / params.soil_resistance_scale
+        beta[:, TILE["bare"]] = np.clip(soil, 0.0, 1.0)
+    return beta
 
 
 def anthropogenic_heat(inputs: SebInputs) -> np.ndarray:
@@ -327,6 +361,8 @@ def prepare(inputs: SebInputs, forcing: Forcing, params: Params) -> Setup:
     # The reference height must clear the roughness: at least 5·z0m above the displacement height.
     z = np.maximum(forcing.z_ref - np.asarray(inputs.zd, dtype=float)[:, None], 5.0 * z0m)
     kb_inv = np.where(tile_mask(VEGETATED), KB_INV_VEGETATION, params.kb_inv)
+    if np.isfinite(params.kb_inv_bare):
+        kb_inv = np.where(tile_mask(("bare",)), params.kb_inv_bare, kb_inv)
 
     a1 = inputs.ohm[..., 0] * np.where(tile_mask(IMPERVIOUS), params.ohm_a1_scale, 1.0)
     d_rn_dt = (1.0 - albedo) * share * forcing.dk_dt  # W m⁻² h⁻¹
@@ -343,6 +379,7 @@ def prepare(inputs: SebInputs, forcing: Forcing, params: Params) -> Setup:
         z0m=z0m * ones,
         z0h=z0m * np.exp(-kb_inv),
         rs=surface_resistance(inputs, forcing, params, t_air),
+        beta=evaporation_efficiency(inputs, params),
         a1=a1,
         storage_offset=inputs.ohm[..., 1] * d_rn_dt + inputs.ohm[..., 2],
         qf=anthropogenic_heat(inputs),
@@ -359,7 +396,7 @@ def fluxes(setup: Setup, t_surface: np.ndarray) -> dict:
     # LE = (ρ cp/γ)·(e_s(T) − e_a)/(ra + rs), written with conductances so rs = inf gives exactly 0.
     with np.errstate(divide="ignore"):
         le_conductance = 1.0 / (1.0 / conductance + setup.rs)
-    le = setup.rho_cp / setup.psy * deficit * le_conductance
+    le = setup.beta * setup.rho_cp / setup.psy * deficit * le_conductance
     dqs = setup.a1 * rn + setup.storage_offset
     residual = rn + setup.qf - h - le - dqs
     return {"rn": rn, "h": h, "le": le, "dqs": dqs, "qf": setup.qf, "residual": residual, "fallback": fallback}

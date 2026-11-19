@@ -27,7 +27,8 @@ from .. import boundary, energy, weather
 from ..cache import Cache
 from ..cities import get_city
 from ..grid import WGS84, Grid, aggregate
-from ..sources import era5, osm, worldcover
+from ..sources import era5, osm, sentinel, worldcover
+from . import physics
 from .types import IMPERVIOUS, KELVIN, TILE, TILES, VON_KARMAN, CANYON_FLOOR, RD, Forcing, SebInputs
 
 log = logging.getLogger(__name__)
@@ -119,6 +120,29 @@ ERA5_Z0_M = 0.1  # roughness of the ERA5 box the 10 m wind refers to ("roughly o
 ERA5_VARIABLES = ("temperature_2m", "dew_point_2m", "wind_speed_10m", "surface_pressure",
                   "shortwave_radiation_instant", "direct_normal_irradiance_instant", "diffuse_radiation_instant")
 ERA5_LAND_VARIABLES = ("soil_moisture_0_to_7cm",)
+
+# --- Surface moisture per cell (Sentinel-2 shortwave infrared, sources/sentinel.py) --------------------------------
+# Read at 200 m / 7 ≈ 28.6 m, the resolution of the existing NDVI/albedo layer (features.FINE_FACTOR); B11, B12 and
+# B8A are 20 m natively.
+MOISTURE_SAMPLE_FACTOR = 7
+# OPTRAM W → volumetric moisture, θ = θ_d + W·(θ_w − θ_d) (Sadeghi et al. 2017, linear model): θ_w the saturated
+# water content of the model's soil (physics.THETA_SAT), θ_d the air-dry surface of a loam, 0.03 m³ m⁻³ (the
+# 0.03–0.05 of sun-dried topsoil; Carsel & Parrish 1988, Water Resour. Res. 24, 755–769, give a residual 0.078 for
+# loam, but the top centimetres of summer loess dry below it).
+THETA_AIR_DRY = 0.03
+THETA_WET = physics.THETA_SAT
+# Off by default: see the out-of-fold scores in pipeline/README.md ("Physics model inputs", surface moisture).
+USE_SURFACE_MOISTURE = False
+# Where W is known it also sets the vegetation's water: θ(W) feeds the Jarvis f2 of grass and trees, and a cell counts
+# as irrigated (f2 = 1) when θ(W) reaches field capacity, instead of the "every cell inside the outline" rule.
+MOISTURE_DRIVES_VEGETATION = True
+# Shift θ(W) so its mean over the cells with W equals the ERA5-Land 0–7 cm value (W then only says where it is
+# wetter or drier than the city mean). Off: the surface is not the 0–7 cm layer, and dry loess is far below it.
+MOISTURE_ANCHOR_ERA5 = False
+# Which index gives W: "optram" (STR of B12, Sadeghi et al. 2017) or "ndmi", the same trapezoid normalisation applied
+# to NDMI against NDVI over the city's cells (dry / wet edge = 5th / 95th NDMI percentile per NDVI bin).
+MOISTURE_INDEX = "optram"
+NDMI_EDGE_VI_STEP = 0.02
 
 # --- Anthropogenic heat -------------------------------------------------------------------------------------------
 # AH4GUC: Varquez, Kiyomoto, Khanh & Kanda (2021) Sci. Data 8, 64, https://doi.org/10.1038/s41597-021-00850-w,
@@ -235,6 +259,52 @@ def fetch_road_area(bbox: tuple, grid: Grid):
         area += road_area_share(fresh, grid)
         del elements, fresh
     return area
+
+
+def fetch_surface_moisture(bbox: tuple, grid: Grid) -> dict:
+    """Per-cell summer NDMI and OPTRAM wetness W from Sentinel-2 (sources/sentinel.py), over soil and vegetation
+    pixels only: WorldCover built-up and water pixels are masked, since dark asphalt and water read as wet soil in the
+    shortwave infrared. Grid-shaped float32 arrays plus the fitted edges, for the cache."""
+    raster = grid.raster(MOISTURE_SAMPLE_FACTOR)
+    classes = worldcover.land_cover(bbox, raster)
+    exclude = np.isin(classes, (worldcover.BUILT, worldcover.WATER, worldcover.NO_DATA))
+    del classes
+    result = sentinel.summer_moisture(bbox, raster, MOISTURE_SAMPLE_FACTOR, exclude=exclude)
+    return {"ndmi": result.ndmi, "wetness": result.wetness, "ndvi": result.ndvi, "edges": result.edges,
+            "scenes": result.scenes}
+
+
+def layer_wetness(layer: dict, index: str = None) -> np.ndarray:
+    """Grid-shaped W from the cached moisture layer: OPTRAM W, or NDMI normalised between its dry and wet edges in
+    the NDMI–NDVI space of the city's cells (the trapezoid of Sadeghi et al. 2017 with NDMI in place of STR)."""
+    index = index or MOISTURE_INDEX
+    if index == "optram":
+        return np.asarray(layer["wetness"], float)
+    if index != "ndmi":
+        raise ValueError(f"unknown moisture index {index!r}")
+    ndmi, vi = np.asarray(layer["ndmi"], float), np.asarray(layer["ndvi"], float)
+    edges = sentinel.fit_optram_edges(vi.ravel(), ndmi.ravel(), step=NDMI_EDGE_VI_STEP)
+    return sentinel.optram_wetness(ndmi, vi, edges)
+
+
+def wetness_to_theta(wetness) -> np.ndarray:
+    """θ = θ_d + W·(θ_w − θ_d), m³ m⁻³ (Sadeghi et al. 2017, linear OPTRAM model); NaN stays NaN."""
+    return THETA_AIR_DRY + np.clip(np.asarray(wetness, float), 0.0, 1.0) * (THETA_WET - THETA_AIR_DRY)
+
+
+def cell_moisture(wetness, era5_theta: float, irrigated, anchor: bool = False, vegetation: bool = True) -> tuple:
+    """(soil moisture per cell, irrigated per cell). Cells with an OPTRAM W take θ(W), shifted to the ERA5-Land mean
+    when `anchor`; the others keep the ERA5-Land value and the given irrigated flag. With `vegetation`, a cell with W
+    is irrigated exactly when θ(W) reaches field capacity (its vegetation is then unstressed, f2 = 1)."""
+    theta = wetness_to_theta(wetness)
+    known = np.isfinite(theta)
+    if anchor and known.any():
+        theta = theta - theta[known].mean() + era5_theta
+    theta = np.where(known, np.clip(theta, THETA_AIR_DRY, THETA_WET), era5_theta)
+    irrigated = np.asarray(irrigated, bool)
+    if vegetation:
+        irrigated = np.where(known, theta >= physics.THETA_CAP, irrigated)
+    return theta, irrigated
 
 
 def fetch_water_share(bbox: tuple, grid: Grid) -> np.ndarray:
@@ -546,8 +616,13 @@ def cell_index(grid: Grid, lon, lat) -> tuple:
     return row, col
 
 
-def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT) -> tuple:
-    """(SebInputs, Forcing, observed LST in K, inside-the-outline mask) for the cells of `<data_dir>/<id>.json`."""
+def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT,
+          moisture: bool = None) -> tuple:
+    """(SebInputs, Forcing, observed LST in K, inside-the-outline mask) for the cells of `<data_dir>/<id>.json`.
+
+    `moisture` (default USE_SURFACE_MOISTURE): per-cell soil moisture and irrigation from Sentinel-2 SWIR (OPTRAM W)
+    instead of one ERA5-Land value and the outline rule; cells without W keep those."""
+    moisture = USE_SURFACE_MOISTURE if moisture is None else moisture
     document, cells = load_cells(data_dir, city_id)
     city = get_city(city_id)
     bbox, _ = boundary.city_extent(city)
@@ -600,6 +675,15 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
     outline = boundary.load(city_id)
     inside = boundary.inside(outline, cells["lon"], cells["lat"])
     n = len(cells["lst"])
+    wetness = np.full(n, np.nan)
+    if moisture:
+        layer = _cached_moisture(cache, query_bbox, grid)
+        if layer is None:
+            log.warning("%s: Sentinel-2 surface moisture unavailable, ERA5-Land soil moisture everywhere", city_id)
+        else:
+            wetness = layer_wetness(layer)[row, col]
+    soil_moisture, irrigated = cell_moisture(wetness, soil, inside | (cells["ndvi"] > IRRIGATED_RING_NDVI),
+                                             anchor=MOISTURE_ANCHOR_ERA5, vegetation=MOISTURE_DRIVES_VEGETATION)
     inputs = SebInputs(
         fraction=fraction,
         albedo=albedo_matrix(cells["albedo"], fraction),
@@ -608,8 +692,8 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
         sky_view=sky_view(aspect),
         z0m=z0m,
         zd=zd,
-        soil_moisture=np.full(n, soil),
-        irrigated=inside | (cells["ndvi"] > IRRIGATED_RING_NDVI),
+        soil_moisture=soil_moisture,
+        irrigated=irrigated,
         ohm=ohm_matrix(n),
         qf=qf,
         rural=~inside,
@@ -623,6 +707,14 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
 # there is unstressed; in the ring only crops green enough to be watered in midsummer in this climate (NDVI > 0.45;
 # rain-fed land is dry and brown by July). The flag only matters for the vegetated tiles.
 IRRIGATED_RING_NDVI = 0.45
+
+
+def _cached_moisture(cache: Cache, bbox: tuple, grid: Grid):
+    try:
+        return cache.get_or_compute("sentinel2_moisture", lambda: fetch_surface_moisture(bbox, grid))
+    except Exception as error:  # an optional download must not stop the city
+        log.warning("sentinel2_moisture failed: %s", error)
+        return None
 
 
 def _cached_layer(cache: Cache, name: str, compute, row, col):

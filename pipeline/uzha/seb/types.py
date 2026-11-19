@@ -79,10 +79,16 @@ class Params:
     rs_min_tree: float = 100.0  # minimum stomatal resistance, s m⁻¹ (Noilhan & Planton 1989)
     rs_min_grass: float = 60.0
     rs_min_crop: float = 60.0  # irrigated crops of the ring
-    soil_resistance_scale: float = 1.0  # multiplies the bare-soil surface resistance (Sellers et al. 1992)
+    # multiplies the bare-soil surface resistance (Sellers et al. 1992), or divides β (Lee & Pielke 1992), by scheme
+    soil_resistance_scale: float = 1.0
     ohm_a1_scale: float = 1.0  # multiplies a1 of the impervious tiles
     d_t_air: float = 0.0  # global offset of the air temperature, K (ERA5 representativeness, LST level bias)
+    # kB⁻¹ of the bare-soil tile; NaN = same as kb_inv. Fitted only when named (calibrate.fit `names`): kB⁻¹ of bare
+    # and sparse surfaces is large and varies widely (Verhoef, De Bruin & Van den Hurk 1997, J. Appl. Meteorol. 36,
+    # 560–572), so it is not tied to the urban value.
+    kb_inv_bare: float = float("nan")
 
+    # The parameters fitted by default, with their bounds; OPTIONAL_BOUNDS are fitted only when named.
     BOUNDS = {
         "kb_inv": (2.0, 20.0),
         "rs_min_tree": (40.0, 400.0),
@@ -92,13 +98,20 @@ class Params:
         "ohm_a1_scale": (0.3, 2.0),
         "d_t_air": (-5.0, 5.0),
     }
-
-    def vector(self) -> np.ndarray:
-        return np.array([getattr(self, name) for name in self.BOUNDS])
+    OPTIONAL_BOUNDS = {"kb_inv_bare": (2.0, 12.0)}
 
     @classmethod
-    def from_vector(cls, values) -> "Params":
-        return cls(**dict(zip(cls.BOUNDS, (float(v) for v in values))))
+    def bounds(cls, name: str) -> tuple:
+        return {**cls.BOUNDS, **cls.OPTIONAL_BOUNDS}[name]
+
+    def vector(self, names=None) -> np.ndarray:
+        return np.array([getattr(self, name) for name in (names or self.BOUNDS)])
+
+    @classmethod
+    def from_vector(cls, values, names=None, base: "Params" = None) -> "Params":
+        """Parameters `names` (default: BOUNDS) set from `values`, the others taken from `base` (default values)."""
+        kept = {} if base is None else {f.name: getattr(base, f.name) for f in fields(cls)}
+        return cls(**{**kept, **dict(zip(names or cls.BOUNDS, (float(v) for v in values)))})
 
 
 @dataclass

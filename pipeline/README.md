@@ -221,8 +221,8 @@ PYTHONUTF8=1 python -m pipeline.uzha.seb.inputs --city tashkent
 | sky view | SVF = cos(atan(2·H/W)), canyon-floor midpoint (cosine-weighted, not the solid-angle form of Eq. 20); 1 in open land | Oke (1981) [doi:10.1002/joc.3370010304](https://doi.org/10.1002/joc.3370010304), Oke (1987) |
 | shade | road, paved, grass, bare: share of the canyon floor in building shadow at the overpass zenith, averaged over street orientations; trees and their shadows not included | Masson (2000) [doi:10.1023/A:1002463829265](https://doi.org/10.1023/A:1002463829265) |
 | z0m, zd | Macdonald on the patch: zd/H = 1 + 4.43^(−λp)(λp − 1), z0/H = (1 − zd/H)·exp(−[0.5·1.0·(1.2/0.4²)(1 − zd/H)λf]^(−½)), λf = λp·H/L, z0 ≥ 0.01 m; trees 10 m tall: z0 = 1.0, zd = 6.7 m; grass 0.03, bare 0.005, water 0.0002 m; blended by area (zd linear, ln z0); zd + z0 ≤ 0.8·z_ref | Macdonald et al. (1998) [doi:10.1016/S1352-2310(97)00403-2](https://doi.org/10.1016/S1352-2310(97)00403-2); Garratt (1992); Wieringa (1993) [doi:10.1007/BF00705357](https://doi.org/10.1007/BF00705357); Taylor (1987) [doi:10.1007/BF00121863](https://doi.org/10.1007/BF00121863) |
-| soil moisture | ERA5-Land `soil_moisture_0_to_7cm` at the overpasses, one city value | Open-Meteo archive, `models=era5_land` |
-| irrigated | every cell inside the outline (city greenery is watered); ring cells with NDVI > 0.45 (watered crops; rain-fed land is brown by July) | assumption |
+| soil moisture | ERA5-Land `soil_moisture_0_to_7cm` at the overpasses, one city value. With surface moisture on (below): θ = 0.03 + W·(0.439 − 0.03) per cell from the Sentinel-2 OPTRAM wetness W, ERA5-Land where W is missing | Open-Meteo archive, `models=era5_land`; Sadeghi et al. (2017) |
+| irrigated | every cell inside the outline (city greenery is watered); ring cells with NDVI > 0.45 (watered crops; rain-fed land is brown by July). With surface moisture on: a cell with W is irrigated when θ(W) ≥ field capacity 0.347 | assumption |
 | rural | cell centre outside `boundaries/<id>.geojson` | |
 | QF | AH4GUC July and August at 06 UTC, mean; each cell takes its 30″ (~1 km) pixel, spread over the pixel's cells in proportion to building volume so the pixel mean is kept. **Estimated** | Varquez et al. (2021) [doi:10.1038/s41597-021-00850-w](https://doi.org/10.1038/s41597-021-00850-w), CC BY 4.0, OPeNDAP at urbanclimate.tse.ens.isct.ac.jp |
 | K↓, diffuse fraction | ERA5 `shortwave_radiation_instant`, `diffuse_radiation_instant`, interpolated to each Landsat acquisition time, averaged | Open-Meteo archive, `models=era5`, UTC |
@@ -276,6 +276,45 @@ Budget, inside minus ring, °C: observed +1.32 = sealing +2.01, geometry −1.06
 Several parameters sit at their bounds (minimum stomatal resistances at the floor, air offset +4.6 K), so the fit
 leans on the air offset to reach the LST level: read the scenario ranges as parameter spread only, not the whole
 uncertainty.
+
+### Bare soil and surface moisture
+
+Bare soil evaporates through the Sellers et al. (1992) resistance r_ss = exp(8.206 − 4.255·θ/θ_sat), which lets dry
+loess evaporate a few hundred W/m² at the overpass. The moisture-availability form of Lee & Pielke (1992),
+LE = β·(ρcp/γ)·(e_s(T_s) − e_a)/ra with β = ¼·[1 − cos(π·θ/θ_fc)]², is in the code (`physics.BARE_SOIL_SCHEME = "beta"`)
+and scores a little better out of fold on Tashkent (physics R² 0.433 against 0.419); it stays off until the browser
+solver and the published files move with it.
+
+Per-cell surface moisture from Sentinel-2 is in the code but **off** (`inputs.USE_SURFACE_MOISTURE = False`,
+`inputs.build(..., moisture=True)` to try it). `sources/sentinel.summer_moisture` reads B04, B08, B8A, B11, B12 and
+SCL of the same summer scenes as NDVI, at 28.6 m, over soil and vegetation pixels only (WorldCover built-up and water
+masked, SCL 4/5/7), and keeps per cell the median NDMI = (B8A − B11)/(B8A + B11) and the median OPTRAM wetness
+W = (STR − STR_d)/(STR_w − STR_d), STR = (1 − R_B12)²/(2·R_B12), with dry/wet edges fitted on the city's pixels in
+the STR–NDVI space as rOPTRAM does (Sadeghi et al. 2017, [doi:10.1016/j.rse.2017.05.041](https://doi.org/10.1016/j.rse.2017.05.041)).
+It is cached as `pipeline/cache/seb/<id>_<grid>/sentinel2_moisture.pkl` (~15 min to fetch, ~170 MB peak). W maps
+to θ = 0.03 + W·(0.439 − 0.03); cells without W keep ERA5-Land; options: drive the vegetation too
+(`MOISTURE_DRIVES_VEGETATION`, irrigated ⇔ θ(W) ≥ field capacity), shift to the ERA5-Land mean
+(`MOISTURE_ANCHOR_ERA5`), or use NDMI normalised the same way (`MOISTURE_INDEX = "ndmi"`). No LST goes into W.
+
+Out-of-fold scores on Tashkent (5 folds of 2 km blocks, 20 446 cells; hybrid = physics + XGBoost correction on the
+11 JSON factors):
+
+| Variant | physics R² all / inside | physics MAE, K | hybrid R² all / inside |
+|---|---|---|---|
+| Sellers r_ss, ERA5-Land θ (before) | 0.419 / 0.445 | 2.15 | 0.711 / 0.725 |
+| Lee–Pielke β, ERA5-Land θ (**default**) | 0.433 / 0.458 | 2.13 | 0.719 / 0.733 |
+| β + separate fitted kB⁻¹ for bare soil | 0.436 / 0.458 | 2.13 | 0.721 / 0.735 |
+| Sellers, OPTRAM θ for soil and vegetation | −0.276 / −0.203 | 3.05 | 0.346 / 0.395 |
+| β, OPTRAM θ for soil and vegetation | −0.725 / −0.510 | 3.44 | 0.158 / 0.229 |
+| β, OPTRAM θ, vegetation keeps the outline rule | −0.015 / 0.235 | 2.71 | 0.538 / 0.633 |
+| β, NDMI θ, vegetation keeps the outline rule | −0.436 / −0.144 | 3.16 | 0.495 / 0.609 |
+
+The SWIR moisture makes the model worse in every form tried. Two reasons are visible in the data: the calibration
+already puts every minimum stomatal resistance at its lower bound, so the vegetation is short of evaporation even
+unstressed and any stress from W warms the green cells further (+3 to +5 K in the NDVI 0.35–0.6 bins); and at low
+NDVI dark urban material that WorldCover does not call built-up sits on OPTRAM's wet edge, so bare cells read wet
+and come out too cool. Within an NDVI bin W does go the right way (it correlates with LST −0.31 at NDVI 0.45–0.6
+and −0.56 above 0.6), so it may help once vegetation can evaporate more and the urban pixels are masked better.
 
 ## Limitations
 
