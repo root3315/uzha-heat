@@ -102,19 +102,39 @@ def write(path: Path, model: dict) -> None:
     path.write_text(json.dumps(model, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
-def refit_from_city_file(path: Path) -> tuple:
-    """Refit the final model on the cell table already in `<id>.json` (same params and seed) and slim it.
+def refit_city(city: dict) -> tuple:
+    """Refit the final model on the cell table of a published `<id>.json` (same params and seed) and explain it again.
 
-    For when the raw downloads are no longer cached. Values in the JSON are rounded to 3 decimals, so the refit
-    can differ slightly from the published SHAP; returns (model document, max and mean |refit − published|, °C),
-    published = baseValue + ΣSHAP per cell.
+    For when the raw downloads are no longer cached. The table's values are rounded to 3 decimals, so the refit
+    differs slightly from the model the full run fit. Everything the site reads from the model is therefore taken
+    from the refit, so the map's attributions and "what if" agree on every cell: SHAP, the base value, the
+    importance ranking and the district means. Returns (updated city document, browser model document, max and mean
+    |refit − old published prediction|, °C).
     """
-    from .model import fit_booster
+    import shapely
+    from shapely.geometry import shape
 
-    city = json.loads(Path(path).read_text(encoding="utf-8"))
+    from . import export
+    from .model import explain, global_importance
+
     keys = [feature["key"] for feature in city["features"]]
-    features = pd.DataFrame({key: city["cells"]["values"][key] for key in keys})
-    booster = fit_booster(features, np.asarray(city["cells"]["lst"], dtype=float))
-    published = city["model"]["baseValue"] + sum(np.asarray(city["cells"]["shap"][key]) for key in keys)
-    gap = np.abs(booster.predict(xgb.DMatrix(features)) - published)
-    return document(booster, features), float(gap.max()), float(gap.mean())
+    cells = city["cells"]
+    features = pd.DataFrame({key: cells["values"][key] for key in keys})
+    lst = np.asarray(cells["lst"], dtype=float)
+    old = city["model"]["baseValue"] + sum(np.asarray(cells["shap"][key], dtype=float) for key in keys)
+    prediction, shap, base_value, booster = explain(features, lst)
+    gap = np.abs(prediction - old)
+
+    city["model"]["baseValue"] = export.r3(base_value)
+    cells["shap"] = {key: export.round_values(shap[key]) for key in keys}
+    city["globalImportance"] = [
+        {"key": row["key"], "meanAbsShap": export.r3(row["meanAbsShap"]), "correlation": export.r3(row["correlation"])}
+        for row in global_importance(features, lst, shap)
+    ]
+    lon, lat = np.asarray(cells["lon"], dtype=float), np.asarray(cells["lat"], dtype=float)
+    for district in city.get("districts", []):
+        # The published outline is simplified, so a cell on its edge may fall the other way than in the full run.
+        inside = shapely.contains_xy(shape(district["geometry"]), lon, lat)
+        if inside.any():
+            district["shapMean"] = {key: export.r3(shap[key].to_numpy()[inside].mean()) for key in keys}
+    return city, document(booster, features), float(gap.max()), float(gap.mean())

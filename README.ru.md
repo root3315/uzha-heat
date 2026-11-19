@@ -126,7 +126,8 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 7. Здания для 3D: контуры из OpenStreetMap и Microsoft ML Building Footprints; высота из OSM, иначе по модели
    (форма, тип, соседи, GHSL Built-H). Средняя ошибка на отложенных зданиях: Ташкент 3,9 м, Самарканд 1,4 м, Бухара 2,4 м.
 8. Модель каждого города выгружена компактным JSON для «Что если»; браузер считает её так же, как XGBoost
-   (расхождение меньше 0,00001 °C, есть тест).
+   (расхождение меньше 0,00001 °C, есть тест). Вклады факторов на карте взяты из той же модели, поэтому «Что если» в
+   клетке начинается с той температуры, в которую складываются её вклады (с точностью 0,004 °C, округление файла).
 
 Подробнее: [pipeline/README.md](pipeline/README.md), формат данных: [docs/data-contract.md](docs/data-contract.md),
 зачем это нужно: [docs/problem.md](docs/problem.md).
@@ -187,7 +188,7 @@ pip install -r pipeline/requirements-lock.txt         # точные верси�
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
 PYTHONUTF8=1 python -m pipeline.buildings              # здания для 3D (скачивает OSM и контуры Microsoft)
-python -m pytest pipeline/tests -q                     # 114 тестов, меньше минуты
+python -m pytest pipeline/tests -q                     # 115 тестов, меньше минуты
 ```
 
 Пайплайн читает Landsat и Sentinel-2 из Microsoft Planetary Computer и кеширует каждый слой в `pipeline/cache/`.
