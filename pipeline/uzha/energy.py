@@ -142,11 +142,21 @@ def balance(lst_c, albedo, ndvi, solar_wm2: float, air_c: float, humidity_pct: f
             "lDown": l_down, "hotC": hot, "coldC": cold}
 
 
+NEEDS = ("albedo", "ndvi")
+
+
+def missing_factors(document: dict) -> list:
+    """Factors the balance needs that the city lacks (Sentinel-2 is optional, so albedo and NDVI may be missing)."""
+    return [key for key in NEEDS if key not in document["cells"]["values"]]
+
+
 def enrich(document: dict) -> dict:
     """Add `cells.energy` and `energy` to a city document in place. Needs the weather at the overpass."""
     overpass = document["city"].get("weather", {}).get("overpass")
     if overpass is None:
         raise ValueError(f"{document['city']['id']}: no weather at the Landsat overpass, run --only weather first")
+    if missing := missing_factors(document):
+        raise ValueError(f"{document['city']['id']}: no {', '.join(missing)} for the energy balance")
     cells = document["cells"]
     fluxes = balance(cells["lst"], cells["values"]["albedo"], cells["values"]["ndvi"],
                      overpass["solarWm2"], overpass["airC"], overpass["humidityPct"])

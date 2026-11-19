@@ -83,3 +83,18 @@ def test_enrich_survives_a_failed_source(tmp_path, monkeypatch):
     monkeypatch.setattr(weather, "landsat_moments", fail)
     document = {"city": {"id": "x", "center": [0, 0], "bbox": [0, 0, 1, 1]}, "period": {"label": ""}}
     assert "weather" not in weather.enrich(document, tmp_path)["city"]
+
+
+def test_city_weather_refuses_a_variable_missing_throughout():
+    series = _series()
+    series["dew_point_2m"] = [None] * len(series["time"])
+    with pytest.raises(ValueError, match="incomplete"):
+        weather.city_weather(series, [])
+
+
+def test_city_weather_leaves_out_an_incomplete_overpass():
+    series = _series()
+    moment = datetime(2024, 7, 1, 6, 0, tzinfo=timezone.utc)
+    series["cloud_cover"] = [None if stamp == "2024-07-01T11:00" else c for stamp, c in zip(series["time"], series["cloud_cover"])]
+    assert "overpass" in weather.city_weather(_series(), [moment])
+    assert "overpass" not in weather.city_weather(series, [moment])

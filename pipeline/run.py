@@ -64,8 +64,15 @@ def process_city(city: City, out_dir: Path) -> dict:
     )
     population.enrich(document, CACHE_ROOT)
     weather.enrich(document, CACHE_ROOT)  # adds city.weather, so the cities.json entry gets it too
-    if "overpass" in document["city"].get("weather", {}):
-        energy.enrich(document)
+    if "overpass" not in document["city"].get("weather", {}):
+        log.warning("%s: no weather at the Landsat overpass, skipping the energy balance", city.id)
+    elif missing := energy.missing_factors(document):
+        log.warning("%s: no %s, skipping the energy balance", city.id, ", ".join(missing))
+    else:
+        try:
+            energy.enrich(document)
+        except ValueError:  # e.g. no hot surface above the cold one to anchor the balance: the map stands without it
+            log.exception("%s: energy balance failed, written without it", city.id)
     export.write_json(out_dir / f"{city.id}.json", document)
     browser_model.write(out_dir / f"model-{city.id}.json", browser_model.document(fitted.booster, factors))
     export.update_cities_index(out_dir / "cities.json", entry, list(CITIES))
