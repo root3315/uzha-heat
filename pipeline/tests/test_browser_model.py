@@ -18,7 +18,8 @@ def _fitted(n=800, seed=1):
     })
     lst = (46 - 10 * features["ndvi"] - 0.04 * features["tree"] + 6e-6 * features["volume"]
            + rng.normal(0, 0.4, n)).to_numpy()
-    booster = xgb.XGBRegressor(**PARAMS).fit(features, lst).get_booster()
+    # One thread, so the trees and the predictions are the same on every run.
+    booster = xgb.XGBRegressor(**{**PARAMS, "n_jobs": 1}).fit(features, lst).get_booster()
     return booster, features
 
 
@@ -27,7 +28,7 @@ def test_slim_model_reproduces_booster_predictions():
     model = json.loads(json.dumps(browser_model.slim(booster, list(features.columns))))
     rows = features.sample(200, random_state=0)
     expected = booster.predict(xgb.DMatrix(rows))
-    np.testing.assert_allclose(browser_model.predict(model, rows.to_numpy()), expected, atol=1e-4)
+    np.testing.assert_allclose(browser_model.predict(model, rows.to_numpy()), expected, atol=1e-5)
 
 
 def test_slim_model_off_the_data_and_missing_values():
@@ -35,7 +36,7 @@ def test_slim_model_off_the_data_and_missing_values():
     model = browser_model.slim(booster, list(features.columns))
     rows = np.array([[1.5, 150.0, 0.9, 2e6], [-1.0, -5.0, 0.0, 0.0], [np.nan, 30.0, np.nan, 1e5]])
     expected = booster.predict(xgb.DMatrix(rows, feature_names=list(features.columns), missing=np.nan))
-    np.testing.assert_allclose(browser_model.predict(model, rows), expected, atol=1e-4)
+    np.testing.assert_allclose(browser_model.predict(model, rows), expected, atol=1e-5)
 
 
 def test_slim_layout():
@@ -57,4 +58,4 @@ def test_document_check_rows_match_booster():
     document = browser_model.document(booster, features)
     rows = np.array(document["check"]["rows"])
     assert len(rows) == browser_model.CHECK_ROWS
-    np.testing.assert_allclose(browser_model.predict(document, rows), document["check"]["prediction"], atol=1e-4)
+    np.testing.assert_allclose(browser_model.predict(document, rows), document["check"]["prediction"], atol=1e-5)

@@ -129,11 +129,11 @@ describe('model files from the pipeline', () => {
   const dataDir = join(__dirname, '../../public/data');
   for (const city of ['tashkent', 'samarkand', 'bukhara']) {
     const path = join(dataDir, `model-${city}.json`);
-    it.runIf(existsSync(path))(`${city}: reproduces the booster's predictions on its check rows to 1e-4`, () => {
+    it.runIf(existsSync(path))(`${city}: reproduces the booster's predictions on its check rows to 1e-5`, () => {
       const model = parseTreeModel(JSON.parse(readFileSync(path, 'utf-8')));
       const { rows, prediction } = model.check ?? { rows: [], prediction: [] };
       expect(rows.length).toBeGreaterThan(0);
-      rows.forEach((row, i) => expect(Math.abs(predictRow(model, row) - (prediction[i] ?? Number.NaN))).toBeLessThan(1e-4));
+      rows.forEach((row, i) => expect(Math.abs(predictRow(model, row) - (prediction[i] ?? Number.NaN))).toBeLessThan(1e-5));
     });
   }
 });

@@ -61,7 +61,8 @@ def slim(booster: xgb.Booster, features: list) -> dict:
 def predict(model: dict, rows: np.ndarray) -> np.ndarray:
     """Reference evaluator, the same walk the web app does (web/src/domain/whatIf.ts)."""
     rows = np.asarray(rows, dtype=np.float32)
-    out = np.full(len(rows), model["baseScore"], dtype=np.float64)
+    # XGBoost adds the trees up in float32; summed in float64 the result drifts by up to ~1e-4 over 400 trees.
+    out = np.full(len(rows), model["baseScore"], dtype=np.float32)
     for tree in model["trees"]:
         feature = tree["feature"]
         value = np.asarray(tree["value"], dtype=np.float32)
@@ -73,8 +74,8 @@ def predict(model: dict, rows: np.ndarray) -> np.ndarray:
                 x = row[feature[node]]
                 go_left = bool(default_left[node]) if np.isnan(x) else x < value[node]
                 node = left[node] if go_left else left[node] + 1
-            out[r] += float(value[node])
-    return out
+            out[r] = np.float32(out[r] + value[node])
+    return out.astype(np.float64)
 
 
 def sample_rows(features: pd.DataFrame, count: int = CHECK_ROWS, seed: int = 0) -> pd.DataFrame:

@@ -33,10 +33,13 @@ function walk(tree: Tree, row: readonly number[]): number {
   }
 }
 
-/** Predicted surface temperature, °C, for a row in `model.features` order (XGBoost compares in float32, so do we). */
+/**
+ * Predicted surface temperature, °C, for a row in `model.features` order. XGBoost compares and adds up the trees in
+ * float32, so do we: summed in float64 the result drifts from the booster's by up to ~1e-4 °C over 400 trees.
+ */
 export function predictRow(model: TreeModel, row: readonly number[]): number {
-  let sum = model.baseScore;
-  for (const tree of model.trees) sum += walk(tree, row);
+  let sum = f32(model.baseScore);
+  for (const tree of model.trees) sum = f32(sum + f32(walk(tree, row)));
   return sum;
 }
 
