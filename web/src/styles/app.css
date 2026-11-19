@@ -484,22 +484,16 @@ select {
   transform: translate(0, -50%);
 }
 
-/* A numbered place over the map: cool blue, so it is not taken for a section end. */
+/* A numbered place over the map: cool blue, so it is not taken for a section end. The element itself is moved by
+   MapLibre's transform, so it stays bare; the face inside carries the look and the hover scale. */
 .mark {
   position: relative;
-  display: grid;
-  place-items: center;
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 2px solid var(--card);
-  border-radius: 50%;
-  background: var(--cool);
-  color: var(--card);
-  font: 600 12px/1 var(--font-mono);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  border: 0;
+  background: none;
   cursor: pointer;
-  transition: transform var(--fast) var(--ease-out);
 }
 /* The mark stays small; the target around it does not. */
 .mark::before {
@@ -508,10 +502,25 @@ select {
   inset: -9px;
   border-radius: 50%;
 }
-.mark:hover,
 .mark:focus-visible {
-  transform: scale(1.15);
   border-radius: 50%;
+}
+.mark__face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--cool);
+  color: var(--card);
+  font: 600 12px/1 var(--font-mono);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  transition: transform var(--fast) var(--ease-out);
+}
+.mark:hover .mark__face,
+.mark:focus-visible .mark__face {
+  transform: scale(1.15);
 }
 
 .maplibregl-ctrl-group:not(:empty) {

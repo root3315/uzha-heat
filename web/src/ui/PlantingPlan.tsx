@@ -9,6 +9,9 @@ import { useTreeModel } from './WhatIf';
 
 const PLACES = 5;
 
+/** A city's plan, once calculated: reopening the block (or coming back to the city view) shows it at once. */
+const planCache = new WeakMap<CityDetail, PlantingPlace[]>();
+
 interface PlantingPlanProps {
   detail: CityDetail;
   inside: readonly boolean[];
@@ -25,13 +28,22 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
   const t = PLAN_TEXTS[locale];
   const { formatDegSigned } = useFormats();
   const state = useTreeModel(detail.city.id);
-  const [plan, setPlan] = useState<PlantingPlace[] | null>(null);
+  const [plan, setPlan] = useState<PlantingPlace[] | null>(() => planCache.get(detail) ?? null);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
+    const known = planCache.get(detail);
+    if (known) {
+      setPlan(known);
+      return;
+    }
     setPlan(null);
     // The whole city through the model takes a moment: let the panel paint "calculating" first.
-    const timer = window.setTimeout(() => setPlan(plantingPlan(state.model, detail, inside, PLACES)), 0);
+    const timer = window.setTimeout(() => {
+      const computed = plantingPlan(state.model, detail, inside, PLACES);
+      planCache.set(detail, computed);
+      setPlan(computed);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [state, detail, inside]);
 

@@ -163,12 +163,16 @@ function handleElement(letter: string, t: MapTexts): HTMLDivElement {
   return element;
 }
 
+/** MapLibre moves the marker element by its transform, so the look and the hover scale live on an inner span. */
 function markElement(mark: MapMark): HTMLButtonElement {
   const element = document.createElement('button');
   element.type = 'button';
-  element.className = 'mark num';
+  element.className = 'mark';
   element.setAttribute('aria-label', mark.name);
-  element.textContent = mark.label;
+  const face = document.createElement('span');
+  face.className = 'mark__face num';
+  face.textContent = mark.label;
+  element.append(face);
   return element;
 }
 
@@ -189,6 +193,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  // A drag that drew a section ends in a click; neither the map nor a mark may treat it as picking a place.
+  const suppressClickRef = useRef(false);
   const tokensRef = useRef<MapTokens | null>(null);
   const locale = useLocale();
   const t = MAP_TEXTS[locale];
@@ -293,7 +299,6 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     map.on('movestart', hideTip);
 
     let draft: { start: LonLat; x: number; y: number; moved: boolean } | null = null;
-    let suppressClick = false;
     const startDraft = (event: MapMouseEvent | MapTouchEvent) => {
       event.preventDefault();
       draft = { start: event.lngLat.toArray() as LonLat, x: event.point.x, y: event.point.y, moved: false };
@@ -307,7 +312,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     const endDraft = () => {
       if (!draft) return;
       if (draft.moved) {
-        suppressClick = true;
+        suppressClickRef.current = true;
         latest.current.onDrawingEnd();
       }
       draft = null;
@@ -325,8 +330,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     window.addEventListener('mouseup', endDraft);
 
     map.on('click', (event) => {
-      if (suppressClick) {
-        suppressClick = false;
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
         return;
       }
       if (latest.current.drawing) return;
@@ -422,10 +427,20 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    // Added last to first, so where two marks overlap the higher rank stays on top.
-    const placed = [...marks].reverse().map((mark) => {
+    const placed = marks.map((mark, i) => {
       const element = markElement(mark);
-      element.addEventListener('click', () => latest.current.onPick(mark.point));
+      // In rank order for the keyboard and screen readers; where two marks overlap, the higher rank stays on top.
+      element.style.zIndex = String(marks.length - i);
+      element.addEventListener('click', (event) => {
+        // The mark sits inside the map's canvas container: the map must not also pick the cell under the cursor.
+        event.stopPropagation();
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          return;
+        }
+        if (latest.current.drawing) return;
+        latest.current.onPick(mark.point);
+      });
       return new Marker({ element }).setLngLat(mark.point).addTo(map);
     });
     return () => placed.forEach((marker) => marker.remove());
