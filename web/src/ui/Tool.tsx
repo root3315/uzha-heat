@@ -4,9 +4,9 @@ import { sourcesLine } from '../domain/answers';
 import type { CityModel } from '../domain/cityModel';
 import { cityName } from '../domain/dataTexts';
 import { cellsToCsv, cellsToGeoJson } from '../domain/exportCells';
-import { PRECISION, type NamePrecision } from '../domain/placeName';
+import { refinePlace, type PickedPlace } from '../domain/pickedPlace';
+import { PRECISION } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
-import type { Site } from '../domain/sites';
 import { sampleTransect, type LonLat, type Sample, type Transect } from '../domain/transect';
 import { CityMap, type CityMapHandle, type MapMark, type MapMode } from '../map/CityMap';
 import { Report } from '../report/Report';
@@ -34,14 +34,6 @@ interface ToolProps {
 const VIEW = { isolines: true, transect: true, interactive: true };
 /** Below this width the panel and the section go under the map, and the controls move onto it. */
 const NARROW_PX = 860;
-
-interface PickedPlace {
-  cell: number;
-  point: LonLat;
-  title: string;
-  precision: NamePrecision;
-  site: Site | null;
-}
 
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
@@ -92,7 +84,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       const center: LonLat = [detail.cells.lon[cell] ?? point[0], detail.cells.lat[cell] ?? point[1]];
       const found = mapRef.current?.nameAt(center, districtAt(detail, center)) ?? null;
       const site = mapRef.current?.siteAt(point) ?? null;
-      setPicked({ cell, point: center, title: found?.name ?? t.unnamed, precision: found?.precision ?? PRECISION.none, site });
+      setPicked({ cell, point: center, at: point, title: found?.name ?? t.unnamed, precision: found?.precision ?? PRECISION.none, site, siteSettled: false });
     },
     [cellUnder, detail, t.unnamed],
   );
@@ -130,13 +122,16 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     if (picked) panelRef.current?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }, [picked?.cell]);
 
-  /** After zooming in, the basemap may know a closer name than it did at the first click. */
+  /** After zooming in, the basemap may know a closer name, or a site it had not drawn yet at the first look. */
   const refineName = useCallback(() => {
-    setPicked((current) => {
-      if (!current || current.precision === PRECISION.place) return current;
-      const found = mapRef.current?.nameAt(current.point, districtAt(detail, current.point)) ?? null;
-      return found && found.precision > current.precision ? { ...current, title: found.name, precision: found.precision } : current;
-    });
+    setPicked((current) =>
+      current
+        ? refinePlace(current, {
+            name: () => mapRef.current?.nameAt(current.point, districtAt(detail, current.point)) ?? null,
+            site: () => mapRef.current?.siteAt(current.at) ?? null,
+          })
+        : current,
+    );
   }, [detail]);
 
   useEffect(() => {
