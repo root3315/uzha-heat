@@ -264,7 +264,7 @@ export const PLAN_TEXTS = texts(
       'Planting on each cell: +20 pp tree crowns and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
       'From the model: surface, not air.',
     title: 'Where to plant first',
-    compute: 'calculate for the city',
+    compute: 'whole city, by the model',
     mark: (rank: number, cooling: string, people: string) => `Place ${rank} to plant: ${cooling} ${people}`,
   },
   {
@@ -276,7 +276,7 @@ export const PLAN_TEXTS = texts(
       'Посадка на каждом участке: +20 п.п. крон и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
       'По модели: поверхность, не воздух.',
     title: 'Где сажать первым',
-    compute: 'посчитать по городу',
+    compute: 'весь город, по модели',
     mark: (rank, cooling, people) => `Место для посадки ${rank}: ${cooling} ${people}`,
   },
 );

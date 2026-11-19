@@ -12,7 +12,7 @@ their phones from the QR code.
   1. `http://localhost:5173/map/tashkent` (map)
   2. `http://localhost:5173/method/tashkent` (method and validation)
   3. `http://localhost:5173/map/samarkand` (the one other city)
-- In tab 1, open "Where to plant first" → "calculate for the city" once, so the list is ready.
+- In tab 1, open "Where to plant first" once, so the list and its marks are ready.
 - Editor, three files open in this order:
   `pipeline/uzha/browser_model.py`, `web/src/domain/whatIf.ts`, `pipeline/tests/test_browser_model.py`.
 - Browser zoom 100 %, window wide enough that the map and the panel are side by side.
