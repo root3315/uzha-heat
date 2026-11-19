@@ -2,6 +2,7 @@ import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary, TreeModel } from './contract';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
+import { parsePlanUncertainty, type PlanUncertainty } from './planUncertainty';
 import { parseValidation, type Validation } from './validation';
 
 const BASE = import.meta.env.BASE_URL;
@@ -77,6 +78,14 @@ let validation: Promise<Validation | null> | null = null;
 export function loadValidation(): Promise<Validation | null> {
   validation ??= fetchJson('validation.json').then(parseValidation, () => null);
   return validation;
+}
+
+let planUncertainty: Promise<PlanUncertainty | null> | null = null;
+
+/** How sure each place of "Where to plant first" is (`plan-uncertainty.json`); null when the file is missing. */
+export function loadPlanUncertainty(): Promise<PlanUncertainty | null> {
+  planUncertainty ??= fetchJson('plan-uncertainty.json').then(parsePlanUncertainty, () => null);
+  return planUncertainty;
 }
 
 const treeModels = new Map<string, Promise<TreeModel>>();

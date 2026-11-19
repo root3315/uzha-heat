@@ -3,6 +3,9 @@ import type { CityDetail, LonLat, TreeModel } from '../data/contract';
 import type { MapMark } from '../map/CityMap';
 import { formatPeople } from '../domain/people';
 import type { PlantingPlace } from '../domain/plantingPlan';
+import { loadPlanUncertainty } from '../data/load';
+import { spreadFor } from '../data/planUncertainty';
+import { useAsync } from './hooks';
 import { computePlan } from './planInWorker';
 import { useFormats, useLocale } from './locale';
 import { PLAN_TEXTS } from './ui.texts';
@@ -100,6 +103,12 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
     );
   }, [plan, onPlan, t, formatDegSigned, locale]);
 
+  const uncertainty = useAsync(loadPlanUncertainty, []);
+  const known = uncertainty.status === 'ready' ? uncertainty.data : null;
+  // Shown only for the very cells the pipeline checked: a plan from other data gets no borrowed range.
+  const spreads = (plan ?? []).map((place) => spreadFor(known, detail.city.id, place.cell));
+  const replicates = spreads.some(Boolean) ? known?.[detail.city.id]?.replicates : undefined;
+
   if (state.status === 'failed' || failed) return <p className="whatif__status">{t.failed}</p>;
   if (!plan) return <p className="whatif__status">{t.computing}</p>;
   if (!plan.length) return <p className="whatif__status">{t.none}</p>;
@@ -113,11 +122,17 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
               <span className="plan__rank num">{i + 1}</span>
               <span className="plan__cooling num num--cool">{formatDegSigned(-place.cooling)}</span>
               <span className="plan__people">{t.forPeople(formatPeople(place.people, locale))}</span>
+              {spreads[i] && (
+                <span className="plan__range num">{t.range(formatDegSigned(-(spreads[i]?.low ?? 0)), formatDegSigned(-(spreads[i]?.high ?? 0)))}</span>
+              )}
             </button>
           </li>
         ))}
       </ol>
-      <p className="whatif__caveat">{t.caveat}</p>
+      <p className="whatif__caveat">
+        {t.caveat}
+        {replicates ? ` ${t.rangeNote(replicates)}` : ''}
+      </p>
     </>
   );
 }

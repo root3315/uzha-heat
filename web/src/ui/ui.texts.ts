@@ -264,6 +264,9 @@ export const PLAN_TEXTS = texts(
     title: 'Where to plant first',
     compute: 'whole city, by the model',
     mark: (rank: number, cooling: string, people: string) => `Place ${rank} to plant: ${cooling} ${people}`,
+    range: (near: string, far: string) => `refit models: ${near} to ${far}`,
+    rangeNote: (replicates: number) =>
+      `The range under each place: 90% of ${replicates} models refit on resampled 2 km blocks of the city. The top place's figure is often near its upper end, since it was picked for being large.`,
   },
   {
     failed: 'Модель не загрузилась. Закройте и откройте блок ещё раз.',
@@ -276,6 +279,9 @@ export const PLAN_TEXTS = texts(
     title: 'Где сажать первым',
     compute: 'весь город, по модели',
     mark: (rank, cooling, people) => `Место для посадки ${rank}: ${cooling} ${people}`,
+    range: (near, far) => `при переобучении: от ${near} до ${far}`,
+    rangeNote: (replicates) =>
+      `Диапазон под каждым местом: 90 % из ${replicates} моделей, обученных заново на перевыбранных блоках города по 2 км. Цифра первого места часто у верхнего края: его и выбрали за то, что она большая.`,
   },
 );
 
