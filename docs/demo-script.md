@@ -83,7 +83,7 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
 3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-5`.
    "Python and the browser match the booster to 0.00001 degrees: we compare and add up in float32, like XGBoost. The web tests check the same rows."
-   Tests: 125 pipeline (under a minute) and 346 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
+   Tests: 125 pipeline (under a minute) and 348 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
 
@@ -111,7 +111,7 @@ Thank you. The site is open on your phones now."
 | Same places, 90 % of 50 refit models | −3.0…−5.1, −2.2…−3.3, −2.3…−3.4, −1.9…−3.0, −2.0…−2.8 °C; place 1 median −4.0 °C |
 | Place 1 (Bektemir district): crowns only / NDVI only / both | −1.3 / −3.7 / −4.7 °C; crowns to the city's top (34 %) alone: −1.3 °C |
 | Place 1: surface; cover; NDVI; residents | 45.5 °C (43.9 °C inside the city outline); 93 % built-up, no tree cover; 0.24, the median of inhabited cells; ~780 |
-| Tests | 125 pipeline + 346 web |
+| Tests | 125 pipeline + 348 web |
 
 ## Jury Q&A
 

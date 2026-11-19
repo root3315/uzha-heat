@@ -5,7 +5,7 @@ import type { CityValidation, ModisPlatform } from '../data/validation';
 import type { CityModel } from '../domain/cityModel';
 import { cityName, featureLabel, featureUnit, periodText, surfaceLabel } from '../domain/dataTexts';
 import { formatWatts } from '../domain/energy';
-import { groupShares } from '../domain/factorGroups';
+import { groupShares, islandBudget } from '../domain/factorGroups';
 import type { Formats } from '../domain/format';
 import { cutAmount, leverByKey } from '../domain/whatIf';
 import { islandByRingWidth, ringSpread } from '../domain/ringSensitivity';
@@ -99,6 +99,7 @@ function Robustness({ model }: { model: CityModel }) {
     [detail, inside, outline],
   );
   const groups = useMemo(() => groupShares(detail, locale, inside), [detail, locale, inside]);
+  const budget = useMemo(() => (outline ? islandBudget(detail, locale, inside) : null), [detail, locale, inside, outline]);
   const spread = ringSpread(rings);
   // Without the outline there is no ring and no "inside": nothing here would mean what it says.
   if (!outline) return null;
@@ -140,6 +141,23 @@ function Robustness({ model }: { model: CityModel }) {
                 <dd>{t.group(formatPercent(group.share), formatNumber(group.meanAbs, 1))}</dd>
               </div>
             ))}
+          </dl>
+        </>
+      )}
+      {budget && (
+        <>
+          <p>{t.budget(formatDeg(budget.observed))}</p>
+          <dl className="method__factors">
+            {budget.groups.map((group) => (
+              <div key={group.id}>
+                <dt>{group.label}</dt>
+                <dd>{formatDegSigned(group.contribution)}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>{t.other}</dt>
+              <dd>{formatDegSigned(budget.other)}</dd>
+            </div>
           </dl>
         </>
       )}
