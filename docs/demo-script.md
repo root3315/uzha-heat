@@ -81,8 +81,8 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    threshold, children, leaf values); `document()` stores check rows with the booster's own predictions.
 2. `web/src/domain/whatIf.ts`: `walk()` and `predictRow()`. "The evaluator. XGBoost compares in float32, so we do too:
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
-3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-4`.
-   "Python and the browser match the booster to 0.0001 degrees; the web tests check the same rows."
+3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-5`.
+   "Python and the browser match the booster to 0.00001 degrees: we compare and add up in float32, like XGBoost. The web tests check the same rows."
    Tests: 109 pipeline (one to two minutes) and 312 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
@@ -142,7 +142,7 @@ where it is hot (r) and the city-vs-ring sign. Both hold with either satellite.
 
 **What did you write yourselves?**
 The 200 m grid and the assembly of all factors onto it; spatial block cross-validation; SHAP grouping of correlated factors;
-the export of XGBoost to JSON and the in-browser evaluator, tested to 0.0001 °C; the planting ranking; the building-height
+the export of XGBoost to JSON and the in-browser evaluator, tested to 0.00001 °C; the planting ranking; the building-height
 model for 3D. Then each member names their part:
 - Amira: ROLE
 - Oliya: ROLE

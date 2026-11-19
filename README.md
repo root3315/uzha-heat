@@ -107,7 +107,7 @@ up in NDVI rather than in the tree share.
 7. Buildings for 3D: footprints from OpenStreetMap and Microsoft ML Building Footprints; height from OSM, otherwise modelled
    from shape, type, neighbours and GHSL Built-H. Mean error on held-out buildings: Tashkent 3.9 m, Samarkand 1.4 m, Bukhara 2.4 m.
 8. Each city model is exported as compact JSON for "what if"; the browser evaluates it exactly as XGBoost does
-   (difference below 0.0001 °C, tested).
+   (difference below 0.00001 °C, tested).
 
 More: [pipeline/README.md](pipeline/README.md), data format: [docs/data-contract.md](docs/data-contract.md),
 why this matters: [docs/problem.md](docs/problem.md).

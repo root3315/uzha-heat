@@ -143,7 +143,7 @@ so rerunning the city retries them.
 6. **Model for the browser.** The same booster is written to `model-<id>.json`: per tree, parallel
    arrays of split feature, threshold or leaf value (float32, shortest round-trip decimal), left child
    (right = left + 1) and the missing-value direction, plus `baseScore`. `check` carries 12 cells with
-   the booster's own predictions; the pytest and the web tests both reproduce them to 1e-4.
+   the booster's own predictions; the pytest and the web tests both reproduce them to 1e-5 (both add the trees up in float32, as XGBoost does).
 
 ## Surface energy balance
 
