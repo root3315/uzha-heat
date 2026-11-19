@@ -1677,6 +1677,11 @@ summary.rest__summary:hover,
   .maplibregl-ctrl.maplibregl-ctrl-scale {
     font-size: 11px;
   }
+  /* Two columns leave the source under a factor some 95 px, and "OpenStreetMap" spills out: one column instead. */
+  .method__factors div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
