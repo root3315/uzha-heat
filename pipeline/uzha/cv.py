@@ -29,11 +29,22 @@ def buffered_folds(x: np.ndarray, y: np.ndarray, block_m: float, folds: int, buf
         yield train[~np.isfinite(near)], test
 
 
-def out_of_fold(make_model: Callable, features: np.ndarray, target: np.ndarray, folds: Iterator[tuple]) -> tuple:
-    """(R², MAE) of predictions each made by a model that never saw the cell's fold."""
+def out_of_fold_predictions(make_model: Callable, features: np.ndarray, target: np.ndarray, folds: Iterator[tuple]) -> np.ndarray:
+    """Each cell's prediction by a model that never saw the cell's fold; NaN for a cell no fold tested."""
     features, target = np.asarray(features), np.asarray(target, float)
     predicted = np.full(len(target), np.nan)
     for train, test in folds:
         predicted[test] = make_model().fit(features[train], target[train]).predict(features[test])
-    done = np.isfinite(predicted)
+    return predicted
+
+
+def score(target: np.ndarray, predicted: np.ndarray, where: np.ndarray = None) -> tuple:
+    """(R², MAE) over the cells that were predicted, and only those in `where` if given."""
+    done = np.isfinite(predicted) & (True if where is None else np.asarray(where, bool))
+    target = np.asarray(target, float)
     return float(r2_score(target[done], predicted[done])), float(mean_absolute_error(target[done], predicted[done]))
+
+
+def out_of_fold(make_model: Callable, features: np.ndarray, target: np.ndarray, folds: Iterator[tuple]) -> tuple:
+    """(R², MAE) of predictions each made by a model that never saw the cell's fold."""
+    return score(target, out_of_fold_predictions(make_model, features, target, folds))
