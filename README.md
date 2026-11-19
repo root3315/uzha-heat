@@ -11,7 +11,7 @@
 2. In the panel on the right move the "What if" sliders: the city model recalculates that place.
 3. Click "Whole city", then "Where to plant first": five places, each opens on the map.
 
-A map of summer surface overheating in Tashkent, with Samarkand and Bukhara as a check that the method transfers. For every
+A map of summer surface overheating in Tashkent, with the same pipeline run on Samarkand and Bukhara (each city gets its own model). For every
 200 × 200 m cell it shows how hot the surface is, which factors heat or cool that place and by how many degrees, and what
 can be done there. "What if" sliders recompute the temperature of a place with the city's own model right in the browser,
 "Where to plant first" ranks places by cooling × residents, and a 3D view colours about 660 thousand buildings
@@ -29,8 +29,10 @@ Inside the city outline the surface is hotter in summer than in the ring around 
 | Samarkand | +1.4 °C | +1.2 / +1.2 / +1.4 °C | 43.4 °C | 77 % |
 | Bukhara | +3.1 °C | +2.9 / +3.0 / +3.1 °C | 42.7 °C | 69 % |
 
-Heat island: median of the cells inside the outline minus the median of the ring around it. Its sign and size do not depend
-on the ring width.
+Heat island: median of the cells inside the outline minus the median of the ring around it. Its sign holds for every ring
+width; its size grows with the width (Tashkent +1.3 → +1.8 °C from 0.5 to 1.5 km), and MODIS keeps rising out to 5 km in
+Tashkent and Samarkand (Samarkand by day +1.6 → +3.0 °C). The 1.5 km ring is itself partly suburban, so these figures are
+lower bounds.
 
 NDVI is the single strongest factor in all three cities; in Samarkand built-up land is close behind (37 % against 39 %
 for vegetation and soil). Grouping correlated factors, vegetation and bare soil take 39–64 % of the
@@ -47,7 +49,9 @@ This is the temperature of the surface itself at about 11:00, from satellite ima
 | Aqua (MYD11A2) | ~13:30 | 0.85 / 0.61 / 0.81 | +0.4 / −0.6 / −0.7 °C | 1.7 / 2.1 / 1.8 °C |
 
 The main metric is r: it says whether we find the heat in the same places. The absolute level differs between the
-products for known reasons: emissivity, 30 m Landsat against 1 km MODIS, view angle and time of day.
+products for known reasons: emissivity, Landsat's thermal band (100 m, delivered at 30 m) against 1 km MODIS, view angle
+and time of day. Terra passes closest to Landsat's hour, so its +3 to +4 °C is the fair measure of the level difference;
+Aqua's smaller one comes partly from its later, hotter overpass, not from closer agreement.
 
 MODIS at 1 km also puts the city above its 1.5 km ring: by day +2.0 / +1.6 / +2.1 °C (Terra) and +2.3 / +2.0 / +2.5 °C
 (Aqua), at night (Aqua, about 01:30) +2.4 / +1.2 / +1.8 °C. So Tashkent's +1.8 °C is not a Landsat artefact. In Samarkand
@@ -55,8 +59,9 @@ and Bukhara the night island is smaller than the day one.
 Command: `PYTHONUTF8=1 python -m pipeline.validate --all --web`.
 
 **People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
-in the hottest 10% of cells inside the outline. In Samarkand the hottest cells are mostly empty open land, hence the small
-figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
+inside the outline on cells hotter than 48.1 / 45.6 / 47.0 °C, the hottest tenth of the whole map (city plus its 1.5 km ring).
+Taking the hottest tenth of the city's own cells instead gives about 260, 27 and 5 thousand. In Samarkand the hottest cells
+are mostly empty open land, hence the small figure. Population is the WorldPop 2025 model (census plus buildings), not a head count.
 
 **Where to plant first.** The same greening on every inhabited 200 m cell: tree crowns plus grass and watering, that is
 +20 percentage points of tree crown and +0.1 NDVI (never past the city's 95th percentile), run through the city model. In
@@ -143,13 +148,13 @@ All sources are open; no API keys are needed.
 cd web
 npm ci
 npm run dev        # http://localhost:5173
-npm test           # unit tests (Vitest)
+npm test           # 312 unit tests (Vitest), about 15 seconds
 npm run build      # output in web/dist
 ```
 
 The city JSON files and models are already in `web/public/data/`, so the site runs without the pipeline. Building files
 `.fgb` (about 140 MB) are not in git; without them 3D shows the basemap's buildings. To get them without running the
-pipeline, download the published ones:
+pipeline, download the published ones (from the project root, not from `web/`):
 
 ```bash
 mkdir -p web/public/data/buildings
@@ -167,7 +172,7 @@ pip install -r pipeline/requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
-python -m pytest pipeline/tests -q                     # 109 tests, one to two minutes
+python -m pytest pipeline/tests -q                     # 109 tests, under a minute
 ```
 
 The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.
