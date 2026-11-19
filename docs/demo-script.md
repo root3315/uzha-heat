@@ -12,7 +12,7 @@ their phones from the QR code.
   1. `http://localhost:5173/map/tashkent` (map)
   2. `http://localhost:5173/method/tashkent` (method and validation)
   3. `http://localhost:5173/map/samarkand` (the one other city)
-- In tab 1, open "Where to plant first" once, so the list and its marks are ready.
+- In tab 1, wait until "Where to plant first" (open at the top of the panel) shows its list and the marks 1–5 are on the map.
 - Editor, three files open in this order:
   `pipeline/uzha/browser_model.py`, `web/src/domain/whatIf.ts`, `pipeline/tests/test_browser_model.py`.
 - Browser zoom 100 %, window wide enough that the map and the panel are side by side.
@@ -23,7 +23,7 @@ their phones from the QR code.
 
 Say: "UzHa answers one question for Tashkent: where to plant first. Here is the answer."
 
-1. In the panel: **Where to plant first**. The five places appear on the map as blue numbers 1–5. Point at the list: **−4.7, −3.0, −2.6, −2.6, −2.5 °C**, for about
+1. At the top of the panel: **Where to plant first**, already open; the five places are on the map as blue numbers 1–5. Point at the list: **−4.7, −3.0, −2.6, −2.6, −2.5 °C**, for about
    **800–1,400** residents each.
    Say: "Every inhabited 200 metre cell gets the same greening: tree crowns plus grass and watering, that is plus 20 points
    of crown and plus 0.1 NDVI. New crowns take the place of bare ground, then of built-up, so a cell never passes 100 per cent.
@@ -83,7 +83,7 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
 3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-5`.
    "Python and the browser match the booster to 0.00001 degrees: we compare and add up in float32, like XGBoost. The web tests check the same rows."
-   Tests: 109 pipeline (under a minute) and 319 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
+   Tests: 109 pipeline (under a minute) and 320 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
 
@@ -110,7 +110,7 @@ Thank you. The site is open on your phones now."
 | Planting list, Tashkent top five | −4.7, −3.0, −2.6, −2.6, −2.5 °C; about 780, 1,200, 1,330, 1,290, 1,370 people |
 | Place 1 (Bektemir district): crowns only / NDVI only / both | −1.3 / −3.7 / −4.7 °C; crowns to the city's top (34 %) alone: −1.3 °C |
 | Place 1: surface; cover; NDVI; residents | 45.5 °C (43.9 °C inside the city outline); 93 % built-up, no tree cover; 0.24, the median of inhabited cells; ~780 |
-| Tests | 109 pipeline + 319 web |
+| Tests | 109 pipeline + 320 web |
 
 ## Jury Q&A
 

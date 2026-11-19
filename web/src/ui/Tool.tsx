@@ -66,6 +66,12 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   // The planting places stay on the map while the reader opens them one by one from the list.
   const [planMarks, setPlanMarks] = useState<MapMark[] | null>(null);
+  // On a wide screen the list starts open, so the answer is on the map at once; a reader who closes it keeps it closed.
+  const [planClosed, setPlanClosed] = useState(false);
+  const showPlan = useCallback((marks: MapMark[] | null) => {
+    setPlanMarks(marks);
+    if (marks === null) setPlanClosed(true);
+  }, []);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
   const { width } = useViewport();
@@ -296,7 +302,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
         />
       </div>
       <aside ref={panelRef} className="tool__panel" aria-label={t.panel}>
-        <Panel model={model} content={content} header={header} footer={footer} onPick={pick} onPlan={setPlanMarks} planShown={planMarks !== null} />
+        <Panel model={model} content={content} header={header} footer={footer} onPick={pick} onPlan={showPlan} planOpen={planMarks !== null || (!narrow && !planClosed)} />
       </aside>
       {reporting && <Report model={model} cities={cities} transect={transect} place={picked ? content : null} onClose={closeReport} />}
     </main>
