@@ -127,7 +127,7 @@ The city's final XGBoost model, for "что если" in the browser. Loaded onl
 - A row is the cell's values in `features` order. Prediction = `baseScore` + one leaf per tree.
 - In a tree, node 0 is the root. `feature` −1 marks a leaf, whose value is in `value`; otherwise go to
   `left` when x < `value` (compared as float32), else to `left + 1`; a missing x goes left when `defaultLeft` is 1.
-- `check`: sample cells and the booster's own predictions (°C), to verify an evaluator to 1e-4.
+- `check`: sample cells and the booster's own predictions (°C), to verify an evaluator to 1e-5.
 
 ## Language
 
