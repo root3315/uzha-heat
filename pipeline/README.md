@@ -89,7 +89,7 @@ PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif [
 averages a finer raster into cells or our cells into a coarser raster's pixels, detects Kelvin, and reports n, r,
 Spearman ρ, bias, RMSE and the overlap of the hottest 10 %.
 
-`PYTHONUTF8=1` only matters on Windows, for Cyrillic in log output.
+`PYTHONUTF8=1` only matters on Windows: without it the console's code page garbles Cyrillic in log output.
 
 Downloads are cached in `pipeline/cache/<city>_<grid-hash>/` (gitignored); a rerun with the same
 bbox takes about a minute. Delete a layer's `.pkl` to refetch it. A first run of Tashkent takes roughly
