@@ -121,8 +121,15 @@ export function buildField(grid: CellGrid, lst: readonly number[], { factor = 4,
   return { grid, factor, fx, fy, values, coverage: upsample(coverageOf(grid), nx, ny, factor) };
 }
 
-/** Smoothed temperature at a point; the nearest edge value outside the grid. */
+/** Below this coverage a point is off the data: the smoothed values there are only the fill that leans on the edge. */
+export const MIN_COVERAGE = 0.5;
+
+/** Smoothed temperature at a point; NaN off the data, where the surface is only the fill beyond its edge. */
 export function fieldAt(field: Field, lon: number, lat: number): number {
   const [gx, gy] = lonLatToSlot(field.grid, lon, lat);
-  return bilinear(field.values, field.fx, field.fy, slotToFine(field.factor, gx), slotToFine(field.factor, gy));
+  const u = slotToFine(field.factor, gx);
+  const v = slotToFine(field.factor, gy);
+  const outside = u < -0.5 || v < -0.5 || u > field.fx - 0.5 || v > field.fy - 0.5;
+  if (outside || bilinear(field.coverage, field.fx, field.fy, u, v) < MIN_COVERAGE) return Number.NaN;
+  return bilinear(field.values, field.fx, field.fy, u, v);
 }
