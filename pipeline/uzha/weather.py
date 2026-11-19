@@ -4,6 +4,7 @@ A light step over a city JSON that already exists: it adds `city.weather` to `<i
 city's entry in `cities.json`. Weather is one point per city (ERA5 is ~25 km), so it is context for
 comparing cities, not a model factor.
 """
+import hashlib
 import json
 import logging
 import math
@@ -109,16 +110,27 @@ def fetch_series(lon: float, lat: float) -> dict:
     return era5.hourly(lon, lat, f"{YEARS[0]}-{MONTHS[0]:02d}-01", f"{YEARS[-1]}-{MONTHS[-1]:02d}-31")
 
 
+def _all_finite(figures: dict) -> bool:
+    return all(isinstance(v, (int, float)) and math.isfinite(v) for v in figures.values())
+
+
 def city_weather(series: dict, moments: list) -> dict:
+    """The city's summer weather. A series with a variable missing throughout (all nulls) gives no summer figures at
+    all (ValueError, so the city goes without weather), and no overpass figures when only those are incomplete."""
+    summer = summer_summary(series)
+    if not _all_finite(summer):
+        raise ValueError(f"incomplete summer weather: {summer}")
     weather = {
         "source": era5.SOURCE_LABEL,
         "period": PERIOD_LABEL,
         "point": [round(v, 3) for v in series["point"]],
-        "summer": summer_summary(series),
+        "summer": summer,
     }
     overpass = overpass_summary(series, moments)
-    if overpass:
+    if overpass and _all_finite(overpass):
         weather["overpass"] = overpass
+    elif overpass:
+        log.warning("incomplete weather at the overpass, left out: %s", overpass)
     return weather
 
 
@@ -127,7 +139,9 @@ def enrich(document: dict, cache_root: Path) -> dict:
     city = document["city"]
     cache = Cache(Path(cache_root) / "weather")
     try:
-        moments = cache.get_or_compute(f"{city['id']}_landsat_times",
+        # The scene times depend on the period and the extent: a run with another of either must not reuse them.
+        key = hashlib.sha1(repr((tuple(city["bbox"]), document["period"]["label"])).encode()).hexdigest()[:8]
+        moments = cache.get_or_compute(f"{city['id']}_landsat_times_{key}",
                                        lambda: landsat_moments(tuple(city["bbox"]), document["period"]["label"]))
     except Exception:
         log.exception("%s: Landsat scene times unavailable, summer means only", city["id"])

@@ -1,4 +1,4 @@
-# Exact versions the pipeline and its 115 tests were run with (Python 3.10.11, Windows 11).
+# Exact versions the pipeline and its 121 tests were run with (Python 3.10.11, Windows 11).
 # pip install -r pipeline/requirements-lock.txt   — or requirements.txt for any compatible versions.
 numpy==2.2.6
 pandas==2.3.3
