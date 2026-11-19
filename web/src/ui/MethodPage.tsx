@@ -194,6 +194,7 @@ function ModisCheck({ check }: { check: CityValidation }) {
                       f.formatNumber(p.day.rmse, 1),
                       f.formatNumber(p.day.n, 0),
                     )}
+                    {p.dayInsideCity && t.inside(f.formatNumber(p.dayInsideCity.r, 2), f.formatNumber(p.dayInsideCity.n, 0))}
                   </dd>
                 </div>,
               ]
