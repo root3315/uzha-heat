@@ -45,7 +45,7 @@ Say: "UzHa answers one question for Tashkent: where to plant first. Here is the 
 
 1. Click **Whole city**. Point at **43.6 °C** and the sentence under it: "Inside Tashkent the surface is 1.8 degrees hotter than
    the ring around it. The hottest 10% of cells are above 48.1 °C; 313,000 people live in them."
-2. Point at the first cause, **Low greenery, +3.2 °C**. Say: "This is SHAP: the model splits each cell's temperature into
+2. Point at the first cause, **Lack of greenery, +3.2 °C**. Say: "This is SHAP: the model splits each cell's temperature into
    factors, in degrees."
 3. Point at the section (it already passes through the hottest point): the profile and the hatched band of causes under it.
    Say: "10 of 14 km hotter than average, by up to 9.4 degrees; the model puts most of it on low greenery."
@@ -70,8 +70,8 @@ Point at, in order:
   Say: "r is the main check: is the heat in the same places. The absolute level differs by satellite: our surface is
   4.4 degrees warmer than Terra and 0.4 warmer than Aqua. That is a known difference between products: emissivity,
   30 m against 1 km, view angle, time of day."
-- Heat island by MODIS, ring 1.5 km: by day **+2.0 °C** (Terra) and **+2.3 °C** (Aqua), at night (Aqua ~01:30) **+2.4 °C**.
-  "MODIS at 1 km sees the same island, day and night. Our +1.8 is not a Landsat artefact."
+- Heat island by MODIS (Aqua), ring 1.5 km, on the page: by day **+2.3 °C**, at night (~01:30) **+2.4 °C**.
+  "MODIS at 1 km sees the same island, day and night; Terra gives plus 2.0 by day. Our +1.8 is not a Landsat artefact."
 - Rings 0.5 / 1 / 1.5 km: **+1.3 / +1.5 / +1.8 °C**. "The sign does not depend on the ring."
 
 ### 5:30–6:40 · Code review: the model in the browser
