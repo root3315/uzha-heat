@@ -265,6 +265,7 @@ export const PLAN_TEXTS = texts(
       'From the model: surface, not air.',
     title: 'Where to plant first',
     compute: 'calculate for the city',
+    mark: (rank: number, cooling: string, people: string) => `Place ${rank} to plant: ${cooling} ${people}`,
   },
   {
     failed: 'Модель не загрузилась. Закройте и откройте блок ещё раз.',
@@ -276,6 +277,7 @@ export const PLAN_TEXTS = texts(
       'По модели: поверхность, не воздух.',
     title: 'Где сажать первым',
     compute: 'посчитать по городу',
+    mark: (rank, cooling, people) => `Место для посадки ${rank}: ${cooling} ${people}`,
   },
 );
 

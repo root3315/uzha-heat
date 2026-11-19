@@ -23,12 +23,12 @@ their phones from the QR code.
 
 Say: "UzHa answers one question for Tashkent: where to plant first. Here is the answer."
 
-1. In the panel: **Where to plant first**. Point at the list: **−3.7, −3.1, −2.7, −2.6, −2.6 °C**, each for about
+1. In the panel: **Where to plant first**. The five places appear on the map as blue numbers 1–5. Point at the list: **−3.7, −3.1, −2.7, −2.6, −2.6 °C**, each for about
    **1,200–1,400** residents.
    Say: "Every inhabited 200 metre cell gets the same greening: tree crowns plus grass and watering, that is plus 20 points
    of crown and plus 0.1 NDVI. The city's own model gives the cooling. We rank by degrees times residents, at least 1 km apart,
    not by how hot the cell is today."
-2. Click place **1**. The map flies to **Near Small Ring Road**, **43.5 °C**, about **1,300 residents**.
+2. Click place **1**, in the list or on the map. The panel opens **Near Small Ring Road**, **43.5 °C**, and a ring marks it on the map.
 
 ### 1:00–2:15 · What if, in this place
 

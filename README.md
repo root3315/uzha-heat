@@ -83,7 +83,7 @@ up in NDVI rather than in the tree share.
 - "What if" on a place: more tree crown and greenery (NDVI), lighter roofs, and, where built-up land or roads heat that place,
   less of them. The city model recomputes the surface temperature of that place. Sliders stay within what the city already has
   (5–95 % of cells); built-up can drop by at most 25 percentage points.
-- "Where to plant first" on the city view: five places, each opens on the map with its own "what if".
+- "Where to plant first" on the city view: five places, numbered on the map; each opens with its own "what if".
 - "Share" puts the place and the 3D view into the link. "Report" builds a printable page; city data downloads as CSV or GeoJSON.
 
 | Where to plant first | What if, place 1 |
