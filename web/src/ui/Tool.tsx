@@ -46,7 +46,7 @@ interface PickedPlace {
 const isTouch = () => window.matchMedia('(pointer: coarse)').matches;
 
 const THREE_D_KEY = 'uzha.3d';
-/** How long "Link copied" stays on the button. */
+/** How long "Copied" stays on the button. */
 const SHARED_NOTE_MS = 2200;
 
 function readThreeD(): boolean {
@@ -194,9 +194,11 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     setReporting(false);
     requestAnimationFrame(() => reportButtonRef.current?.focus());
   };
+  // Both labels share one grid cell, so the button keeps its width and the header does not reflow when it flips.
   const shareButton = (
-    <button type="button" className="pill pill--small" onClick={() => void share()} aria-live="polite">
-      {shared ? t.copied : t.share}
+    <button type="button" className="pill pill--small pill--swap" onClick={() => void share()} aria-live="polite">
+      <span className={shared ? 'pill__label pill__label--off' : 'pill__label'}>{t.share}</span>
+      <span className={shared ? 'pill__label' : 'pill__label pill__label--off'}>{t.copied}</span>
     </button>
   );
   const reportButton = (
