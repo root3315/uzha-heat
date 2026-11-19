@@ -161,7 +161,7 @@ pip install -r pipeline/requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
 PYTHONUTF8=1 python -m pipeline.buildings              # здания для 3D (скачивает OSM и контуры Microsoft)
-python -m pytest pipeline/tests -q                     # 103 теста, одна-две минуты
+python -m pytest pipeline/tests -q                     # 109 тестов, одна-две минуты
 ```
 
 Пайплайн читает Landsat и Sentinel-2 из Microsoft Planetary Computer и кеширует каждый слой в `pipeline/cache/`.

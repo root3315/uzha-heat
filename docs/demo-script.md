@@ -83,7 +83,7 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
 3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-4`.
    "Python and the browser match the booster to 0.0001 degrees; the web tests check the same rows."
-   Tests: 103 pipeline (one to two minutes) and 312 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
+   Tests: 109 pipeline (one to two minutes) and 312 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
 
@@ -110,7 +110,7 @@ Thank you. The site is open on your phones now."
 | Planting list, Tashkent top five | −3.7, −3.1, −2.7, −2.6, −2.6 °C; 1.2–1.4 thousand people each |
 | Place 1 (Small Ring Road): crowns only / NDVI only / both | −0.5 / −3.1 / −3.7 °C; crowns to the city's top (34 %) alone: −0.8 °C |
 | Place 1: surface; NDVI; residents | 43.5 °C (inside mean 43.9 °C); 0.14, lowest fifth of inhabited cells; ~1,300 |
-| Tests | 103 pipeline + 312 web |
+| Tests | 109 pipeline + 312 web |
 
 ## Jury Q&A
 

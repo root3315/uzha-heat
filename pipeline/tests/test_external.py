@@ -124,3 +124,68 @@ def test_compare_command_reads_a_city_file_and_matches_points(tmp_path):
     assert report["points"] == 10 and report["onTheMap"] == 9
     assert report["r"] == pytest.approx(1.0) and report["bias"] == pytest.approx(10.0)
     assert report["rows"][-1] == {"name": "far", "theirs": 25.0, "ours": None}
+
+
+def test_read_points_csv_skips_blank_coordinates_and_ragged_rows(tmp_path):
+    path = tmp_path / "excel.csv"
+    path.write_text("name;lon;lat;lst;\nA;69,25;41,30;44,5;\nempty;;;31,5;\nshort;69,2524\n", encoding="utf-8")
+    points = read_points_csv(path)
+    assert points.names == ["A", "empty", "short"]
+    cell = cells_for_points(CELL_LON, CELL_LAT, HALF, points.lon, points.lat)
+    assert cell.tolist() == [0, -1, -1]
+
+
+def test_read_points_csv_keeps_semicolons_when_a_header_has_a_comma(tmp_path):
+    path = tmp_path / "ru.csv"
+    path.write_text("Станция;lon;lat;Температура, °C\nA;69,25;41,30;31,5\nB;69,2524;41,2982;33,0\n", encoding="utf-8")
+    points = read_points_csv(path)
+    assert points.value_column == "Температура, °C" and points.value.tolist() == [31.5, 33.0]
+
+
+def test_read_points_csv_rejects_projected_coordinates_and_empty_files(tmp_path):
+    projected = tmp_path / "utm.csv"
+    projected.write_text("id,x,y,t\n1,521000,4572000,30\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="degrees"):
+        read_points_csv(projected)
+    empty = tmp_path / "empty.csv"
+    empty.write_text("", encoding="utf-8")
+    with pytest.raises(ValueError, match="empty"):
+        read_points_csv(empty)
+
+
+def test_raster_that_misses_the_city_or_has_no_crs_says_so(tmp_path):
+    far = tmp_path / "far.tif"
+    _write_raster(far, np.full((4, 4), 30.0), from_origin(10.0, 50.0, 0.01, 0.01))
+    with pytest.raises(ValueError, match="does not cover"):
+        raster_to_cells(far, CELL_LON, CELL_LAT, HALF)
+    bare = tmp_path / "bare.tif"
+    with rasterio.open(bare, "w", driver="GTiff", height=2, width=2, count=1, dtype="float32",
+                       transform=from_origin(LON0, LAT0, 0.01, 0.01)) as dst:
+        dst.write(np.full((2, 2), 30.0, dtype="float32"), 1)
+    with pytest.raises(ValueError, match="no coordinate system"):
+        raster_to_cells(bare, CELL_LON, CELL_LAT, HALF)
+
+
+def test_degree_raster_with_pixels_taller_than_a_cell_is_sampled_not_averaged(tmp_path):
+    # 0.0022° pixels: ~184 m across but ~245 m tall at this latitude, taller than a 200 m cell.
+    data = np.arange(16, dtype=float).reshape(4, 4) + 30.0
+    path = tmp_path / "tall.tif"
+    _write_raster(path, data, from_origin(LON0 - 0.0012, LAT0 + 0.0009, 0.0022, 0.0022))
+    values, pixel = raster_to_cells(path, CELL_LON, CELL_LAT, HALF, with_pixels=True)
+    assert pixel is not None and np.isfinite(values).all()
+
+
+def test_compare_command_report_has_no_nan(tmp_path):
+    import json
+
+    from pipeline.compare import run
+
+    city = {"grid": {"halfSizeDeg": list(HALF)},
+            "cells": {"lon": CELL_LON.tolist(), "lat": CELL_LAT.tolist(), "lst": [40.0 + i for i in range(9)]}}
+    (tmp_path / "tashkent.json").write_text(json.dumps(city), encoding="utf-8")
+    csv_path = tmp_path / "s.csv"
+    rows = "\n".join(f"S{i},{CELL_LON[i]:.5f},{CELL_LAT[i]:.5f},{30.0 + i}" for i in range(8))
+    csv_path.write_text("name,lon,lat,t\n" + rows + f"\nblank,{CELL_LON[8]:.5f},{CELL_LAT[8]:.5f},\n", encoding="utf-8")
+    report = run("tashkent", csv_path, None, None, 1.0, 0.0, tmp_path)
+    json.dumps(report, allow_nan=False)
+    assert report["rows"][-1]["theirs"] is None

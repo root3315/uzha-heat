@@ -11,9 +11,13 @@ Usage (from the project root):
 """
 import argparse
 import json
+import math
 from pathlib import Path
 
 import numpy as np
+
+from pyproj.exceptions import CRSError
+from rasterio.errors import RasterioError
 
 from .uzha.cities import CITIES
 from .uzha.external import cells_for_points, compare, compare_by_pixel, raster_to_cells, read_points_csv, to_celsius
@@ -24,7 +28,10 @@ OUT_DIR = PIPELINE_DIR / "cache"
 
 
 def _rounded(value):
-    return None if value is None else round(value, 3)
+    """Three decimals, and None for anything missing or not finite, so the report stays valid JSON."""
+    if value is None or not math.isfinite(value):
+        return None
+    return round(value, 3)
 
 
 def load_cells(city_id: str, data_dir: Path = DATA_DIR) -> tuple:
@@ -45,7 +52,7 @@ def run(city_id: str, points: Path | None, raster: Path | None, value: str | Non
         ours = np.where(cell >= 0, lst[np.clip(cell, 0, None)], np.nan)
         report = {"source": str(points), "kind": "points", "column": found.value_column, "points": len(cell),
                   "onTheMap": int((cell >= 0).sum()), "kelvin": kelvin,
-                  "rows": [{"name": n, "theirs": _rounded(float(t)), "ours": _rounded(float(o)) if np.isfinite(o) else None}
+                  "rows": [{"name": n, "theirs": _rounded(float(t)), "ours": _rounded(float(o))}
                            for n, t, o in zip(found.names, theirs, ours)]}
     else:
         values, pixel = raster_to_cells(raster, lon, lat, half, with_pixels=True)
@@ -57,6 +64,8 @@ def run(city_id: str, points: Path | None, raster: Path | None, value: str | Non
                   "comparedAt": "our cells" if pixel is None else "their pixels"}
     metrics = compare_by_pixel(ours, theirs, pixel) if pixel is not None else compare(ours, theirs)
     report.update({"city": city_id, **{key: _rounded(v) if isinstance(v, float) else v for key, v in metrics.items()}})
+    if report["r"] is None and metrics["n"] >= 3:
+        report["note"] = "one side is constant over the matched cells, so r and Spearman are undefined"
     return report
 
 
@@ -90,12 +99,12 @@ def main() -> None:
 
     try:
         report = run(args.city, args.points, args.raster, args.value, args.scale, args.offset, args.data)
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, RasterioError, CRSError) as error:
         raise SystemExit(f"compare: {error}") from None
     _print(report)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / f"compare-{args.city}-{(args.points or args.raster).stem}.json"
-    out.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=1, allow_nan=False), encoding="utf-8")
     print(f"  report: {out}")
 
 

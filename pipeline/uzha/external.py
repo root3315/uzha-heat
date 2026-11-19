@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
+import rasterio.errors
 from pyproj import Transformer
 from rasterio.warp import transform_bounds
 from rasterio.windows import from_bounds
@@ -47,24 +48,49 @@ def _number(text: str, decimal_comma: bool) -> float:
         return math.nan
 
 
+def _delimiter(lines: list) -> str:
+    """The delimiter that splits the first lines into the most, equal, fields; `;` and tab win ties over `,`, since a
+    comma also turns up inside headers ("Temperature, °C") and decimal numbers."""
+    best, best_fields = ",", 1
+    for delimiter in (";", "\t", ","):
+        counts = {len(row) for row in csv.reader(lines[:5], delimiter=delimiter) if row}
+        fields = min(counts) if counts else 1
+        if fields > best_fields:
+            best, best_fields = delimiter, fields
+    return best
+
+
 def read_points_csv(path: Path, value_column: str | None = None) -> Points:
-    """Points from a CSV: longitude and latitude columns found by name, the value is the one other numeric column."""
-    text = Path(path).read_text(encoding="utf-8-sig")
-    dialect = csv.Sniffer().sniff(text.splitlines()[0], delimiters=",;\t")
-    rows = list(csv.DictReader(text.splitlines(), dialect=dialect))
+    """Points from a CSV: longitude and latitude columns found by name, the value is the one other numeric column.
+
+    Excel habits are fine: `;` or tab, decimal commas, trailing delimiters, blank or short rows (their missing
+    coordinates are NaN, so they match no cell)."""
+    lines = [line for line in Path(path).read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if not lines:
+        raise ValueError(f"{path}: the file is empty")
+    delimiter = _delimiter(lines)
+    reader = csv.reader(lines, delimiter=delimiter)
+    header = [name.strip() for name in next(reader)]
+    while header and not header[-1]:
+        header.pop()
+    rows = [dict(zip(header, row)) for row in reader]
     if not rows:
-        raise ValueError(f"{path}: no rows")
-    columns = list(rows[0].keys())
-    by_name = {c.strip().lower(): c for c in columns}
+        raise ValueError(f"{path}: no rows under the header")
+    columns = header
+    by_name = {c.lower(): c for c in columns}
     lon_col = next((by_name[n] for n in LON_NAMES if n in by_name), None)
     lat_col = next((by_name[n] for n in LAT_NAMES if n in by_name), None)
     if lon_col is None or lat_col is None:
         raise ValueError(f"{path}: no longitude/latitude columns among {', '.join(columns)}")
-    decimal_comma = dialect.delimiter != ","
+    decimal_comma = delimiter != ","
 
     def numeric(column: str) -> np.ndarray:
-        return np.array([_number(row[column] or "", decimal_comma) for row in rows])
+        return np.array([_number(row.get(column) or "", decimal_comma) for row in rows])
 
+    lon, lat = numeric(lon_col), numeric(lat_col)
+    if (np.abs(lon[np.isfinite(lon)]) > 180).any() or (np.abs(lat[np.isfinite(lat)]) > 90).any():
+        raise ValueError(f"{path}: {lon_col}/{lat_col} must be longitude/latitude in degrees (WGS84); these look like "
+                         "projected metres")
     others = [c for c in columns if c not in (lon_col, lat_col)]
     numeric_others = [c for c in others if np.isfinite(numeric(c)).any()]
     if value_column is None:
@@ -74,8 +100,8 @@ def read_points_csv(path: Path, value_column: str | None = None) -> Points:
     elif value_column not in columns:
         raise ValueError(f"{path}: no column {value_column!r}; columns: {', '.join(columns)}")
     label = next((c for c in others if c not in numeric_others), None)
-    names = [row[label].strip() for row in rows] if label else [str(i + 1) for i in range(len(rows))]
-    return Points(numeric(lon_col), numeric(lat_col), numeric(value_column), names, value_column)
+    names = [(row.get(label) or "").strip() for row in rows] if label else [str(i + 1) for i in range(len(rows))]
+    return Points(lon, lat, numeric(value_column), names, value_column)
 
 
 def cells_for_points(cell_lon: np.ndarray, cell_lat: np.ndarray, half_deg: tuple, lon: np.ndarray,
@@ -83,8 +109,13 @@ def cells_for_points(cell_lon: np.ndarray, cell_lat: np.ndarray, half_deg: tuple
     """Index of the cell each point falls in, or -1 when it is outside the grid."""
     scale = np.array([2 * half_deg[0], 2 * half_deg[1]])
     tree = cKDTree(np.column_stack([cell_lon, cell_lat]) / scale)
-    distance, index = tree.query(np.column_stack([lon, lat]) / scale, p=np.inf, distance_upper_bound=MATCH_HALF)
-    return np.where(np.isfinite(distance), index, -1)
+    lon, lat = np.asarray(lon, float), np.asarray(lat, float)
+    known = np.isfinite(lon) & np.isfinite(lat)
+    out = np.full(len(lon), -1)
+    distance, index = tree.query(np.column_stack([lon[known], lat[known]]) / scale, p=np.inf,
+                                 distance_upper_bound=MATCH_HALF)
+    out[known] = np.where(np.isfinite(distance), index, -1)
+    return out
 
 
 def to_celsius(values: np.ndarray) -> tuple:
@@ -105,15 +136,22 @@ def raster_to_cells(path: Path, cell_lon: np.ndarray, cell_lat: np.ndarray, half
     lat0 = float(np.mean(cell_lat))
     cell_m = 2 * half_deg[1] * METRES_PER_DEGREE
     with rasterio.open(path) as src:
+        if src.crs is None:
+            raise ValueError(f"{path}: the raster has no coordinate system; save it as a GeoTIFF with its CRS")
         to_raster = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
-        pixel_m = max(abs(src.res[0]), abs(src.res[1]))
-        if src.crs.is_geographic:
-            pixel_m *= METRES_PER_DEGREE * math.cos(math.radians(lat0))
+        res_x, res_y = abs(src.res[0]), abs(src.res[1])
+        if src.crs.is_geographic:  # a degree of longitude shrinks with latitude, a degree of latitude does not
+            res_x *= METRES_PER_DEGREE * math.cos(math.radians(lat0))
+            res_y *= METRES_PER_DEGREE
+        pixel_m = max(res_x, res_y)
         margin = 2 * max(half_deg)
         left, bottom, right, top = transform_bounds("EPSG:4326", src.crs, cell_lon.min() - margin, cell_lat.min() - margin,
                                                     cell_lon.max() + margin, cell_lat.max() + margin)
         window = from_bounds(left, bottom, right, top, src.transform).round_offsets().round_lengths()
-        window = window.intersection(rasterio.windows.Window(0, 0, src.width, src.height))
+        try:
+            window = window.intersection(rasterio.windows.Window(0, 0, src.width, src.height))
+        except rasterio.errors.WindowError:
+            raise ValueError(f"{path}: the raster does not cover the city") from None
         data = src.read(band, window=window, masked=True).astype(float).filled(np.nan)
         transform = src.window_transform(window)
         crs = src.crs
@@ -145,7 +183,7 @@ def raster_to_cells(path: Path, cell_lon: np.ndarray, cell_lat: np.ndarray, half
 def compare_by_pixel(ours: np.ndarray, theirs: np.ndarray, pixel: np.ndarray) -> dict:
     """`compare` at the coarser raster's own resolution: our cells averaged within each of its pixels."""
     keep = (pixel >= 0) & np.isfinite(ours) & np.isfinite(theirs)
-    ids, group = np.unique(pixel[keep], return_inverse=True)
+    _, group = np.unique(pixel[keep], return_inverse=True)
     count = np.bincount(group)
     mean_ours = np.bincount(group, weights=ours[keep]) / count
     mean_theirs = np.bincount(group, weights=theirs[keep]) / count
