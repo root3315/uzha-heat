@@ -36,6 +36,20 @@ describe('predict', () => {
   it('sends a missing value the default way', () => {
     expect(predict(TOY, { built: 0 })).toBe(40 + 2 - 0.5);
   });
+
+  it('treats a row shorter than the factor list as missing the rest', () => {
+    expect(predictRow(TOY, [0])).toBe(40 + 2 - 0.5);
+  });
+
+  it('treats a null in a row, as JSON writes a missing value, as missing rather than as 0', () => {
+    expect(predictRow(TOY, [0, null as unknown as number, 0])).toBe(40 + 2 - 0.5);
+  });
+
+  it('gives the same answer from the second call on, when the trees are already packed', () => {
+    const row = [3, 0.1, 50];
+    expect(predictRow(TOY, row)).toBe(predictRow(TOY, row));
+    expect(predictRow(TOY, row)).toBe(43);
+  });
 });
 
 describe('whatIf', () => {
