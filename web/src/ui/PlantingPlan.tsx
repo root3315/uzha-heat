@@ -18,7 +18,7 @@ interface PlantingPlanProps {
   onPick: (point: LonLat) => void;
   /** The places as numbered marks for the map once they are known; null when the block closes. */
   onPlan?: (marks: MapMark[] | null) => void;
-  /** The marks are on the map already: the block opens with them, so it can also take them away. */
+  /** Start open: the marks are on the map already (so closing can take them away), or there is room to show the list. */
   shown?: boolean;
 }
 

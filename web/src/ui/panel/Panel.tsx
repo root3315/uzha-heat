@@ -27,8 +27,8 @@ interface PanelProps {
   onPick?: (point: LonLat) => void;
   /** Hands the planting places to the map as numbered marks. */
   onPlan?: (marks: MapMark[] | null) => void;
-  /** The planting places are on the map now. */
-  planShown?: boolean;
+  /** "Where to plant first" starts open: its places are on the map, or the reader has room and has not closed it. */
+  planOpen?: boolean;
 }
 
 /** Bars share one scale, so a cause of +2° is visibly half of one of +4°. */
@@ -115,7 +115,7 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
   );
 }
 
-export function Panel({ model, content, header, footer, expanded = false, onPick, onPlan, planShown = false }: PanelProps) {
+export function Panel({ model, content, header, footer, expanded = false, onPick, onPlan, planOpen = false }: PanelProps) {
   const { stats } = model.detail;
   const { formatDeg } = useFormats();
   const scale = Math.max(BAR_SCALE_MIN, Math.abs(content.cause?.value ?? 0) * 1.15);
@@ -135,6 +135,10 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
       <p className="panel__answer">
         <Phrase spans={content.answer} />
       </p>
+      {/* The city's answer to "what to do" right under "where it is hot", before the causes that explain it. */}
+      {content.isCity && !expanded && onPick && model.detail.cells.pop && (
+        <PlantingPlanBlock detail={model.detail} inside={model.inside} onPick={onPick} onPlan={onPlan} shown={planOpen} />
+      )}
 
       {content.cause && <CauseBar row={content.cause} scale={scale} />}
       {content.rest &&
@@ -150,9 +154,6 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
           </details>
         ))}
       {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
-      {content.isCity && !expanded && onPick && model.detail.cells.pop && (
-        <PlantingPlanBlock detail={model.detail} inside={model.inside} onPick={onPick} onPlan={onPlan} shown={planShown} />
-      )}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}
       <AdviceBlock advice={content.advice} expanded={expanded} />
