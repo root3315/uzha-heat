@@ -9,7 +9,8 @@
 **Как посмотреть демо** (две минуты):
 1. Откройте https://uzha.mydevbox.xyz/map/tashkent?lang=ru и нажмите на любое цветное место на карте.
 2. На панели справа подвигайте ползунки «Что если»: модель города пересчитает это место.
-3. Нажмите «Весь город», затем «Где сажать первым»: пять мест, каждое открывается на карте.
+3. Под ответом по городу блок «Где сажать первым»: пять мест, пронумерованных на карте (на широком экране открыт сразу,
+   на телефоне нажмите на него). Каждое открывается со своим «Что если».
 
 Карта летнего перегрева поверхности Ташкента; тот же пайплайн посчитан для Самарканда и Бухары (у каждого города своя модель). Для каждого
 участка 200 × 200 м видно, насколько горячая поверхность, какие факторы греют или охлаждают это место и на сколько градусов,
@@ -183,7 +184,7 @@ done
 **Пайплайн данных** (Python 3.10+, без ключей):
 
 ```bash
-python -m venv .venv && source .venv/bin/activate     # PowerShell: .venv\Scripts\Activate.ps1
+python -m venv .venv && source .venv/bin/activate     # Git Bash: .venv/Scripts/activate; PowerShell: .venv\Scripts\Activate.ps1
 pip install -r pipeline/requirements-lock.txt         # точные версии, с которыми мы считали; или requirements.txt
 PYTHONUTF8=1 python -m pipeline.run --all              # карта, модель и model-<город>.json; или --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # сверка с MODIS, ночь, кольца
@@ -201,9 +202,12 @@ GHSL. Подробнее: [pipeline/README.md](pipeline/README.md).
 **Сверка с вашими данными** (офлайн, секунды; читает `web/public/data/<город>.json`):
 
 ```bash
-PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points stations.csv   # столбцы lon/lat находятся по имени
+PYTHONUTF8=1 python -m pipeline.compare --city tashkent --points pipeline/examples/stations.csv   # столбцы lon/lat находятся по имени
 PYTHONUTF8=1 python -m pipeline.compare --city tashkent --raster their_lst.tif  # любая проекция и разрешение
 ```
+
+В `pipeline/examples/stations.csv` выдуманные значения, только чтобы показать файл, который команда берёт как есть
+(`;`, десятичные запятые, столбец с названием).
 
 Точки попадают в свою клетку 200 м (столбец значения находится сам или задаётся `--value t_max`; `;` и десятичные
 запятые подходят). Растр мельче наших клеток усредняется в каждую клетку; более крупный сравнивается по его собственным
