@@ -1390,8 +1390,10 @@ summary.rest__summary:hover,
   margin-bottom: 6px;
   font-weight: 600;
 }
+/* Two figures in one line: on a phone it wraps between them (.num alone would keep it on one line and spill out). */
 .energy-summary__head .num {
   min-width: 0;
+  white-space: normal;
   overflow-wrap: anywhere;
   color: var(--ink-2);
   font: 400 0.72rem/1.4 var(--font-mono);
