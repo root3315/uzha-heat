@@ -100,10 +100,15 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     [cellUnder, detail, t.unnamed],
   );
 
+  // A place from a shared link is shown on the map where the reader lands; only a place they pick brings the answer to them.
+  const pickedFromLink = useRef(false);
+
   // A shared link opens on its place, once.
   useEffect(() => {
     const { place } = readSharedView(window.location.search);
-    if (place) pick(place);
+    if (!place) return;
+    pickedFromLink.current = true;
+    pick(place);
   }, []);
 
   // The address always says what is on screen, so copying it from the bar shares this exact view.
@@ -129,8 +134,14 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   };
 
   // A new place starts at its own title: the panel may still be scrolled down to the previous place's sliders.
+  // On a phone the panel is far below the map, so the page itself goes to the title, or a tap would seem to do nothing.
   useEffect(() => {
-    if (picked) panelRef.current?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (!picked) return;
+    const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    const fromLink = pickedFromLink.current;
+    pickedFromLink.current = false;
+    if (narrow && !fromLink) panelRef.current?.scrollIntoView({ behavior, block: 'start' });
+    else panelRef.current?.scrollTo({ top: 0, behavior });
   }, [picked?.cell]);
 
   /** After zooming in, the basemap may know a closer name, or a site it had not drawn yet at the first look. */

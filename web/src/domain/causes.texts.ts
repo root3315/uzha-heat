@@ -105,6 +105,7 @@ export const CAUSE_WORDS = texts<Record<FactorKey, CauseWords>>(
       heatsShort: 'tall buildings',
       coolsShort: 'building shade',
       there: 'tall buildings',
+      plural: true,
       better: null,
       explain:
         'Tall buildings both heat and shade: by day their shadow cools the yard and the street, while walls and roofs store heat. Which wins depends on the block, so height is read together with building volume.',
@@ -212,6 +213,7 @@ export const CAUSE_WORDS = texts<Record<FactorKey, CauseWords>>(
       heatsShort: 'высокие дома',
       coolsShort: 'тень домов',
       there: 'высокие дома',
+      plural: false,
       better: null,
       explain:
         'Высокие дома и греют, и затеняют: днём их тень остужает двор и улицу, а стены и крыши копят тепло. Что перевешивает, зависит от квартала, поэтому высоту читаем вместе с объёмом застройки.',

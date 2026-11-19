@@ -523,8 +523,9 @@
   .rp-island {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Wide enough for "vs the mean" / "к среднему", which are kept on one line. */
   .rp-place__t small {
-    max-width: 8ch;
+    max-width: 11ch;
     white-space: normal;
   }
   .rp-figs {
