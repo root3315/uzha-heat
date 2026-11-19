@@ -25,10 +25,15 @@ https://uzha.mydevbox.xyz отдаёт домашний ТВ-бокс (Android, 
 
 ```bash
 cd web && npm ci && npm run build
-tar cf - -C dist . | ssh tvbox 'rm -rf ~/www/uzha.new && mkdir ~/www/uzha.new && tar xf - -C ~/www/uzha.new   && rm -rf ~/www/uzha.old && mv ~/www/uzha ~/www/uzha.old && mv ~/www/uzha.new ~/www/uzha'
+tar cf - --exclude=./data/buildings -C dist . | ssh tvbox 'rm -rf ~/www/uzha.new && mkdir ~/www/uzha.new && tar xf - -C ~/www/uzha.new   && ln -s ~/www/uzha-buildings ~/www/uzha.new/data/buildings   && cp -n ~/www/uzha/assets/* ~/www/uzha.new/assets/   && rm -rf ~/www/uzha.old && mv ~/www/uzha ~/www/uzha.old && mv ~/www/uzha.new ~/www/uzha'
 ```
 
 Старая версия остаётся в `~/www/uzha.old`, откат: поменять папки местами обратно.
+
+Cloudflare кеширует сайт (Cache Rule: GET на `uzha.mydevbox.xyz` и `mydevbox.xyz`, Edge TTL 1 час, Smart Tiered
+Cache): через туннель бокс отвечает за 2–15 с, из кеша — за 0,3 с. Поэтому при выкладке старые файлы `assets/`
+копируются в новую версию: закешированная страница ещё час может ссылаться на них. После выкладки сбросить кеш:
+Cloudflare → mydevbox.xyz → Caching → Configuration → Purge Everything.
 
 ## nginx example
 
