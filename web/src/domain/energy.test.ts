@@ -109,9 +109,9 @@ describe('heat storage', () => {
   });
 
   it('explains the evening with numbers from the reference table', () => {
-    expect(plain(storageLine('built', SURFACES, 'ru'))).toContain('1 205 и 1 785 против 620');
+    expect(storageLine('built', SURFACES, 'ru')).toContain('в 2–3 раза больше тепла, чем сухой грунт');
     expect(storageLine('bare', SURFACES, 'ru')).toContain('остывает быстрее');
-    expect(plain(storageLine('green', SURFACES, 'ru'))).toContain('2 550');
+    expect(storageLine('green', SURFACES, 'ru')).toContain('в 4 раза больше сухого грунта');
     expect(storageLine('built', [], 'ru')).toBeNull();
   });
 });

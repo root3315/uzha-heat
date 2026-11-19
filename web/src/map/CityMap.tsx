@@ -48,6 +48,8 @@ export interface CityMapHandle {
   nameAt(point: LonLat, district: string | null): FoundName | null;
   /** An airfield or a rail yard under the point, from the basemap. */
   siteAt(point: LonLat): Site | null;
+  /** Frames these points, so marks that crowd each other at the city's zoom stand apart. */
+  frame(points: readonly LonLat[]): void;
 }
 
 export interface MapMark {
@@ -133,6 +135,10 @@ function boundsOf(model: CityModel): LngLatBoundsLike {
   return [w, s, e, n];
 }
 
+/** Room around framed marks, beyond the map's own padding, and how close framing may come. */
+const FRAME_MARGIN = 36;
+const FRAME_MAX_ZOOM = 14;
+
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function wasHinted(): boolean {
@@ -213,6 +219,19 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     },
     siteAt(point) {
       return mapRef.current ? siteFromBasemap(mapRef.current, point, locale) : null;
+    },
+    frame(points) {
+      const map = mapRef.current;
+      if (!map || !points.length) return;
+      const lons = points.map(([lon]) => lon);
+      const lats = points.map(([, lat]) => lat);
+      const { top = 0, right = 0, bottom = 0, left = 0 } = latest.current.padding;
+      map.fitBounds([Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)], {
+        padding: { top: top + FRAME_MARGIN, right: right + FRAME_MARGIN, bottom: bottom + FRAME_MARGIN, left: left + FRAME_MARGIN },
+        maxZoom: FRAME_MAX_ZOOM,
+        duration: reducedMotion() ? 0 : 900,
+        essential: false,
+      });
     },
   }));
 
@@ -448,6 +467,8 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
   useEffect(() => {
     const map = mapRef.current;
     if (map?.getSource(SOURCE.place)) setData(map, SOURCE.place, pointOf(place));
+    // With a place open, the planting marks step back so the picked place is the one thing the eye lands on.
+    frameRef.current?.classList.toggle('has-place', place !== null);
   }, [place]);
 
   useEffect(() => {

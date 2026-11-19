@@ -89,7 +89,7 @@ export const TOOL_TEXTS = texts(
     exportAll: (city) => `Все участки ${genitive(city)}: температура, факторы, вклады`,
     howCalculated: 'Как это посчитано',
     mapToolbar: 'Карта',
-    drawing: 'Ведите',
+    drawing: 'Ведите по карте',
     section: 'Разрез',
     causes: 'Причины',
     people: 'Люди',
@@ -99,21 +99,21 @@ export const TOOL_TEXTS = texts(
 
 export const PANEL_TEXTS = texts(
   {
-    inHottestTenth: (measure: string) => `in the hottest tenth: ${measure}`,
+    inHottestTenth: (measure: string) => `in the hottest 10% of the city: ${measure}`,
     cityMean: (value: string) => `, city average ${value}`,
-    figureHere: (mean: string) => `here; city average ${mean}`,
-    figureCity: (min: string, max: string) => `city average, from ${min} to ${max}`,
+    figureHere: (mean: string) => `surface temperature here; city average ${mean}. Air is cooler.`,
+    figureCity: (min: string, max: string) => `surface temperature, city average, from ${min} to ${max}. Air is cooler.`,
     energyPlace: 'Physics of the place',
-    energyHot: 'Physics of the hottest tenth',
+    energyHot: 'Physics of the hottest 10% of the city',
     ramp: (value: string) => `City temperature scale, ${value} marked`,
   },
   {
-    inHottestTenth: (measure) => `в горячей десятой части ${measure}`,
+    inHottestTenth: (measure) => `в самых горячих 10 % города ${measure}`,
     cityMean: (value) => `, в среднем по городу ${value}`,
-    figureHere: (mean) => `здесь, в среднем по городу ${mean}`,
-    figureCity: (min, max) => `в среднем по городу, от ${min} до ${max}`,
+    figureHere: (mean) => `температура поверхности здесь, в среднем по городу ${mean}. Воздух прохладнее.`,
+    figureCity: (min, max) => `температура поверхности, в среднем по городу, от ${min} до ${max}. Воздух прохладнее.`,
     energyPlace: 'Физика участка',
-    energyHot: 'Физика горячей десятой части',
+    energyHot: 'Физика самых горячих 10 % города',
     ramp: (value) => `Шкала температуры города, отмечено ${value}`,
   },
 );
@@ -121,12 +121,12 @@ export const PANEL_TEXTS = texts(
 export const ENERGY_UI_TEXTS = texts(
   {
     intake: { before: 'Sunlight absorbed: ', middle: "; after the surface's own thermal radiation, ", after: ' is left. Where it goes:' },
-    rows: { hot: 'Hottest tenth', mean: 'Whole city', green: 'Greenest tenth' },
+    rows: { hot: 'Hottest 10% of the city', mean: 'Whole city', green: 'Greenest 10% of the city' },
     split: (air: string, evaporation: string) => `to the air ${air} · to evaporation ${evaporation}`,
   },
   {
     intake: { before: 'Поглощено солнца ', middle: ', после теплового излучения остаётся ', after: '. Куда оно уходит:' },
-    rows: { hot: 'Горячая десятая часть', mean: 'Весь город', green: 'Зелёная десятая часть' },
+    rows: { hot: 'Самые горячие 10 % города', mean: 'Весь город', green: 'Самые зелёные 10 % города' },
     split: (air, evaporation) => `в воздух ${air} · на испарение ${evaporation}`,
   },
 );
@@ -154,8 +154,8 @@ export const SECTION_TEXTS = texts(
     section: 'Section',
     drawing: 'Draw on the map',
     newSection: 'New section',
-    alreadyHottestTitle: 'The section already runs through the hottest place in the city',
-    hottestTitle: 'Put the section back through the hottest place',
+    alreadyHottestTitle: 'The section already runs through the hottest place in the city where people live',
+    hottestTitle: 'Put the section back through the hottest place where people live',
     alreadyHottest: 'Already through the hottest',
     hottest: 'Through the hottest',
     causesOnMap: 'Causes on the map',
@@ -170,8 +170,8 @@ export const SECTION_TEXTS = texts(
     section: 'Разрез',
     drawing: 'Ведите по карте',
     newSection: 'Новый разрез',
-    alreadyHottestTitle: 'Разрез уже идёт через самое жаркое место города',
-    hottestTitle: 'Вернуть разрез через самое жаркое место',
+    alreadyHottestTitle: 'Разрез уже идёт через самое жаркое место города, где живут люди',
+    hottestTitle: 'Вернуть разрез через самое жаркое место, где живут люди',
     alreadyHottest: 'Уже через самое жаркое',
     hottest: 'Через самое жаркое',
     causesOnMap: 'Причины на карте',
@@ -208,8 +208,13 @@ export const WHAT_IF_TEXTS = texts(
       roads: { label: 'Roads', spoken: (v: string) => `${v} of road`, noun: 'of roads' },
     } as Record<'tree' | 'ndvi' | 'built' | 'roads', LeverWords>,
     spokenOther: (label: string, value: string) => `${label} ${value}`,
-    cityTail: (up: boolean) => `${up ? 'top' : 'bottom'} 5% of the city`,
-    limit: (to: string, reason: string) => `up to ${to}: ${reason}`,
+    cityTail: (lever: string, up: boolean) => {
+      if (lever === 'tree' || lever === 'ndvi') return "as in the city's greenest 5%";
+      if (lever === 'built') return "as in the city's least built-up 5%";
+      if (lever === 'roads') return 'as in the 5% of the city with the fewest roads';
+      return `as in the city's ${up ? 'top' : 'bottom'} 5%`;
+    },
+    limit: (to: string, reason: string) => `up to ${to}, ${reason}`,
     now: (value: string) => `now ${value}`,
     spokenNow: (value: string, now: string) => `${value}, now ${now}`,
     loading: 'Loading the city model…',
@@ -223,7 +228,7 @@ export const WHAT_IF_TEXTS = texts(
     caveat: 'From the model: an association in the data, not an experiment; surface, not air.',
     treesNote: ' “Trees” here is only the crown share; grass and leaves under them count in NDVI, so greenery changes more. New crowns take the place of bare ground first, then of built-up.',
     title: 'What if',
-    recalc: 'recalculate with the model',
+    recalc: 'AI model estimate',
   },
   {
     levers: {
@@ -233,8 +238,13 @@ export const WHAT_IF_TEXTS = texts(
       roads: { label: 'Дороги', spoken: (v) => `${v} дорог`, noun: 'дорог' },
     },
     spokenOther: (label, value) => `${label} ${value}`,
-    cityTail: (up) => `${up ? 'верхние' : 'нижние'} 5 % города`,
-    limit: (to, reason) => `до ${to} — ${reason}`,
+    cityTail: (lever, up) => {
+      if (lever === 'tree' || lever === 'ndvi') return 'как в самых зелёных 5 % города';
+      if (lever === 'built') return 'как в самых малозастроенных 5 % города';
+      if (lever === 'roads') return 'как в 5 % города, где меньше всего дорог';
+      return `как в ${up ? 'верхних' : 'нижних'} 5 % города`;
+    },
+    limit: (to, reason) => `до ${to}, ${reason}`,
     now: (value) => `сейчас ${value}`,
     spokenNow: (value, now) => `${value}, сейчас ${now}`,
     loading: 'Загружаю модель города…',
@@ -242,13 +252,13 @@ export const WHAT_IF_TEXTS = texts(
     nothingToAdd: 'Здесь нечего прибавить: деревьев и зелени уже столько, сколько бывает в городе.',
     noChange: 'пока без изменений',
     toSurface: ' к температуре поверхности здесь',
-    result: (after, before) => `к поверхности здесь: около ${after} вместо ${before}`,
+    result: (after, before) => `поверхность здесь: около ${after} вместо ${before}`,
     hint: 'подвиньте ползунок, модель пересчитает температуру поверхности',
     reset: 'Вернуть как есть',
     caveat: 'По модели: связь в данных, не эксперимент; поверхность, не воздух.',
     treesNote: ' «Деревья» здесь только доля крон; трава и листва под ними идут в NDVI, поэтому зелень меняет больше. Новые кроны занимают место сначала голого грунта, потом застройки.',
     title: 'Что если',
-    recalc: 'пересчитать по модели',
+    recalc: 'оценка ИИ-модели',
   },
 );
 
@@ -256,16 +266,16 @@ export const WHAT_IF_TEXTS = texts(
 export const SURFACES_TEXTS = texts(
   {
     title: 'Surfaces (physics)',
-    recalc: 'by the energy balance',
+    recalc: 'physics estimate',
     levers: {
       roofAlbedo: { label: 'Roof albedo', spoken: (v: string) => `roof albedo ${v}` },
       roadAlbedo: { label: 'Road albedo', spoken: (v: string) => `road albedo ${v}` },
       greenRoofs: { label: 'Green roofs', spoken: (v: string) => `${v} of the roof area green` },
     } as Record<'roofAlbedo' | 'roadAlbedo' | 'greenRoofs', LeverWords>,
     limits: {
-      roofAlbedo: (to: string) => `up to ${to}: a new white coating`,
-      roadAlbedo: (to: string) => `up to ${to}: light concrete`,
-      greenRoofs: (to: string) => `up to ${to}: every roof`,
+      roofAlbedo: (to: string) => `up to ${to}, as with a new white coating`,
+      roadAlbedo: (to: string) => `up to ${to}, as with light concrete`,
+      greenRoofs: (to: string) => `up to ${to}, every roof`,
     } as Record<'roofAlbedo' | 'roadAlbedo' | 'greenRoofs', (to: string) => string>,
     loading: 'Loading the physics of the city…',
     failed: 'The physics did not load. Close the block and open it again.',
@@ -278,16 +288,16 @@ export const SURFACES_TEXTS = texts(
   },
   {
     title: 'Поверхности (физика)',
-    recalc: 'по балансу энергии',
+    recalc: 'оценка по физике',
     levers: {
       roofAlbedo: { label: 'Альбедо крыш', spoken: (v) => `альбедо крыш ${v}` },
       roadAlbedo: { label: 'Альбедо дорог', spoken: (v) => `альбедо дорог ${v}` },
       greenRoofs: { label: 'Зелёные крыши', spoken: (v) => `зелёные ${v} площади крыш` },
     },
     limits: {
-      roofAlbedo: (to) => `до ${to} — новое белое покрытие`,
-      roadAlbedo: (to) => `до ${to} — светлый бетон`,
-      greenRoofs: (to) => `до ${to} — все крыши`,
+      roofAlbedo: (to) => `до ${to}, как у нового белого покрытия`,
+      roadAlbedo: (to) => `до ${to}, как у светлого бетона`,
+      greenRoofs: (to) => `до ${to}, все крыши`,
     },
     loading: 'Загружаю физику города…',
     failed: 'Физика не загрузилась. Закройте и откройте блок ещё раз.',
@@ -306,8 +316,9 @@ export const PLAN_TEXTS = texts(
     computing: 'Calculating over every cell of the city…',
     none: 'There are no cells in the city where trees would noticeably cool housing.',
     forPeople: (people: string) => `for ${people}`,
+    onMap: (count: number) => (count > 1 ? `Numbers 1–${count} on the map mark these places.` : 'Number 1 on the map marks this place.'),
     caveat:
-      'Planting on each cell: +20 pp tree crowns (in place of bare ground, then built-up) and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
+      'Planting on each cell: +20 points of tree crowns (in place of bare ground, then built-up) and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
       'From the model: surface, not air.',
     title: 'Where to plant first',
     compute: 'whole city, by the model',
@@ -321,8 +332,9 @@ export const PLAN_TEXTS = texts(
     computing: 'Считаю по всем участкам города…',
     none: 'В городе нет участков, где деревья заметно охладили бы жильё.',
     forPeople: (people) => `для ${people}`,
+    onMap: (count) => (count > 1 ? `Цифры 1–${count} на карте отмечают эти места.` : 'Цифра 1 на карте отмечает это место.'),
     caveat:
-      'Посадка на каждом участке: +20 п.п. крон (на месте голого грунта, потом застройки) и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
+      'Посадка на каждом участке: +20 пунктов крон (на месте голого грунта, потом застройки) и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
       'По модели: поверхность, не воздух.',
     title: 'Где сажать первым',
     compute: 'весь город, по модели',

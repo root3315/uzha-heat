@@ -17,12 +17,10 @@ export const ENERGY_TEXTS = texts(
       `The air here is heated ${ratio} times more than over the city's greenest cells: ${here} against ${green}.`,
     asGreen: (green: string) => `About the same as the city's greenest cells: there ${green} goes into heating the air.`,
     storage: {
-      built: (asphalt: string, concrete: string, dry: string) =>
-        `Asphalt and concrete take heat in deep and give it back in the evening: thermal admittance ${asphalt} and ${concrete} against ${dry} for dry soil.`,
-      bare: (dry: string, asphalt: string) =>
-        `Dry soil lets almost no heat in deep, thermal admittance ${dry} against ${asphalt} for asphalt: by day it is hot on top, but it cools faster in the evening.`,
-      green: (wet: string) =>
-        `Moist soil stores the most heat, thermal admittance ${wet}, but by day the sunlight goes into evaporation, and by evening there is little to store.`,
+      built: (times: string) => `Asphalt and concrete soak up ${times} times more heat than dry soil and give it back in the evening.`,
+      bare: (times: string) => `Dry soil soaks up about ${times} times less heat than asphalt: by day it is hot on top, but it cools faster in the evening.`,
+      green: (times: string) =>
+        `Moist soil soaks up the most heat, about ${times} times more than dry soil, but by day the sunlight goes into evaporation, and by evening there is little to store.`,
     },
     caveat: (hour: number, solar: string) =>
       `An estimate from one model for a clear day around ${hour}:00. Sunlight, ${solar}, and air from ERA5 are the same for the whole city; ` +
@@ -44,12 +42,10 @@ export const ENERGY_TEXTS = texts(
       `Воздух здесь греется в${NBSP}${ratio} раза сильнее, чем на самых зелёных участках города: ` + `${here} против ${green}.`,
     asGreen: (green) => `Почти как на самых зелёных участках города: там на нагрев воздуха уходит ${green}.`,
     storage: {
-      built: (asphalt, concrete, dry) =>
-        `Асфальт и бетон набирают тепло вглубь и отдают его вечером: тепловая активность ${asphalt} и ${concrete} против ${dry} у сухого грунта.`,
-      bare: (dry, asphalt) =>
-        `Сухой грунт тепло вглубь почти не пускает, тепловая активность ${dry} против ${asphalt} у асфальта: днём он горячий сверху, но вечером остывает быстрее.`,
-      green: (wet) =>
-        `Влажная почва запасает тепла больше всех, тепловая активность ${wet}, но днём солнце уходит на испарение, и к вечеру запасать почти нечего.`,
+      built: (times) => `Асфальт и бетон набирают в ${times} раза больше тепла, чем сухой грунт, и отдают его вечером.`,
+      bare: (times) => `Сухой грунт набирает примерно в ${times} раза меньше тепла, чем асфальт: днём он горячий сверху, но вечером остывает быстрее.`,
+      green: (times) =>
+        `Влажная почва набирает больше всех тепла, примерно в ${times} раза больше сухого грунта, но днём солнце уходит на испарение, и к вечеру запасать почти нечего.`,
     },
     caveat: (hour, solar) =>
       `Оценка по одной модели для ясного дня около ${hour}:00. Солнце, ${solar}, и воздух по ERA5 одни на весь город; ` +

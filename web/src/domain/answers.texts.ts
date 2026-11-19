@@ -31,7 +31,7 @@ export const ANSWER_TEXTS = texts(
         ` There, dense building is mixed with bare ground: ${built} built up (${builtGap}), ${bare} bare ground (${bareGap}).`,
       dense: (built: string, gap: string) => ` This is dense building: ${built} built up, ${gap} above the average.`,
       bare: (bare: string, gap: string) => ` There is a lot of bare ground: ${bare}, ${gap} above the average.`,
-      gap: (points: string) => `${points} pp`,
+      gap: (points: string) => `${points} ${points === '1' ? 'point' : 'points'}`,
     },
     hotTenth: {
       head: (threshold: Span): Phrase => ['One in ten 200 m cells is hotter than ', threshold, '.'],
@@ -58,8 +58,9 @@ export const ANSWER_TEXTS = texts(
       hotCause: ({ words, value }: Cause) => ` Most of the heat there comes from ${causeSubject(words, value)}.`,
     },
     rest: (count: number, sum: string) => `${count} more ${pluralEn(count, ['cause', 'causes'])} · ${sum}`,
+    unexplained: 'Not explained by the model',
     advice: {
-      whereHotspot: 'In the hottest tenth',
+      whereHotspot: 'In the hottest 10% of the city',
       whereHere: 'Here',
       reason: (where: string, measure: string, deg: Span): Phrase => [`${where}: ${measure}; in the model this adds `, deg, '.'],
       nothingHotspot: 'Nothing to change.',
@@ -73,8 +74,8 @@ export const ANSWER_TEXTS = texts(
       ],
       noClear: (heats: string) => `No clear measure: ${heats} here is no worse than the city average.`,
     },
-    sources: (sources: string, period: string, r2: string, error: string) =>
-      `${sources}, ${period}. R² ${r2} on spatial cross-validation, error ~${error}. ` +
+    sources: (sources: string, period: string, explained: string, error: string) =>
+      `${sources}, ${period}. On parts of the city it has not seen, the model explains ${explained} of the differences, typical error ±${error}. ` +
       'Factor contributions show association, not cause and effect.',
   },
   {
@@ -97,7 +98,7 @@ export const ANSWER_TEXTS = texts(
         ` Там плотная застройка вперемешку с голой землёй: застроено ${built} (${builtGap}), голой земли ${bare} (${bareGap}).`,
       dense: (built, gap) => ` Это плотная застройка: застроено ${built}, на ${gap} больше среднего.`,
       bare: (bare, gap) => ` Там много голой земли: ${bare}, на ${gap} больше среднего.`,
-      gap: (points) => `${points} п.п.`,
+      gap: (points) => `${points} ${pluralRu(Number(points), ['пункт', 'пункта', 'пунктов'])}`,
     },
     hotTenth: {
       head: (threshold) => ['Каждый десятый участок 200 м горячее ', threshold, '.'],
@@ -124,8 +125,9 @@ export const ANSWER_TEXTS = texts(
       hotCause: ({ words, value }) => ` Там больше всего ${causeClause(words, value, { one: 'греет', many: 'греют' })}.`,
     },
     rest: (count, sum) => `ещё ${count} ${pluralRu(count, ['причина', 'причины', 'причин'])} · ${sum}`,
+    unexplained: 'Модель не объясняет',
     advice: {
-      whereHotspot: 'В горячей десятой части',
+      whereHotspot: 'В самых горячих 10 % города',
       whereHere: 'Здесь',
       reason: (where, measure, deg) => [`${where} ${measure}, по модели это даёт `, deg, '.'],
       nothingHotspot: 'Менять нечего.',
@@ -139,7 +141,8 @@ export const ANSWER_TEXTS = texts(
       ],
       noClear: (heats) => `Явной меры нет: ${heats} здесь не хуже, чем в среднем по городу.`,
     },
-    sources: (sources, period, r2, error) =>
-      `${sources}, ${period}. R² ${r2} на пространственной проверке, ошибка ~${error}. ` + 'Вклад факторов показывает связь, а не эксперимент.',
+    sources: (sources, period, explained, error) =>
+      `${sources}, ${period}. На кусках города, которых модель не видела, она объясняет ${explained} различий, типичная ошибка ±${error}. ` +
+      'Вклад факторов показывает связь, а не эксперимент.',
   },
 );

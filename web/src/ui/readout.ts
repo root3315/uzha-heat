@@ -23,12 +23,12 @@ export function useReadout(model: CityModel, layer: MapLayer = 'lst', night: Nig
 
   const describe = useCallback(
     (point: LonLat) => {
-      const { formatDeg } = formats(locale);
+      const { formatTemp } = formats(locale);
       const said = LAYER_TEXTS[locale].readout;
       // The night is read anywhere MODIS has a pixel: the countryside around is half of what it shows.
       if (layer === 'night') {
         const t = night ? nightAt(night, point[0], point[1]) : Number.NaN;
-        return Number.isNaN(t) ? null : `${formatDeg(t)} ${said.night}`;
+        return Number.isNaN(t) ? null : `${formatTemp(t)} ${said.night}`;
       }
       const cell = cellUnder(point);
       if (cell < 0) return null;
@@ -38,7 +38,7 @@ export function useReadout(model: CityModel, layer: MapLayer = 'lst', night: Nig
       }
       const readout = cellReadout(model.detail, cell, locale);
       if (!readout) return null;
-      return readout.cause ? `${formatDeg(readout.t)} · ${readout.cause}` : formatDeg(readout.t);
+      return readout.cause ? `${formatTemp(readout.t)} · ${readout.cause}` : formatTemp(readout.t);
     },
     [cellUnder, model, locale, layer, night],
   );

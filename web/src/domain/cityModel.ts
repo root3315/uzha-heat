@@ -71,20 +71,32 @@ export interface CitySurface {
   causeAreas: FeatureCollection<MultiPolygon, CauseAreaProperties>;
   inside: boolean[];
   island: HeatIsland | null;
-  /** Centre of the hottest neighbourhood inside the city, where the opening section is laid. */
+  /** Centre of the hottest lived-in neighbourhood inside the city, where the opening section is laid. */
   hotCenter: LonLat;
 }
 
-function hotCenter(field: Field, outline: Outline | null): LonLat {
+/**
+ * Cells where people live: at least as crowded as the median cell inside the city (WorldPop).
+ * Runways, aprons and rail yards come out nearly empty, so the opening section goes through a neighbourhood, not an airfield.
+ * Every cell counts when population is unknown.
+ */
+function livedIn(detail: CityDetail, inside: readonly boolean[]): (cell: number) => boolean {
+  const pop = detail.cells.pop;
+  if (!pop) return () => true;
+  const median = quantile(pop.filter((_, i) => inside[i]), 0.5);
+  return (cell) => cell >= 0 && (pop[cell] ?? 0) >= median;
+}
+
+function hotCenter(field: Field, outline: Outline | null, grid: CellGrid, lived: (cell: number) => boolean): LonLat {
   const toLonLat = (u: number, v: number): LonLat => slotToLonLat(field.grid, fineToSlot(field.factor, u), fineToSlot(field.factor, v));
   const radius = Math.round((HOT_PATCH_RADIUS_M / field.grid.cellSizeM) * field.factor);
-  const hottest = hottestPatch(
-    field.values,
-    field.fx,
-    field.fy,
-    (u, v) => (field.coverage[v * field.fx + u] ?? 0) >= COVERED && (!outline || pointInGeometry(toLonLat(u, v), outline)),
-    radius,
-  );
+  const livedAt = (u: number, v: number): boolean => {
+    const [lon, lat] = toLonLat(u, v);
+    return lived(cellAt(grid, lon, lat));
+  };
+  const allowed = (u: number, v: number): boolean =>
+    (field.coverage[v * field.fx + u] ?? 0) >= COVERED && (!outline || pointInGeometry(toLonLat(u, v), outline)) && livedAt(u, v);
+  const hottest = hottestPatch(field.values, field.fx, field.fy, allowed, radius, { counted: livedAt, minShare: 0.5 });
   return hottest ? toLonLat(hottest[0], hottest[1]) : toLonLat(field.fx / 2, field.fy / 2);
 }
 
@@ -105,7 +117,7 @@ export function citySurface(detail: CityDetail, outline: Outline | null): CitySu
     causeAreas: causeAreas(grid, dominant, strength),
     inside,
     island: outline ? heatIslandIntensity(cells.lst, inside) : null,
-    hotCenter: hotCenter(field, outline),
+    hotCenter: hotCenter(field, outline, grid, livedIn(detail, inside)),
   };
 }
 

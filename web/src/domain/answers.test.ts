@@ -101,7 +101,7 @@ describe('cityAnswer', () => {
     const detail = city();
     const island = { inside: 45, outside: 43.6, intensity: 1.4, insideCount: 5, outsideCount: 5 };
     expect(say(cityAnswer(detail, cityFacts(detail, inside, island), 'ru'))).toBe(
-      'В черте Ташкента поверхность на 1,4° горячее, чем вокруг. Каждый десятый участок 200 м горячее 50,2°. Сильнее всего с жарой там по модели связано: мало зелени, так в 100 % из них.',
+      'В черте Ташкента поверхность на 1,4° горячее, чем вокруг. Каждый десятый участок 200 м горячее 50,2 °C. Сильнее всего с жарой там по модели связано: мало зелени, так в 100 % из них.',
     );
   });
 
@@ -110,7 +110,7 @@ describe('cityAnswer', () => {
     // The hottest cells are barely built and lie outside the city line.
     detail.cells.values.built = [80, 80, 80, 80, 80, 60, 60, 60, 5, 5];
     const text = say(cityAnswer(detail, cityFacts(detail, inside, null), 'ru'));
-    expect(text).toContain('Это в основном открытые, мало застроенные места: застроено 5 % (−54 п.п.). 100 % из них за городской чертой.');
+    expect(text).toContain('Это в основном открытые, мало застроенные места: застроено 5 % (−54 пункта). 100 % из них за городской чертой.');
   });
 
   it('calls dense building dense, with the gap in points', () => {
@@ -118,21 +118,21 @@ describe('cityAnswer', () => {
     detail.cells.values.built = [40, 40, 40, 40, 40, 40, 40, 40, 90, 90];
     const facts = cityFacts(detail, inside.map(() => true), null);
     expect(facts.pattern.kind).toBe('dense');
-    expect(say(cityAnswer(detail, facts, 'ru'))).toContain('Это плотная застройка: застроено 90 %, на 40 п.п. больше среднего.');
+    expect(say(cityAnswer(detail, facts, 'ru'))).toContain('Это плотная застройка: застроено 90 %, на 40 пунктов больше среднего.');
   });
 
   it('opens in English with the English city name and the same numbers', () => {
     const detail = city();
     const island = { inside: 45, outside: 43.6, intensity: 1.4, insideCount: 5, outsideCount: 5 };
     expect(say(cityAnswer(detail, cityFacts(detail, inside, island), 'en'))).toBe(
-      'Within Tashkent, the surface is 1.4° hotter than around the city. One in ten 200 m cells is hotter than 50.2°. What the model ties to the heat there most often: little greenery, in 100% of them.',
+      'Within Tashkent, the surface is 1.4° hotter than around the city. One in ten 200 m cells is hotter than 50.2 °C. What the model ties to the heat there most often: little greenery, in 100% of them.',
     );
   });
 
   it('stops after the threshold when nothing heats the hottest tenth', () => {
     const detail = city();
     const facts = { ...cityFacts(detail, inside, null), top: null, second: null };
-    expect(say(cityAnswer(detail, facts, 'ru'))).toMatch(/^Каждый десятый участок 200 м горячее 50,2°\./);
+    expect(say(cityAnswer(detail, facts, 'ru'))).toMatch(/^Каждый десятый участок 200 м горячее 50,2 °C\./);
   });
 
   it('never uses an em-dash or the word "квартал"', () => {
@@ -293,10 +293,10 @@ describe('sectionAnswer', () => {
 describe('sourcesLine', () => {
   it('lists only the sources behind the factors present, and the model quality from the data', () => {
     expect(plain(sourcesLine(city(), 'ru'))).toBe(
-      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, июнь–август 2023–2025. R² 0,74 на пространственной проверке, ошибка ~1,3°. Вклад факторов показывает связь, а не эксперимент.',
+      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, июнь–август 2023–2025. На кусках города, которых модель не видела, она объясняет 74 % различий, типичная ошибка ±1,3 °C. Вклад факторов показывает связь, а не эксперимент.',
     );
     expect(plain(sourcesLine(city(), 'en'))).toBe(
-      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, June–August 2023–2025. R² 0.74 on spatial cross-validation, error ~1.3°. Factor contributions show association, not cause and effect.',
+      'NASA/USGS Landsat 8/9, Sentinel-2, ESA WorldCover, Copernicus DEM, June–August 2023–2025. On parts of the city it has not seen, the model explains 74% of the differences, typical error ±1.3 °C. Factor contributions show association, not cause and effect.',
     );
   });
 });

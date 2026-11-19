@@ -70,7 +70,7 @@ const islandFigure = (island: HeatIsland | null, { formatDegSigned }: Formats) =
 function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt(found: ReadonlySet<number>): void }) {
   const { detail } = model;
   const locale = useLocale();
-  const { formatDeg, formatNumber } = useFormats();
+  const { formatTemp, formatNumber } = useFormats();
   const t = useTexts(LANDING_TEXTS).map;
   const { cellUnder, describe } = useReadout(model);
   const [said, setSaid] = useState<string | null>(null);
@@ -119,7 +119,7 @@ function HeroMap({ model, hunt, onHunt }: { model: CityModel; hunt: Hunt; onHunt
                 {t.foundOf(formatNumber(hunt.target.total, 0))}
               </p>
             )}
-            <p className="hunt-chip__log">{said ?? t.prompt(formatDeg(hunt.target.threshold))}</p>
+            <p className="hunt-chip__log">{said ?? t.prompt(formatTemp(hunt.target.threshold))}</p>
           </div>
         </CityMap>
       </div>
@@ -228,7 +228,7 @@ function Why({ model }: { model: CityModel }) {
 function CityCard({ city }: { city: CitySummary }) {
   const locale = useLocale();
   const f = useFormats();
-  const { formatDeg, formatNumber } = f;
+  const { formatTemp, formatPercent } = f;
   const t = useTexts(LANDING_TEXTS).town;
   const name = cityName(city, locale);
   const [ref, near] = useNear<HTMLElement>();
@@ -256,11 +256,11 @@ function CityCard({ city }: { city: CitySummary }) {
       <dl className="nums">
         <div>
           <dt>{t.meanSurface}</dt>
-          <dd>{formatDeg(detail?.stats.lstMean ?? city.lstMean)}</dd>
+          <dd>{formatTemp(detail?.stats.lstMean ?? city.lstMean)}</dd>
         </div>
         <div>
           <dt>{t.hotTenth}</dt>
-          <dd>{detail ? t.from(formatDeg(detail.stats.lstP90)) : '…'}</dd>
+          <dd>{detail ? t.from(formatTemp(detail.stats.lstP90)) : '…'}</dd>
         </div>
         {inHeat && (
           <div>
@@ -272,8 +272,8 @@ function CityCard({ city }: { city: CitySummary }) {
       {sparse && <p className="town__note">{sparse}</p>}
       <p className="tag town__meta">
         {detail
-          ? t.scenes(detail.period.lstScenes, formatNumber(detail.model.r2Cv, 2))
-          : `R² ${formatNumber(city.r2, 2)}`}
+          ? t.scenes(detail.period.lstScenes, formatPercent(detail.model.r2Cv))
+          : t.explains(formatPercent(city.r2))}
       </p>
       <Link className="pill town__open" href={toolHref(city.id)}>
         {t.cityMap(name)}
@@ -335,7 +335,7 @@ function Closing({ model }: { model: CityModel }) {
   const { detail } = model;
   const { period, grid, model: fit } = detail;
   const locale = useLocale();
-  const { formatDeg, formatNumber } = useFormats();
+  const { formatTemp, formatNumber, formatPercent } = useFormats();
   const t = useTexts(LANDING_TEXTS).closing;
   return (
     <footer className="close" id="method" aria-labelledby="how-title">
@@ -345,7 +345,7 @@ function Closing({ model }: { model: CityModel }) {
         <p>{t.model(fit.type)}</p>
         {detail.population && <p>{t.people(detail.population.year)}</p>}
         <p className="close__data">
-          [{detail.city.nameEn.toLowerCase()}] {t.figures(period.lstScenes, period.s2Scenes, formatNumber(grid.count, 0), formatNumber(fit.r2Cv, 2), formatDeg(fit.maeCv))}
+          [{detail.city.nameEn.toLowerCase()}] {t.figures(period.lstScenes, period.s2Scenes, formatNumber(grid.count, 0), formatPercent(fit.r2Cv), formatTemp(fit.maeCv))}
         </p>
         <Link className="pill" href={methodHref(detail.city.id)}>
           {t.method}
@@ -399,7 +399,7 @@ export function Landing({ cities, model, hunt, onHunt }: LandingProps) {
           {inHeat && (
             <p className="hero__people">
               <b>{formatPeople(inHeat.people, locale)}</b>
-              {t.hero.peopleRest(name, f.formatDeg(detail.stats.lstP90))}{' '}
+              {t.hero.peopleRest(name, f.formatTemp(detail.stats.lstP90))}{' '}
               <span className="hero__note">{t.hero.peopleNote(detail.population?.year)}</span>
             </p>
           )}

@@ -130,7 +130,7 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
         ))}
       </ol>
       <p className="whatif__caveat">
-        {t.caveat}
+        {t.onMap(plan.length)} {t.caveat}
         {replicates ? ` ${t.rangeNote(replicates)}` : ''}
       </p>
     </>

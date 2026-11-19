@@ -1,4 +1,5 @@
-import { advise, cityAnswer, dominantFor, isNegligible, placeAnswer, restOfCauses, type Advice } from '../domain/answers';
+import { advise, cityAnswer, dominantFor, isNegligible, placeAnswer, restOfCauses, unexplainedPart, type Advice } from '../domain/answers';
+import { ANSWER_TEXTS } from '../domain/answers.texts';
 import { causeLabel, causeWords } from '../domain/causes';
 import type { CityModel } from '../domain/cityModel';
 import { cityName } from '../domain/dataTexts';
@@ -27,6 +28,8 @@ export interface PanelContent {
   meanMark: number | null;
   cause: (CauseRow & { note: string }) | null;
   rest: { summary: string; rows: CauseRow[] } | null;
+  /** What the causes leave of the difference from the city mean, so the numbers add up; null when it rounds to nothing. */
+  unexplained: { label: string; value: number } | null;
   advice: Advice;
   /** Where the sunlight goes: the picked cell, or the hottest tenth for the city. Null without energy data. */
   energy: { title: string; view: EnergyView } | null;
@@ -40,7 +43,7 @@ export interface PanelContent {
  */
 export function panelContent(model: CityModel, place: PlaceProfile | null, placeTitle: string, site: Site | null, locale: Locale): PanelContent {
   const t = PANEL_TEXTS[locale];
-  const { formatDeg, formatFactorValue } = formats(locale);
+  const { formatTemp, formatFactorValue } = formats(locale);
   const { detail } = model;
   const { stats, features } = detail;
   const subject = place ?? model.hotspot;
@@ -65,6 +68,9 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     if (others.length) rest = { summary: restOfCauses(subject.contributions, key, locale).summary, rows: others };
   }
 
+  const remainder = unexplainedPart(subject, stats.lstMean);
+  const unexplained = cause && !isNegligible(remainder) ? { label: ANSWER_TEXTS[locale].unexplained, value: remainder } : null;
+
   const fluxes = place?.cell !== undefined ? cellFluxes(detail, place.cell) : meanFluxes(detail, hottestTenth(detail));
   const energy = energyView(detail, fluxes, subject.values, locale);
 
@@ -73,10 +79,11 @@ export function panelContent(model: CityModel, place: PlaceProfile | null, place
     isCity: place === null,
     answer: place ? placeAnswer(place, stats.lstMean, features, locale) : cityAnswer(detail, model.facts, locale),
     figure: place ? place.lst : stats.lstMean,
-    figureCaption: place ? t.figureHere(formatDeg(stats.lstMean)) : t.figureCity(formatDeg(stats.lstMin, 0), formatDeg(stats.lstMax, 0)),
+    figureCaption: place ? t.figureHere(formatTemp(stats.lstMean)) : t.figureCity(formatTemp(stats.lstMin, 0), formatTemp(stats.lstMax, 0)),
     meanMark: place ? stats.lstMean : null,
     cause,
     rest,
+    unexplained,
     advice: place && site ? { kind: 'none', text: [siteNote(site, locale)] } : advise(detail, subject, model.cityMeans, locale),
     energy: energy && { title: place ? t.energyPlace : t.energyHot, view: energy },
     whatIfCell: place?.cell !== undefined && !site ? place.cell : null,

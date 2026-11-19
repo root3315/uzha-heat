@@ -102,8 +102,18 @@ describe('hottestPatch', () => {
   it('finds the centre of the hottest neighbourhood among allowed pixels', () => {
     const w = 20;
     const values = Array.from({ length: w * w }, (_, i) => (Math.abs((i % w) - 14) < 3 && Math.abs(Math.floor(i / w) - 6) < 3 ? 50 : 40));
-    expect(hottestPatch(values, w, w, () => true, 2, 1)).toEqual([14, 6]);
-    expect(hottestPatch(values, w, w, () => false, 2, 1)).toBeNull();
+    expect(hottestPatch(values, w, w, () => true, 2, { step: 1 })).toEqual([14, 6]);
+    expect(hottestPatch(values, w, w, () => false, 2, { step: 1 })).toBeNull();
+  });
+
+  it('passes over a neighbourhood where too few pixels are counted', () => {
+    const w = 20;
+    // One very hot counted pixel in a corner, a warm block everywhere counted around the middle.
+    const values = Array.from({ length: w * w }, (_, i) => (i === 0 ? 90 : 45));
+    const counted = (u: number, v: number) => (u === 0 && v === 0) || (u >= 5 && u < 15 && v >= 5 && v < 15);
+    expect(hottestPatch(values, w, w, () => true, 2, { step: 1, counted })).toEqual([0, 0]);
+    const [u, v] = hottestPatch(values, w, w, () => true, 2, { step: 1, counted, minShare: 0.5 }) ?? [-1, -1];
+    expect(u >= 5 && u < 15 && v >= 5 && v < 15).toBe(true);
   });
 });
 

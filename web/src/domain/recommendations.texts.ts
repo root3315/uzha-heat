@@ -21,13 +21,13 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
         'plant large-canopy trees along sidewalks and in courtyards: plane, elm, mulberry',
         'canopies and pergolas over bus stops, markets and playgrounds',
       ],
-      finding: 'a review of 308 studies: air under trees is 0.8° cooler on average',
+      finding: 'Air, not surface: in a review of 308 studies, air under trees is 0.8 °C cooler on average',
       cite: 'Knight et al., 2021, Environmental Evidence',
     },
     'cool-roofs': {
       title: 'Cool and green roofs',
       actions: ['light reflective roof coatings at scheduled repairs', 'green roofs on public and commercial buildings with flat roofs'],
-      finding: 'a review of city models: green roofs lower air temperature by 0.3–3°',
+      finding: 'Air, not surface: in a review of city models, green roofs lower air temperature by 0.3–3 °C',
       cite: 'Santamouris, 2014, Solar Energy',
     },
     'shade-dense-blocks': {
@@ -49,13 +49,13 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
     'cover-bare-soil': {
       title: 'Cover bare ground',
       actions: ['trees, shrubs and drought-tolerant ground cover on vacant lots', 'dust control and planting in industrial zones and along roadsides'],
-      finding: 'a review of 308 studies: air over grass is 0.6° cooler on average than over unvegetated ground, under trees 0.8°',
+      finding: 'Air, not surface: in a review of 308 studies, air over grass is 0.6 °C cooler on average than over unvegetated ground, under trees 0.8 °C',
       cite: 'Knight et al., 2021, Environmental Evidence',
     },
     water: {
       title: 'Water nearby: aryks, fountains, irrigation',
       actions: ['restore the aryk irrigation channels and drip-water the public gardens', 'fountains and open water in public spaces'],
-      finding: 'a review: air is cooler near water, but by how much depends strongly on wind and the buildings around',
+      finding: 'Air, not surface: in a review, air is cooler near water, but by how much depends strongly on wind and the buildings around',
       cite: 'Völker et al., 2013, Erdkunde',
     },
   },
@@ -66,13 +66,13 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
         'высадить крупномерные деревья вдоль тротуаров и во дворах: чинара, карагач, тут',
         'навесы и перголы над остановками, рынками и детскими площадками',
       ],
-      finding: 'по обзору 308 исследований, под деревьями воздух в среднем на 0,8° прохладнее',
+      finding: 'Это воздух, не поверхность: по обзору 308 исследований, под деревьями воздух в среднем на 0,8 °C прохладнее',
       cite: 'Knight и др., 2021, Environmental Evidence',
     },
     'cool-roofs': {
       title: 'Холодные и зелёные крыши',
       actions: ['светлые отражающие покрытия кровли при плановом ремонте', 'зелёные крыши на общественных и торговых зданиях с плоской кровлей'],
-      finding: 'по обзору моделей городов, зелёные крыши снижают температуру воздуха на 0,3–3°',
+      finding: 'Это воздух, не поверхность: по обзору моделей городов, зелёные крыши снижают температуру воздуха на 0,3–3 °C',
       cite: 'Santamouris, 2014, Solar Energy',
     },
     'shade-dense-blocks': {
@@ -94,13 +94,13 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
     'cover-bare-soil': {
       title: 'Закрыть открытый грунт',
       actions: ['деревья, кустарник и засухоустойчивые почвопокровные растения на пустырях', 'пылеподавление и озеленение промзон и обочин'],
-      finding: 'по обзору 308 исследований, воздух над травой в среднем на 0,6° прохладнее, чем над незелёными участками, под деревьями на 0,8°',
+      finding: 'Это воздух, не поверхность: по обзору 308 исследований, воздух над травой в среднем на 0,6 °C прохладнее, чем над незелёными участками, под деревьями на 0,8 °C',
       cite: 'Knight и др., 2021, Environmental Evidence',
     },
     water: {
       title: 'Вода рядом: арыки, фонтаны, полив',
       actions: ['восстановить арычную сеть и капельный полив скверов', 'фонтаны и открытые водоёмы в общественных пространствах'],
-      finding: 'по обзору, у воды воздух прохладнее, но насколько, сильно зависит от ветра и застройки вокруг',
+      finding: 'Это воздух, не поверхность: по обзору, у воды воздух прохладнее, но насколько, сильно зависит от ветра и застройки вокруг',
       cite: 'Völker и др., 2013, Erdkunde',
     },
   },

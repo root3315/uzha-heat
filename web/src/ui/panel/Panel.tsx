@@ -118,17 +118,22 @@ function AdviceBlock({ advice, expanded }: { advice: Advice; expanded: boolean }
 
 export function Panel({ model, content, header, footer, expanded = false, onPick, onPlan, planOpen = false }: PanelProps) {
   const { stats } = model.detail;
-  const { formatDeg } = useFormats();
+  const { formatNumber, formatDegSigned } = useFormats();
   const scale = Math.max(BAR_SCALE_MIN, Math.abs(content.cause?.value ?? 0) * 1.15);
   return (
     <div className="panel">
       <div className="panel__header">{header}</div>
-      <h1 className={content.isCity ? 'visually-hidden' : 'panel__title'}>{content.title}</h1>
+      <h1 className={content.isCity ? 'visually-hidden' : 'panel__title'} tabIndex={-1}>
+        {content.title}
+      </h1>
 
       {/* The number first: the eye lands on the temperature, the sentence explains it. */}
       <div className="figure">
         <p className="figure__row">
-          <span className="figure__value">{formatDeg(content.figure)}</span>
+          <span className="figure__value">
+            {formatNumber(content.figure)}
+            <span className="figure__unit">°C</span>
+          </span>
           <span className="figure__caption">{content.figureCaption}</span>
         </p>
         <Ramp levels={model.levels} shares={model.shares} min={stats.lstMin} max={stats.lstMax} value={content.figure} meanMark={content.meanMark} />
@@ -142,6 +147,8 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
       )}
 
       {content.cause && <CauseBar row={content.cause} scale={scale} />}
+      {/* What if right under the main cause: the lever sits next to the reason it moves. */}
+      {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
       {content.rest &&
         (expanded ? (
           <div className="rest">
@@ -154,7 +161,11 @@ export function Panel({ model, content, header, footer, expanded = false, onPick
             <RestRows rows={content.rest.rows} />
           </details>
         ))}
-      {content.whatIfCell !== null && !expanded && <WhatIfBlock detail={model.detail} cell={content.whatIfCell} />}
+      {content.unexplained && (
+        <p className="rest__summary rest__unexplained">
+          {content.unexplained.label} · {formatDegSigned(content.unexplained.value)}
+        </p>
+      )}
       {content.whatIfCell !== null && !expanded && <SurfacesBlock detail={model.detail} cell={content.whatIfCell} />}
 
       {content.energy && <EnergyBlock view={content.energy.view} title={content.energy.title} />}

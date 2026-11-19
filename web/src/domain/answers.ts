@@ -77,8 +77,8 @@ function patternSentence({ kind, outsideShare, built, bare }: HotTenthPattern, l
 /** The hottest tenth: its threshold, what it is made of and what the model says heats it most often. */
 export function hotTenthAnswer(detail: CityDetail, facts: CityFacts, locale: Locale): Phrase {
   const t = ANSWER_TEXTS[locale].hotTenth;
-  const { formatDeg, formatPercent } = formats(locale);
-  const phrase: Phrase = t.head(hot(formatDeg(detail.stats.lstP90)));
+  const { formatTemp, formatPercent } = formats(locale);
+  const phrase: Phrase = t.head(hot(formatTemp(detail.stats.lstP90)));
   const pattern = patternSentence(facts.pattern, locale);
   if (pattern) phrase.push(pattern);
   if (!facts.top) return phrase;
@@ -163,6 +163,15 @@ export const NEGLIGIBLE_DEG = 0.05;
 
 export const isNegligible = (value: number): boolean => Math.abs(value) < NEGLIGIBLE_DEG;
 
+/**
+ * What the contributions leave of a place's difference from the city mean: the model's own error there plus the gap
+ * between its base value and the city mean. Shown so the causes add up to the headline difference.
+ */
+export function unexplainedPart(place: PlaceProfile, cityMean: number): number {
+  const explained = Object.values(place.contributions).reduce((total, value) => total + value, 0);
+  return place.lst - cityMean - explained;
+}
+
 /** "7 more causes · +4.3°": everything except the dominant cause, folded into one line; causes that round to 0.0° are not counted. */
 export function restOfCauses(contributions: Record<string, number>, dominantKey: string, locale: Locale): RestOfCauses {
   const others = Object.entries(contributions).filter(([key]) => key !== dominantKey);
@@ -235,7 +244,7 @@ export function sourcesLine(detail: CityDetail, locale: Locale): string {
   const sources = ['NASA/USGS Landsat 8/9', ...new Set(detail.features.map((f) => SOURCE_BY_KEY[f.key]).filter((s): s is string => Boolean(s)))];
   if (detail.features.some((f) => f.key === 'water_dist') && !sources.includes('OpenStreetMap')) sources.push('OpenStreetMap');
   if (detail.population) sources.push(`WorldPop ${detail.population.year}`);
-  const { formatDeg, formatNumber } = formats(locale);
+  const { formatPercent, formatTemp } = formats(locale);
   const { model } = detail;
-  return ANSWER_TEXTS[locale].sources(sources.join(', '), periodText(detail.period.label, locale), formatNumber(model.r2Cv, 2), formatDeg(model.maeCv));
+  return ANSWER_TEXTS[locale].sources(sources.join(', '), periodText(detail.period.label, locale), formatPercent(model.r2Cv), formatTemp(model.maeCv));
 }

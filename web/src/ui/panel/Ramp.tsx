@@ -20,7 +20,7 @@ const LABEL_GAP = 28;
 /** The city as a strip of its own temperature classes, with the shown place marked on it. */
 export function Ramp({ levels, shares, min, max, value, meanMark }: RampProps) {
   const [ref, width] = useWidth<HTMLDivElement>(340);
-  const { formatDeg } = useFormats();
+  const { formatDeg, formatTemp } = useFormats();
   const t = useTexts(PANEL_TEXTS);
   const edges = shares.reduce<number[]>((acc, share) => [...acc, (acc[acc.length - 1] ?? 0) + share * width], [0]);
   const floor = (k: number) => (k === 0 ? min : (levels.thresholds[k - 1] ?? min));
@@ -44,7 +44,7 @@ export function Ramp({ levels, shares, min, max, value, meanMark }: RampProps) {
 
   return (
     <div ref={ref} className="ramp">
-      <svg width={width} height={BAR_Y + BAR_H + 20} role="img" aria-label={t.ramp(formatDeg(value))}>
+      <svg width={width} height={BAR_Y + BAR_H + 20} role="img" aria-label={t.ramp(formatTemp(value))}>
         {shares.map((_, k) => {
           const x0 = edges[k] ?? 0;
           const w = Math.max(0, (edges[k + 1] ?? x0) - x0 - 1);

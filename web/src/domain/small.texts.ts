@@ -1,15 +1,16 @@
 import { texts } from '../i18n/locale';
+import { pluralRu } from '../i18n/plural';
 
 /** The hunt on the landing: the line under the counter after a click. */
 export const HUNT_TEXTS = texts(
   {
-    counted: (t: string) => `Counted: ${t}, in the city's hottest tenth.`,
+    counted: (t: string) => `Counted: ${t}, in the hottest 10% of the city.`,
     repeat: 'This cell is already counted.',
     warm: (t: string, threshold: string) => `${t}: warmer than average, but hot starts at ${threshold}.`,
     cool: (t: string, mean: string) => `${t}: cooler than the city average, ${mean}.`,
   },
   {
-    counted: (t) => `Засчитано: ${t}, горячая десятая часть города.`,
+    counted: (t) => `Засчитано: ${t}, это самые горячие 10 % города.`,
     repeat: 'Этот участок уже засчитан.',
     warm: (t, threshold) => `${t}: теплее среднего, но горячими считаются от ${threshold}.`,
     cool: (t, mean) => `${t}: прохладнее среднего по городу, ${mean}.`,
@@ -59,13 +60,13 @@ export const GROUP_TEXTS = texts(
 /** How far a reduction lever may go. */
 export const CUT_TEXTS = texts(
   {
-    points: (points: number) => `${points} pp`,
+    points: (points: number) => `${points} ${points === 1 ? 'point' : 'points'}`,
     quarter: 'a quarter',
     percent: (percent: number) => `${percent}%`,
     minus: (amount: string) => `minus ${amount}`,
   },
   {
-    points: (points) => `${points} п.п.`,
+    points: (points) => `${points} ${pluralRu(points, ['пункт', 'пункта', 'пунктов'])}`,
     quarter: 'четверть',
     percent: (percent) => `${percent} %`,
     minus: (amount) => `минус ${amount}`,
