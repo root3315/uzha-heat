@@ -623,11 +623,14 @@ select {
 /* ---------- Section ---------- */
 .section__head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 20px;
+  gap: 12px 20px;
 }
+/* The sentence keeps a readable column; when the buttons do not fit beside it they move under it. */
 .section__answer {
+  flex: 1 1 26ch;
   max-width: 62ch;
   font-size: 1rem;
   line-height: 1.45;
@@ -638,7 +641,7 @@ select {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-  flex-shrink: 0;
+  margin-left: auto;
 }
 .section__tools[hidden] {
   display: none;
@@ -1500,6 +1503,7 @@ summary.rest__summary:hover,
   }
   .section__tools {
     justify-content: flex-start;
+    margin-left: 0;
   }
   .panel {
     min-height: 0;
