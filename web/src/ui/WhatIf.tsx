@@ -31,36 +31,38 @@ export function useTreeModel(cityId: string): ModelState {
 const column = (columns: Record<string, readonly number[]>, cell: number): FactorValues =>
   Object.fromEntries(Object.entries(columns).map(([key, values]) => [key, values[cell] ?? Number.NaN]));
 
-interface SliderProps {
-  range: LeverRange;
-  feature: FeatureMeta;
+export interface SliderProps {
+  /** The input's id; the limit line gets `${id}-limit`. */
+  id: string;
+  label: string;
+  /** The value as the cell is now, and the furthest the slider goes (on either side of it). */
+  from: number;
+  to: number;
+  /** The step; rounded so that the steps divide the span exactly. */
+  step: number;
   value: number;
+  say: (value: number) => string;
+  /** What a screen reader hears for the value, unit in words. */
+  spoken: (said: string) => string;
+  /** The line under the far end: how far the slider goes and why. */
+  limit: string;
   onChange: (value: number) => void;
 }
 
-function LeverSlider({ range, feature, value, onChange }: SliderProps) {
-  const { lever, from, to } = range;
-  const locale = useLocale();
-  const t = WHAT_IF_TEXTS[locale];
-  const { formatFactorValue } = useFormats();
-  const label = featureLabel(feature, locale);
-  const text: LeverWords = (t.levers as Partial<Record<string, LeverWords>>)[lever.key] ?? { label, spoken: (v) => t.spokenOther(label, v) };
-  const id = `whatif-${lever.key}`;
-  const say = (v: number) => formatFactorValue(feature, v);
-  const up = lever.direction === 'up';
+/** A slider from "now" to a limit: a rail, the stretch moved from "now", a tick at "now". */
+export function Slider({ id, label, from, to, step, value, say, spoken, limit, onChange }: SliderProps) {
+  const t = WHAT_IF_TEXTS[useLocale()];
+  const up = to >= from;
   // The input measures how far from "now": 0 is the cell as it is, always on the step grid, so the slider can
   // always come back to it; the grid divides the span exactly, so the far end is reachable too.
   const span = Math.abs(to - from);
-  const steps = Math.max(1, Math.round(span / lever.step));
+  const steps = Math.max(1, Math.round(span / step));
   const amount = Math.min(span, Math.abs(value - from));
   const at = span > 0 ? amount / span : 0;
-  const cut = range.bound === 'cut' ? cutText(lever, locale) : undefined;
-  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : t.cityTail(up);
-  const limit = t.limit(say(to), reason);
   return (
     <div className="whatif__lever">
       <p className="whatif__head">
-        <label htmlFor={id}>{text.label}</label>
+        <label htmlFor={id}>{label}</label>
         <span className="whatif__value num">{say(value)}</span>
       </p>
       <div className="whatif__slider">
@@ -76,7 +78,7 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
           max={span}
           step={span / steps}
           value={amount}
-          aria-valuetext={t.spokenNow(text.spoken(say(value)), say(from))}
+          aria-valuetext={t.spokenNow(spoken(say(value)), say(from))}
           aria-describedby={`${id}-limit`}
           onChange={(event) => {
             const moved = Number(event.currentTarget.value);
@@ -90,6 +92,39 @@ function LeverSlider({ range, feature, value, onChange }: SliderProps) {
         <span id={`${id}-limit`}>{limit}</span>
       </p>
     </div>
+  );
+}
+
+interface LeverSliderProps {
+  range: LeverRange;
+  feature: FeatureMeta;
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function LeverSlider({ range, feature, value, onChange }: LeverSliderProps) {
+  const { lever, from, to } = range;
+  const locale = useLocale();
+  const t = WHAT_IF_TEXTS[locale];
+  const { formatFactorValue } = useFormats();
+  const label = featureLabel(feature, locale);
+  const text: LeverWords = (t.levers as Partial<Record<string, LeverWords>>)[lever.key] ?? { label, spoken: (v) => t.spokenOther(label, v) };
+  const say = (v: number) => formatFactorValue(feature, v);
+  const cut = range.bound === 'cut' ? cutText(lever, locale) : undefined;
+  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : t.cityTail(lever.direction === 'up');
+  return (
+    <Slider
+      id={`whatif-${lever.key}`}
+      label={text.label}
+      from={from}
+      to={to}
+      step={lever.step}
+      value={value}
+      say={say}
+      spoken={text.spoken}
+      limit={t.limit(say(to), reason)}
+      onChange={onChange}
+    />
   );
 }
 
