@@ -196,6 +196,44 @@ evaporative fraction is relative to the city's own hottest and coolest cells: th
 to evaporate nothing and the cold anchor to evaporate as much as it can, so `le` compares places within
 a city better than it compares cities. Shading by buildings and trees and the wind are not in the model.
 
+## Physics model inputs
+
+`uzha/seb/inputs.py` turns a city into the solver's `SebInputs` and `Forcing` (`uzha/seb/types.py`,
+equations in `docs/theory.pdf`). It reads the exported `<id>.json` and adds four small downloads, cached in
+`pipeline/cache/seb/<id>_<grid-hash>/`; a summary of every input goes to `pipeline/cache/seb/<id>_summary.json`:
+
+```bash
+PYTHONUTF8=1 python -m pipeline.uzha.seb.inputs --city tashkent
+```
+
+| Input | How | Source / assumption |
+|---|---|---|
+| tree, bare | WorldCover shares from the JSON | ESA WorldCover 2021 |
+| water | WorldCover class 80 share, 20 m nearest sample; fallback 1 − √(d̄/100 m) from `water_dist` (water as a strip on one side of the cell) | ESA WorldCover 2021 |
+| roof | `volume / (height · 10 000)` = the GHSL Built-S building share, cut to `built` | GHSL Built-S 2020 |
+| road | OSM drivable ways, length per cell × carriageway width: `width` tag, else `lanes` × 3.5 m, else by class (motorway 22, trunk 18, primary 14, secondary 11, tertiary 8, unclassified/residential/link 6, living street 5, service 4 m); cut to `built − roof`. Fallback: JSON road density × 7 m | lane width 3.5 m (AASHTO); class widths are an assumption |
+| paved | `built − roof − road` (≥ 0) | |
+| grass | `1 − tree − built − bare − water` (WorldCover grass, crops, shrubs, wetland) | |
+| albedo | tree 0.16, grass 0.21, bare 0.25, water 0.08; roof = road = paved = one value per cell inverted so the area-weighted albedo equals the Sentinel-2 cell albedo, clipped to 0.08–0.45 (0.18 where impervious < 5 %) | Oke (1987) *Boundary Layer Climates*, Tables 1.1 and 8.2 |
+| emissivity | tree 0.98, grass 0.95, bare 0.93, roof 0.91, road 0.95, paved 0.90, water 0.96 | Oke (1987), same tables |
+| OHM a1, a2 (h), a3 (W/m²) | tree 0.11/0.11/−12.3 (mixed forest); grass 0.32/0.54/−27.4; bare 0.35/0.43/−36.5 (dry soil); water 0.50/0.21/−39.1; roof = mean of Vancouver, Uppsala, Kyoto roofs 0.48/0.34/−33.9; road = mean of three asphalt sets 0.61/0.41/−27.7; paved = mean of two concrete sets 0.83/0.40/−54.2 | Grimmond & Oke (1999), [doi:10.1175/1520-0450(1999)038<0922:HSIUAL>2.0.CO;2](https://doi.org/10.1175/1520-0450(1999)038%3C0922:HSIUAL%3E2.0.CO;2), Table 4 |
+| canyon H/W | urban patch = roof + road + paved, λp = roof / patch; square buildings of side L = √(roof · 10 000 / OSM buildings per ha) (city median where OSM has none, 6–60 m); street W = L·(1/√λp − 1); H/W ≤ 6 | regular-array assumption |
+| sky view | SVF = cos(atan(2·H/W)), canyon-floor midpoint (cosine-weighted, not the solid-angle form of Eq. 20); 1 in open land | Oke (1981) [doi:10.1002/joc.3370010304](https://doi.org/10.1002/joc.3370010304), Oke (1987) |
+| shade | road, paved, grass, bare: share of the canyon floor in building shadow at the overpass zenith, averaged over street orientations; trees and their shadows not included | Masson (2000) [doi:10.1023/A:1002463829265](https://doi.org/10.1023/A:1002463829265) |
+| z0m, zd | Macdonald on the patch: zd/H = 1 + 4.43^(−λp)(λp − 1), z0/H = (1 − zd/H)·exp(−[0.5·1.0·(1.2/0.4²)(1 − zd/H)λf]^(−½)), λf = λp·H/L, z0 ≥ 0.01 m; trees 10 m tall: z0 = 1.0, zd = 6.7 m; grass 0.03, bare 0.005, water 0.0002 m; blended by area (zd linear, ln z0); zd + z0 ≤ 0.8·z_ref | Macdonald et al. (1998) [doi:10.1016/S1352-2310(97)00403-2](https://doi.org/10.1016/S1352-2310(97)00403-2); Garratt (1992); Wieringa (1993) [doi:10.1007/BF00705357](https://doi.org/10.1007/BF00705357); Taylor (1987) [doi:10.1007/BF00121863](https://doi.org/10.1007/BF00121863) |
+| soil moisture | ERA5-Land `soil_moisture_0_to_7cm` at the overpasses, one city value | Open-Meteo archive, `models=era5_land` |
+| irrigated | every cell inside the outline (city greenery is watered); ring cells with NDVI > 0.45 (watered crops; rain-fed land is brown by July) | assumption |
+| rural | cell centre outside `boundaries/<id>.geojson` | |
+| QF | AH4GUC July and August at 06 UTC, mean; each cell takes its 30″ (~1 km) pixel, spread over the pixel's cells in proportion to building volume so the pixel mean is kept. **Estimated** | Varquez et al. (2021) [doi:10.1038/s41597-021-00850-w](https://doi.org/10.1038/s41597-021-00850-w), CC BY 4.0, OPeNDAP at urbanclimate.tse.ens.isct.ac.jp |
+| K↓, diffuse fraction | ERA5 `shortwave_radiation_instant`, `diffuse_radiation_instant`, interpolated to each Landsat acquisition time, averaged | Open-Meteo archive, `models=era5`, UTC |
+| L↓ | clear-sky Brutsaert (1975) per cell from the cell's t_air and e_air (as `energy.py`; no keyless L↓ series) | |
+| t_air | ERA5 2 m temperature (Open-Meteo corrects it to its DEM height at the city centre), lapse-corrected per cell: T = T_ref − 6.5 K/km·(z − z_ref) (Eq. 47); used as the air temperature at z_ref | ICAO standard lapse rate |
+| e_air | from the 2 m dew point (Magnus, Alduchov & Eskridge 1996), one city value | |
+| pressure | ERA5 surface pressure, hypsometric per cell elevation, kPa | |
+| wind | 10 m wind to z_ref = 60 m by the neutral log law over z0 = 0.1 m (×1.39) | Wieringa (1993) |
+| zenith | Eq. 17 at the city centre for the mean day and UTC time of the acquisitions; declination and equation of time from Spencer (1971) via Iqbal (1983) | |
+| dK↓/dt | K↓ · d(cos θz)/dt / cos θz, transmissivity held fixed, W m⁻² h⁻¹ | |
+
 ## Limitations
 
 - **LST is not air temperature.** It is the skin temperature of roofs, asphalt and soil at the
@@ -235,6 +273,7 @@ uzha/browser_model.py  the booster as compact JSON for the browser (model-<id>.j
 uzha/population.py  light step: people per cell and facilities into an existing city JSON
 uzha/weather.py     light step: summer weather (ERA5) into an existing city JSON and cities.json
 uzha/energy.py      light step: surface energy balance per cell from LST, albedo, NDVI and the overpass weather
+uzha/seb/           physics model: types, inputs (SebInputs, Forcing from a city JSON + small downloads)
 uzha/export.py      contract JSON (3-decimal values, 5-decimal coordinates)
 buildings.py        CLI: footprints with heights → buildings/<id>.fgb
 uzha/footprints.py  OSM + MS merge, simplify, FlatGeobuf export
