@@ -202,7 +202,7 @@ export function advise(detail: CityDetail, place: PlaceProfile, cityMeans: Facto
     return { kind: 'act', title: first.title, actions: first.actions, reason, heating: first.heating, evidence: first.evidence };
   }
 
-  if (place.lst < detail.stats.lstMean) {
+  if (place.lst - detail.stats.lstMean <= -NEAR_MEAN) {
     const top = strongest(place.contributions, -1);
     const head = place.kind === 'hotspot' ? t.nothingHotspot : t.nothingCool;
     if (!top || !words(top[0]).better) return { kind: 'none', text: [head] };
