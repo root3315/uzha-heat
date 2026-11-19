@@ -9,6 +9,7 @@ Usage (from the project root):
     python -m pipeline.run --all --only model                  # refit model-<id>.json from <id>.json
 """
 import argparse
+import json
 import logging
 from pathlib import Path
 
@@ -128,11 +129,14 @@ def _log_energy(document: dict) -> None:
 
 
 def _refit_model(city_id: str, out_dir: Path) -> None:
-    document, gap_max, gap_mean = browser_model.refit_from_city_file(out_dir / f"{city_id}.json")
+    city_path = out_dir / f"{city_id}.json"
+    city, document, gap_max, gap_mean = browser_model.refit_city(json.loads(city_path.read_text(encoding="utf-8")))
+    export.write_json(city_path, city)
     path = out_dir / f"model-{city_id}.json"
     browser_model.write(path, document)
-    log.info("%s: %s, %d trees, %.0f KB; refit vs published prediction: max %.3f °C, mean %.3f °C", city_id,
-             path.name, len(document["trees"]), path.stat().st_size / 1024, gap_max, gap_mean)
+    log.info("%s: %s, %d trees, %.0f KB; SHAP rewritten from the same booster; refit vs old prediction: "
+             "max %.3f °C, mean %.3f °C", city_id, path.name, len(document["trees"]), path.stat().st_size / 1024,
+             gap_max, gap_mean)
 
 
 def main() -> None:
