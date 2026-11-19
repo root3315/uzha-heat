@@ -81,9 +81,28 @@ describe('balanceCover', () => {
     expect(balanceCover(cell, { ...cell, tree: 20 })).toEqual({ tree: 20, built: 85, bare: 0 });
   });
 
-  it('does not take from a share the reader moved', () => {
-    const cell = { tree: 5, built: 90, bare: 5 };
-    expect(balanceCover(cell, { ...cell, tree: 25, built: 70 })).toEqual({ tree: 25, built: 70, bare: 5 });
+  it('keeps the sum when the reader also lowered built-up', () => {
+    const cell = { tree: 0, built: 93, bare: 7 };
+    // Built-up already at 92 by hand: bare gives 7, built-up gives 5 more (93 − 25 = 68 is its floor).
+    expect(balanceCover(cell, { ...cell, tree: 20, built: 92 })).toEqual({ tree: 20, built: 80, bare: 0 });
+  });
+
+  it('never takes built-up past the 25-point cut; the crowns get only the room there is', () => {
+    const cell = { tree: 0, built: 100, bare: 0 };
+    expect(balanceCover(cell, { ...cell, tree: 34 })).toEqual({ tree: 25, built: 75, bare: 0 });
+    expect(balanceCover(cell, { ...cell, tree: 34, built: 75 })).toEqual({ tree: 25, built: 75, bare: 0 });
+  });
+
+  it('never leaves the shares over 100 %', () => {
+    for (const cell of [{ tree: 0, built: 100, bare: 0 }, { tree: 3, built: 60, bare: 37 }, { tree: 10, built: 88, bare: 2 }]) {
+      for (const tree of [10, 20, 34]) {
+        for (const built of [cell.built, cell.built - 10, cell.built - 25]) {
+          const out = balanceCover(cell, { ...cell, tree, built });
+          expect((out.tree ?? 0) + (out.built ?? 0) + (out.bare ?? 0)).toBeLessThanOrEqual(100 + 1e-9);
+          expect(out.built ?? 0).toBeGreaterThanOrEqual(cell.built - 25 - 1e-9);
+        }
+      }
+    }
   });
 
   it('is applied by whatIf', () => {
