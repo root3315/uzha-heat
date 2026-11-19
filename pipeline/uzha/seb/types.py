@@ -114,3 +114,5 @@ class TileState:
     residual: np.ndarray  # F_k at the returned T_k, W m⁻²: the energy-balance closure (theory section 12)
     converged: np.ndarray  # (n, T) bool
     t_cell: np.ndarray = field(default=None)  # (n,) radiance-weighted cell temperature, K (Eq. 48 note)
+    # (n, T) bool: the Monin–Obukhov iteration did not settle at T_k and the neutral resistance was used
+    stability_fallback: np.ndarray = field(default=None)
