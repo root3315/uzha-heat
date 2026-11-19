@@ -11,8 +11,8 @@ interface MiniMapProps {
   label: string;
 }
 
-/** Tall cities are not allowed to push the card past this height-to-width ratio. */
-const MAX_ASPECT = 1.15;
+/** No city is drawn taller than wide: every card frames its map in the same square, a hair inside it. */
+const MAX_ASPECT = 0.96;
 
 /** Height over width of a lon/lat box on the ground, so the frame takes the city's own shape. */
 function groundAspect([w, s, e, n]: [number, number, number, number]): number {

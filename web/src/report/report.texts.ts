@@ -27,7 +27,7 @@ export const REPORT_TEXTS = texts(
       place: (title: string) => `Selected place: ${title}`,
       hottest: 'Hottest places',
       crowded: 'Where most people live in the heat',
-      causes: 'What heats the hottest tenth',
+      causes: 'What heats the hottest 10% of the city',
       physics: 'Physics: where the sunlight goes',
       measures: 'What to do',
       map: 'Map and section',
@@ -41,8 +41,8 @@ export const REPORT_TEXTS = texts(
       ` inside the city line live on the hottest cells, ${share} of its residents. ${note}`,
     figures: {
       mean: 'city average',
-      hot: 'hottest tenth, from',
-      cool: 'coolest tenth, up to',
+      hot: 'hottest 10% of the city, from',
+      cool: 'coolest 10% of the city, up to',
       spread: 'spread between them',
     },
     scale: (min: string, max: string) =>
@@ -53,7 +53,7 @@ export const REPORT_TEXTS = texts(
       'Cause: the factor that, in the model, heats the cell most.',
     vsMean: `vs${NBSP}the mean`,
     crowdedLead: (metres: number) =>
-      `Cells of the hottest tenth where the most people live, at least 1${NBSP}km apart. ` +
+      `Cells of the hottest 10% of the city where the most people live, at least 1${NBSP}km apart. ` +
       `Nearby: schools, kindergartens and clinics within${NBSP}${metres}${NBSP}m, from${NBSP}OpenStreetMap.`,
     causesLead: (count: number, figure: string, threshold: string, mean: string) =>
       `${figure} ${pluralEn(count, ['cell is', 'cells are'])} hotter than ${threshold}, ${mean} on${NBSP}average. ` +
@@ -62,7 +62,7 @@ export const REPORT_TEXTS = texts(
     physicsNote: (caveat: string) =>
       `Bar: where the solar energy left after the surface's own thermal radiation goes, averaged over cells. ${caveat}`,
     measuresLead: (city: string) =>
-      `Measures for the hottest tenth of ${city}, by${NBSP}what heats it. How much a measure removes is known from reviews of${NBSP}other ` +
+      `Measures for the hottest 10% of ${city}, by${NBSP}what heats it. How much a measure removes is known from reviews of${NBSP}other ` +
       `cities; each has its${NBSP}reference.`,
     byModel: `; in${NBSP}the model this is `,
     mapAlt: (city: string, a: string, b: string) => `Surface isotherms: ${city}, section line from ${a} to ${b}`,
@@ -111,7 +111,7 @@ export const REPORT_TEXTS = texts(
       place: (title) => `Выбранное место: ${title}`,
       hottest: 'Самые горячие места',
       crowded: 'Где в жаре живёт больше всего людей',
-      causes: 'Что греет горячую десятую часть',
+      causes: 'Что греет самые горячие 10 % города',
       physics: 'Физика: куда уходит солнце',
       measures: 'Что делать',
       map: 'Карта и разрез',
@@ -124,8 +124,8 @@ export const REPORT_TEXTS = texts(
     peopleInHeat: (share, note) => ` в${NBSP}черте города живут на${NBSP}самых горячих участках, это ${share} его жителей. ${note}`,
     figures: {
       mean: 'в среднем по городу',
-      hot: 'горячая десятая часть, от',
-      cool: 'прохладная десятая часть, до',
+      hot: 'самые горячие 10 % города, от',
+      cool: 'самые прохладные 10 % города, до',
       spread: 'разброс между ними',
     },
     scale: (min, max) =>
@@ -136,7 +136,7 @@ export const REPORT_TEXTS = texts(
       'греет участок сильнее всего.',
     vsMean: `к${NBSP}среднему`,
     crowdedLead: (metres) =>
-      `Участки горячей десятой части, где живёт больше всего людей, не${NBSP}ближе 1${NBSP}км друг к${NBSP}другу. Рядом: школы, детские сады и${NBSP}поликлиники ` +
+      `Участки из самых горячих 10 % города, где живёт больше всего людей, не${NBSP}ближе 1${NBSP}км друг к${NBSP}другу. Рядом: школы, детские сады и${NBSP}поликлиники ` +
       `до${NBSP}${metres}${NBSP}м по${NBSP}OpenStreetMap.`,
     causesLead: (count, figure, threshold, mean) =>
       `${figure} ${pluralRu(count, ['участок', 'участка', 'участков'])} горячее ${threshold}, в${NBSP}среднем ${mean}. ` +
@@ -146,7 +146,7 @@ export const REPORT_TEXTS = texts(
     physicsNote: (caveat) =>
       `Полоса: куда уходит солнечная энергия, оставшаяся после теплового излучения поверхности, в${NBSP}среднем по${NBSP}участкам. ${caveat}`,
     measuresLead: (city) =>
-      `Меры для горячей десятой части ${genitive(city)}, по${NBSP}тому, что её греет. Сколько снимет мера, известно из${NBSP}обзоров по${NBSP}другим ` +
+      `Меры для самых горячих 10 % ${genitive(city)}, по${NBSP}тому, что их греет. Сколько снимет мера, известно из${NBSP}обзоров по${NBSP}другим ` +
       `городам, ссылка у${NBSP}каждой.`,
     byModel: `; по${NBSP}модели это `,
     mapAlt: (city, a, b) => `Изотермы поверхности: ${city}, линия разреза от ${a} до ${b}`,

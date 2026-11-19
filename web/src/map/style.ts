@@ -261,13 +261,25 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         source: SOURCE.probe,
         paint: { 'circle-radius': 4.5, 'circle-color': tokens.ground, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 1.5 },
       },
+      // The picked place: an ink ring some 28 px across in a paper halo, so it holds on the darkest heat colours.
+      {
+        id: 'place-halo',
+        type: 'circle',
+        source: SOURCE.place,
+        paint: { 'circle-radius': 9, 'circle-opacity': 0, 'circle-stroke-color': tokens.noon, 'circle-stroke-width': 8.5 },
+      },
       {
         id: 'place-ring',
         type: 'circle',
         source: SOURCE.place,
-        paint: { 'circle-radius': 11, 'circle-opacity': 0, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 1.5 },
+        paint: { 'circle-radius': 12, 'circle-opacity': 0, 'circle-stroke-color': tokens.ink, 'circle-stroke-width': 2.5 },
       },
-      { id: 'place-dot', type: 'circle', source: SOURCE.place, paint: { 'circle-radius': 2.4, 'circle-color': tokens.ink } },
+      {
+        id: 'place-dot',
+        type: 'circle',
+        source: SOURCE.place,
+        paint: { 'circle-radius': 3, 'circle-color': tokens.ink, 'circle-stroke-color': tokens.noon, 'circle-stroke-width': 1 },
+      },
       {
         id: 'found',
         type: 'circle',

@@ -209,6 +209,15 @@ export function defaultTransect(source: TransectSource, center: LonLat, options:
   return [source.fromMetres([cx - fallback, cy]), source.fromMetres([cx + fallback, cy])];
 }
 
+export interface PatchOptions {
+  /** Sampling step, in raster pixels. */
+  step?: number;
+  /** Which pixels of the surroundings enter the average; all by default. */
+  counted?: (u: number, v: number) => boolean;
+  /** Share of the surroundings that must be counted: a few counted pixels at an edge are no neighbourhood. */
+  minShare?: number;
+}
+
 /**
  * Centre of the hottest neighbourhood: the point whose surroundings within `radius`
  * (in raster pixels) are hottest on average, among points that pass `allowed`.
@@ -219,8 +228,10 @@ export function hottestPatch(
   height: number,
   allowed: (u: number, v: number) => boolean,
   radius: number,
-  step = Math.max(1, Math.round(radius / 5)),
+  { step = Math.max(1, Math.round(radius / 5)), counted = () => true, minShare = 0 }: PatchOptions = {},
 ): [number, number] | null {
+  const side = 2 * Math.floor(radius / step) + 1;
+  const needed = Math.max(1, Math.ceil(minShare * side * side));
   let best = -Infinity;
   let pick: [number, number] | null = null;
   for (let v = 0; v < height; v += step) {
@@ -232,12 +243,12 @@ export function hottestPatch(
         for (let du = -radius; du <= radius; du += step) {
           const uu = u + du;
           const vv = v + dv;
-          if (uu < 0 || vv < 0 || uu >= width || vv >= height) continue;
+          if (uu < 0 || vv < 0 || uu >= width || vv >= height || !counted(uu, vv)) continue;
           sum += values[vv * width + uu] ?? 0;
           n++;
         }
       }
-      if (n > 0 && sum / n > best) {
+      if (n >= needed && sum / n > best) {
         best = sum / n;
         pick = [u, v];
       }

@@ -108,15 +108,15 @@ describe('leadingFactor', () => {
 
 describe('findMessage', () => {
   const target = { threshold: 47.9, total: 10 };
-  const plain = (text: string) => text.replace(/[  ]/g, ' ');
+  const plain = (text: string) => text.replace(/[  ]/g, ' ');
 
   it('confirms a find and refuses a repeat', () => {
-    expect(plain(findMessage('new', 49.24, target, 43.8, 'ru'))).toBe('Засчитано: 49,2°, горячая десятая часть города.');
+    expect(plain(findMessage('new', 49.24, target, 43.8, 'ru'))).toBe('Засчитано: 49,2 °C, это самые горячие 10 % города.');
     expect(findMessage('repeat', 49.24, target, 43.8, 'ru')).toBe('Этот участок уже засчитан.');
   });
 
   it('says how far a miss was from hot', () => {
-    expect(plain(findMessage('cold', 45.1, target, 43.8, 'ru'))).toBe('45,1°: теплее среднего, но горячими считаются от 47,9°.');
-    expect(plain(findMessage('cold', 40, target, 43.8, 'ru'))).toBe('40,0°: прохладнее среднего по городу, 43,8°.');
+    expect(plain(findMessage('cold', 45.1, target, 43.8, 'ru'))).toBe('45,1 °C: теплее среднего, но горячими считаются от 47,9 °C.');
+    expect(plain(findMessage('cold', 40, target, 43.8, 'ru'))).toBe('40,0 °C: прохладнее среднего по городу, 43,8 °C.');
   });
 });

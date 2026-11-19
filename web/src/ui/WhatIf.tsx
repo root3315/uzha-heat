@@ -112,7 +112,7 @@ function LeverSlider({ range, feature, value, onChange }: LeverSliderProps) {
   const text: LeverWords = (t.levers as Partial<Record<string, LeverWords>>)[lever.key] ?? { label, spoken: (v) => t.spokenOther(label, v) };
   const say = (v: number) => formatFactorValue(feature, v);
   const cut = range.bound === 'cut' ? cutText(lever, locale) : undefined;
-  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : t.cityTail(lever.direction === 'up');
+  const reason = cut ? `${cut}${text.noun ? ` ${text.noun}` : ''}` : t.cityTail(lever.key, lever.direction === 'up');
   return (
     <Slider
       id={`whatif-${lever.key}`}

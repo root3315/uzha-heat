@@ -78,17 +78,19 @@ export function dominantSurface(values: Record<string, number>): SurfaceKind | n
 /** Why the surface keeps or loses its heat into the evening, from the reference table (Oke 1987). */
 export function storageLine(kind: SurfaceKind, surfaces: readonly SurfaceMaterial[], locale: Locale): string | null {
   const t = ENERGY_TEXTS[locale].storage;
-  const admittanceOf = (key: string): string | null => {
-    const surface = surfaces.find((s) => s.key === key);
-    return surface ? formats(locale).formatNumber(surface.admittance, 0) : null;
-  };
+  const admittanceOf = (key: string): number | null => surfaces.find((s) => s.key === key)?.admittance ?? null;
+  // Plain ratios of thermal admittance, rounded to whole times: the table values themselves stay on the method page.
+  const times = (more: number, less: number) => Math.max(1, Math.round(more / less));
   const asphalt = admittanceOf('asphalt');
   const concrete = admittanceOf('concrete');
   const dry = admittanceOf('dry_soil');
   const wet = admittanceOf('wet_soil');
-  if (kind === 'built' && asphalt && concrete && dry) return t.built(asphalt, concrete, dry);
-  if (kind === 'bare' && dry && asphalt) return t.bare(dry, asphalt);
-  if (kind === 'green' && wet) return t.green(wet);
+  if (kind === 'built' && asphalt && concrete && dry) {
+    const [low, high] = [times(asphalt, dry), times(concrete, dry)].sort((a, b) => a - b);
+    return t.built(low === high ? `${low}` : `${low}–${high}`);
+  }
+  if (kind === 'bare' && dry && asphalt) return t.bare(`${times(asphalt, dry)}`);
+  if (kind === 'green' && wet && dry) return t.green(`${times(wet, dry)}`);
   return null;
 }
 

@@ -1,5 +1,6 @@
 import type { FeatureMeta } from '../data/contract';
 import type { Locale } from '../i18n/locale';
+import { plural } from '../i18n/plural';
 
 const MINUS = '−';
 const NBSP = ' ';
@@ -25,10 +26,12 @@ export interface Formats {
   formatSigned(value: number, digits?: number): string;
   /** Temperature as the app writes it: "47.9°". */
   formatDeg(value: number, digits?: number): string;
+  /** A temperature with its unit, where a reader may take a bare degree for air: "47.9 °C". */
+  formatTemp(value: number, digits?: number): string;
   /** Temperature difference with its sign: "+4.6°", "−1.2°". */
   formatDegSigned(value: number, digits?: number): string;
   formatPercent(share: number): string;
-  /** A difference of two percentages, in percentage points: "+17 pp". */
+  /** A difference of two percentages, in percentage points: "+17 points". */
   formatPoints(difference: number): string;
   formatKm(metres: number): string;
   /** A factor value according to its unit from the contract (unit-driven, not key-driven). */
@@ -46,7 +49,8 @@ function makeFormats(locale: Locale): Formats {
     return f;
   };
   const percentSign = locale === 'en' ? '%' : `${NBSP}%`;
-  const points = locale === 'en' ? 'pp' : 'п.п.';
+  const points = (difference: number) =>
+    plural(locale, Math.abs(Math.round(difference)), { en: ['point', 'points'], ru: ['пункт', 'пункта', 'пунктов'] });
   const unit = (u: string) => unitText(u, locale);
 
   const formatNumber = (value: number, digits = 1): string => {
@@ -80,9 +84,10 @@ function makeFormats(locale: Locale): Formats {
     formatNumber,
     formatSigned,
     formatDeg: (value, digits = 1) => `${formatNumber(value, digits)}°`,
+    formatTemp: (value, digits = 1) => `${formatNumber(value, digits)}${NBSP}°C`,
     formatDegSigned: (value, digits = 1) => `${formatSigned(value, digits)}°`,
     formatPercent: (share) => `${formatNumber(share * 100, 0)}${percentSign}`,
-    formatPoints: (difference) => `${formatSigned(difference, 0)}${NBSP}${points}`,
+    formatPoints: (difference) => `${formatSigned(difference, 0)}${NBSP}${points(difference)}`,
     formatKm,
     formatFactorValue,
   };

@@ -18,7 +18,7 @@ export const LANDING_TEXTS = texts(
       region: (city: string) => `Surface temperature map: ${city}`,
       foundBefore: 'hot cells found ',
       foundOf: (total: string) => ` of${NBSP}${total}`,
-      prompt: (threshold: string) => `find a cell at ${threshold} or above: it is hotter than 90% of the city`,
+      prompt: (threshold: string) => `Try it: tap the map and find a spot at ${threshold} or hotter (the hottest 10%)`,
       gaugeLabel: 'surface temperature, share of the city',
       gaugeHint: `Colour means degrees only; lines every 2°, like contour lines on${NBSP}a mountain map. Hover or tap: the map gives the degrees and${NBSP}the cause.`,
       openFull: 'Open the full map',
@@ -30,7 +30,7 @@ export const LANDING_TEXTS = texts(
         `The model predicts the temperature of every 200${NBSP}m cell from${NBSP}${factors} factors. ${label} ` +
         `${dominant ? 'outweighs all the others together' : 'weighs more than any other'}. Greenery is measured by${NBSP}the satellite index NDVI: about 0 ` +
         `for${NBSP}asphalt and${NBSP}bare ground, close to${NBSP}1 for${NBSP}dense foliage.`,
-      sectionTitle: 'Section through the hottest place',
+      sectionTitle: 'Section through the hottest place where people live',
       sectionHint: 'The band below: what heats each stretch most.',
       energyTitle: 'Where the sunlight goes',
     },
@@ -43,10 +43,11 @@ export const LANDING_TEXTS = texts(
       noData: 'No data',
       computingShort: 'Computing isotherms',
       meanSurface: 'mean surface',
-      hotTenth: 'hottest tenth',
+      hotTenth: 'hottest 10% of the city',
       from: (t: string) => `from ${t}`,
       livingHot: 'live on the hottest cells inside the city line',
-      scenes: (n: number, r2: string) => `${n} Landsat ${pluralEn(n, ['scene', 'scenes'])} · R² ${r2}`,
+      scenes: (n: number, explained: string) => `${n} Landsat ${pluralEn(n, ['scene', 'scenes'])} · the model explains ${explained}`,
+      explains: (explained: string) => `the model explains ${explained}`,
       cityMap: (city: string) => `Map of ${city} ↗`,
     },
     towns: {
@@ -57,7 +58,7 @@ export const LANDING_TEXTS = texts(
     actions: {
       title: 'What to do',
       intro: (city: string) =>
-        `For the hottest tenth of ${city}. The number on the left: how many degrees of surface temperature the model ties to${NBSP}this factor there. ` +
+        `For the hottest 10% of ${city}. The number on the left: how many degrees of surface temperature the model ties to${NBSP}this factor there. ` +
         `It is an association in${NBSP}the data, not${NBSP}the result of an experiment. How much a measure removes is known from${NBSP}reviews of${NBSP}other cities; each has a${NBSP}link.`,
       effectNote: 'tied by the model',
     },
@@ -73,8 +74,8 @@ export const LANDING_TEXTS = texts(
       people: (year: number) =>
         `Residents per cell come from${NBSP}WorldPop ${year}: a model that spreads the census over the buildings seen on${NBSP}imagery, not${NBSP}a${NBSP}count ` +
         `of people. Schools, kindergartens and${NBSP}clinics come from${NBSP}OpenStreetMap.`,
-      figures: (lst: number, s2: number, cells: string, r2: string, mae: string) =>
-        `${lst} Landsat scenes · ${s2} Sentinel-2 scenes · ${cells} cells · R² ${r2} · MAE ${mae}`,
+      figures: (lst: number, s2: number, cells: string, explained: string, error: string) =>
+        `${lst} Landsat scenes · ${s2} Sentinel-2 scenes · ${cells} cells · the model explains ${explained} of the differences, typical error ±${error}`,
       method: `Full method and${NBSP}factors`,
       team: 'Team',
       names: ['Amira', 'Oliya', 'Maxim', 'Shakhina', 'Stepan'],
@@ -98,7 +99,7 @@ export const LANDING_TEXTS = texts(
       region: (city) => `Карта температуры поверхности: ${city}`,
       foundBefore: 'найдено горячих участков ',
       foundOf: (total) => ` из${NBSP}${total}`,
-      prompt: (threshold) => `найдите участок от ${threshold}: он горячее 90 % города`,
+      prompt: (threshold) => `Попробуйте: нажмите на карту и найдите место от ${threshold} и горячее (самые горячие 10 %)`,
       gaugeLabel: 'температура поверхности, доля города',
       gaugeHint: `Цвет значит только градусы, линии через каждые 2°, как горизонтали на${NBSP}карте гор. Наведите или коснитесь: карта скажет градусы и${NBSP}причину.`,
       openFull: 'Открыть карту целиком',
@@ -110,7 +111,7 @@ export const LANDING_TEXTS = texts(
         `Модель предсказывает температуру каждого участка 200${NBSP}м по${NBSP}${factors} факторам. ${label} ` +
         `${dominant ? 'весит больше, чем все остальные вместе' : 'весит больше любого другого'}. Зелень меряем индексом NDVI со${NBSP}спутника: около 0 ` +
         `у${NBSP}асфальта и${NBSP}голой земли, ближе к${NBSP}1 у${NBSP}густой листвы.`,
-      sectionTitle: 'Разрез через самое жаркое место',
+      sectionTitle: 'Разрез через самое жаркое место, где живут люди',
       sectionHint: 'Полоса внизу: что греет каждый отрезок сильнее всего.',
       energyTitle: 'Куда уходит солнце',
     },
@@ -123,10 +124,11 @@ export const LANDING_TEXTS = texts(
       noData: 'Нет данных',
       computingShort: 'Считаю изотермы',
       meanSurface: 'средняя поверхность',
-      hotTenth: 'горячая десятая часть',
+      hotTenth: 'самые горячие 10 % города',
       from: (t) => `от ${t}`,
       livingHot: 'живут на самых горячих участках в черте',
-      scenes: (n, r2) => `${n} ${pluralRu(n, ['снимок', 'снимка', 'снимков'])} Landsat · R² ${r2}`,
+      scenes: (n, explained) => `${n} ${pluralRu(n, ['снимок', 'снимка', 'снимков'])} Landsat · модель объясняет ${explained}`,
+      explains: (explained) => `модель объясняет ${explained}`,
       cityMap: (city) => `Карта ${genitive(city)} ↗`,
     },
     towns: {
@@ -137,7 +139,7 @@ export const LANDING_TEXTS = texts(
     actions: {
       title: 'Что делать',
       intro: (city) =>
-        `Для горячей десятой части ${genitive(city)}. Число слева: на${NBSP}сколько градусов поверхности этот фактор по${NBSP}модели связан с${NBSP}жарой ` +
+        `Для самых горячих 10${NBSP}% ${genitive(city)}. Число слева: на${NBSP}сколько градусов поверхности этот фактор по${NBSP}модели связан с${NBSP}жарой ` +
         `там. Это связь в${NBSP}данных, а${NBSP}не${NBSP}результат эксперимента. Сколько снимет мера, известно из${NBSP}обзоров по${NBSP}другим городам, ссылка у${NBSP}каждой.`,
       effectNote: 'связано по модели',
     },
@@ -153,7 +155,8 @@ export const LANDING_TEXTS = texts(
       people: (year) =>
         `Жителей участка берём из${NBSP}WorldPop ${year}: это модель, которая раскладывает перепись по${NBSP}застройке на${NBSP}снимках, а${NBSP}не${NBSP}подсчёт ` +
         `людей. Школы, детские сады и${NBSP}поликлиники взяты из${NBSP}OpenStreetMap.`,
-      figures: (lst, s2, cells, r2, mae) => `${lst} сцен Landsat · ${s2} сцен Sentinel-2 · ${cells} участков · R² ${r2} · MAE ${mae}`,
+      figures: (lst, s2, cells, explained, error) =>
+        `${lst} сцен Landsat · ${s2} сцен Sentinel-2 · ${cells} участков · модель объясняет ${explained} различий, типичная ошибка ±${error}`,
       method: `Весь метод и${NBSP}факторы`,
       team: 'Команда',
       names: ['Амира', 'Олия', 'Максим', 'Шахина', 'Степан'],

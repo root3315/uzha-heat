@@ -72,9 +72,9 @@ export function leadingFactor(importance: readonly GlobalImportance[]): { key: s
 /** The line under the counter after a click, in the page's plain voice. */
 export function findMessage(outcome: FindOutcome, t: number, target: HuntTarget, cityMean: number, locale: Locale): string {
   const say = HUNT_TEXTS[locale];
-  const { formatDeg } = formats(locale);
-  if (outcome === 'new') return say.counted(formatDeg(t));
+  const { formatTemp } = formats(locale);
+  if (outcome === 'new') return say.counted(formatTemp(t));
   if (outcome === 'repeat') return say.repeat;
-  if (t >= cityMean) return say.warm(formatDeg(t), formatDeg(target.threshold));
-  return say.cool(formatDeg(t), formatDeg(cityMean));
+  if (t >= cityMean) return say.warm(formatTemp(t), formatTemp(target.threshold));
+  return say.cool(formatTemp(t), formatTemp(cityMean));
 }

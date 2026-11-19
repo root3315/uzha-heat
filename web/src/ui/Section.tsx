@@ -55,7 +55,7 @@ export function PeopleKey({ model }: { model: CityModel }) {
   const { detail } = model;
   const locale = useLocale();
   const t = SECTION_TEXTS[locale];
-  const { formatDeg, formatNumber } = useFormats();
+  const { formatTemp, formatNumber } = useFormats();
   const inHeat = peopleInHeat(detail, model.inside);
   const facilities = hotFacilities(detail, model.source.cellAt).filter((f) => model.inside[model.source.cellAt([f.lon, f.lat])]);
   if (!inHeat) return null;
@@ -77,7 +77,7 @@ export function PeopleKey({ model }: { model: CityModel }) {
         </li>
       </ul>
       <p className="people-key__note">
-        {t.peopleNote(formatDeg(detail.stats.lstP90), formatPeople(inHeat.people, locale))} {sparseHeatNote(inHeat, locale) ?? ''}{' '}
+        {t.peopleNote(formatTemp(detail.stats.lstP90), formatPeople(inHeat.people, locale))} {sparseHeatNote(inHeat, locale) ?? ''}{' '}
         {detail.population ? populationCaveat(detail.population.year, locale) : ''}
       </p>
     </div>

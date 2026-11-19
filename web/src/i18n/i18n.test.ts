@@ -81,7 +81,7 @@ describe('numbers', () => {
     expect(en.formatDegSigned(-1.24)).toBe('−1.2°');
     expect(en.formatDegSigned(4.56)).toBe('+4.6°');
     expect(en.formatPercent(0.34)).toBe('34%');
-    expect(en.formatPoints(17)).toBe('+17 pp');
+    expect(en.formatPoints(17)).toBe('+17 points');
     expect(en.formatKm(1240)).toBe('1.2 km');
   });
 
@@ -90,7 +90,7 @@ describe('numbers', () => {
     expect(ru.formatNumber(1234, 0)).toBe('1 234');
     expect(ru.formatDegSigned(-1.24)).toBe('−1,2°');
     expect(ru.formatPercent(0.34)).toBe('34 %');
-    expect(ru.formatPoints(17)).toBe('+17 п.п.');
+    expect(ru.formatPoints(17)).toBe('+17 пунктов');
     expect(ru.formatKm(1240)).toBe('1,2 км');
   });
 

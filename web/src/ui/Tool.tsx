@@ -65,14 +65,24 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [planMarks, setPlanMarks] = useState<MapMark[] | null>(null);
   // On a wide screen the list starts open, so the answer is on the map at once; a reader who closes it keeps it closed.
   const [planClosed, setPlanClosed] = useState(false);
+  const { width } = useViewport();
+  const narrow = width < NARROW_PX;
+  // A plan the reader opens is framed, so its five marks stand apart instead of piling up at the city's zoom; the one a
+  // wide screen opens by itself leaves the whole city in view.
+  const planFrame = useRef({ shown: false, readerOpened: narrow });
+  planFrame.current.readerOpened ||= narrow;
   const showPlan = useCallback((marks: MapMark[] | null) => {
+    const opened = marks !== null && !planFrame.current.shown;
+    planFrame.current.shown = marks !== null;
     setPlanMarks(marks);
-    if (marks === null) setPlanClosed(true);
+    if (marks === null) {
+      setPlanClosed(true);
+      planFrame.current.readerOpened = true;
+    }
+    if (opened && planFrame.current.readerOpened) mapRef.current?.frame(marks.map((mark) => mark.point));
   }, []);
   const [probe, setProbe] = useState<Sample | null>(null);
   const [reporting, setReporting] = useState(false);
-  const { width } = useViewport();
-  const narrow = width < NARROW_PX;
   const { detail } = model;
   // What the map colours. The temperature unless the reader picks a flux or the night; the night shows once its file is in.
   const [chosenLayer, setLayer] = useState<MapLayer>('lst');
@@ -140,8 +150,11 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
     const fromLink = pickedFromLink.current;
     pickedFromLink.current = false;
-    if (narrow && !fromLink) panelRef.current?.scrollIntoView({ behavior, block: 'start' });
-    else panelRef.current?.scrollTo({ top: 0, behavior });
+    if (narrow && !fromLink) {
+      panelRef.current?.scrollIntoView({ behavior, block: 'start' });
+      // A screen reader goes where the eye went: to the new place's name.
+      panelRef.current?.querySelector<HTMLElement>('.panel__title')?.focus({ preventScroll: true });
+    } else panelRef.current?.scrollTo({ top: 0, behavior });
   }, [picked?.cell]);
 
   /** After zooming in, the basemap may know a closer name, or a site it had not drawn yet at the first look. */
@@ -213,18 +226,22 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       {t.report}
     </button>
   );
+  // One row: the city on the left, sharing on the right. Back to the whole city gets a row of its own, at the left,
+  // above the place's name, rather than wrapping in under the others.
   const header = (
     <>
       {!narrow && switcher}
       <span className="panel__links">
-        {picked && (
-          <button type="button" className="pill pill--small" onClick={() => setPicked(null)}>
-            {t.wholeCity}
-          </button>
-        )}
         {!narrow && shareButton}
         {!narrow && reportButton}
       </span>
+      {picked && (
+        <span className="panel__back">
+          <button type="button" className="pill pill--small" onClick={() => setPicked(null)}>
+            {t.wholeCity}
+          </button>
+        </span>
+      )}
     </>
   );
   const footer = (

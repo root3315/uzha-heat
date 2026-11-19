@@ -44,7 +44,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   const locale = useLocale();
   const t = PROFILE_TEXTS[locale];
   const [endA, endB] = MAP_TEXTS[locale].ends;
-  const { formatDeg, formatDegSigned, formatNumber } = useFormats();
+  const { formatDeg, formatTemp, formatDegSigned, formatNumber } = useFormats();
   const wordsOf = useMemo(() => {
     const byKey = new Map(features.map((f) => [f.key, causeWords(f, locale)]));
     return (key: string) => byKey.get(key) ?? causeWords({ key, label: key, unit: '' }, locale);
@@ -121,7 +121,7 @@ export function ProfileChart({ profile, levels, cityMean, features, width, heigh
   };
 
   const probeText = probe?.cause
-    ? `${formatNumber(probe.d / 1000, 1)} ${t.km} · ${formatDeg(probe.t)} · ${causeLabel(wordsOf(probe.cause.key), probe.cause.value)} ${formatDegSigned(probe.cause.value)}`
+    ? `${formatNumber(probe.d / 1000, 1)} ${t.km} · ${formatTemp(probe.t)} · ${causeLabel(wordsOf(probe.cause.key), probe.cause.value)} ${formatDegSigned(probe.cause.value)}`
     : '';
   const probeAnchor = probe && x(probe.d) > width - 260 ? 'end' : 'start';
 
