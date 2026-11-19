@@ -495,6 +495,14 @@
 .close__how .pill {
   justify-self: start;
 }
+/* The band is the pill's own grey: a plain pill on it takes the card, so it still reads as a button. */
+.close .pill:not(.pill--ink) {
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.close .pill:not(.pill--ink):hover {
+  background: var(--line);
+}
 .close .close__label {
   font-size: clamp(28px, 2.4vw, 40px);
 }
