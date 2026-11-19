@@ -83,7 +83,7 @@ Say: "Our strongest own piece: the same model in Python and in the browser."
    `Math.fround` on both sides of every split." Then `whatIf()`: the change is clamped to the city's 5–95 % range.
 3. `pipeline/tests/test_browser_model.py`: `test_slim_model_reproduces_booster_predictions`, `atol=1e-5`.
    "Python and the browser match the booster to 0.00001 degrees: we compare and add up in float32, like XGBoost. The web tests check the same rows."
-   Tests: 109 pipeline (under a minute) and 320 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
+   Tests: 114 pipeline (under a minute) and 320 web (`cd web && npm test`, about 15 seconds). Run `npm test` if there is time.
 
 ### 6:40–7:00 · Limits and close
 
@@ -110,7 +110,7 @@ Thank you. The site is open on your phones now."
 | Planting list, Tashkent top five | −4.7, −3.0, −2.6, −2.6, −2.5 °C; about 780, 1,200, 1,330, 1,290, 1,370 people |
 | Place 1 (Bektemir district): crowns only / NDVI only / both | −1.3 / −3.7 / −4.7 °C; crowns to the city's top (34 %) alone: −1.3 °C |
 | Place 1: surface; cover; NDVI; residents | 45.5 °C (43.9 °C inside the city outline); 93 % built-up, no tree cover; 0.24, the median of inhabited cells; ~780 |
-| Tests | 109 pipeline + 320 web |
+| Tests | 114 pipeline + 320 web |
 
 ## Jury Q&A
 
@@ -159,6 +159,11 @@ Yes, now: `python -m pipeline.compare --city tashkent --points <your.csv>` or `-
 longitude, latitude and a value, or a GeoTIFF in any projection; it runs in seconds on the published map and prints r,
 Spearman, the mean difference and how much of our hottest 10 % is also in yours. For air temperature expect a
 difference; r says whether the heat is in the same places.
+
+**Is R² 0.79 not optimistic? Neighbouring cells look alike.**
+We hold out whole 2 km blocks. With a 400 m buffer, so no training cell touches a held-out one, it is 0.78 / 0.73 / 0.66;
+with 4 km blocks 0.77 / 0.75 / 0.67. Random splits would say 0.82: that is the optimistic one, and we do not use it.
+A linear model on the same blocks gets 0.67, NDVI alone 0.65 in Tashkent. `python -m pipeline.cv_check --all`, under a minute.
 
 **Backup: why only +1.8 °C? Tashkent feels much hotter.**
 The comparison ring is suburban itself, not a cool forest: 37 % built-up against 55 % inside the city, NDVI 0.34

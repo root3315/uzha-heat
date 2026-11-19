@@ -135,7 +135,9 @@ so rerunning the city retries them.
 4. **Model.** `XGBRegressor` (400 trees, depth 5, lr 0.05, subsample/colsample 0.8,
    min_child_weight 10) predicts LST from the factors. Accuracy (`r2Cv`, `maeCv`) is
    out-of-fold over **spatial block CV**: cells are grouped into 2×2 km blocks and `GroupKFold(5)`
-   holds whole blocks out, so neighbouring cells never leak between train and test.
+   holds whole blocks out. Cells at a block's edge still have training neighbours across it; `python -m pipeline.cv_check --all`
+   measures that: with a 400 m buffer R² drops by 0.01–0.04, with 4 km blocks by 0.02, and a linear model scores 0.09–0.22 lower
+   (`uzha/cv.py`, results in the main README).
 5. **Explanation.** The final model is fit on all cells; per-cell SHAP values come from
    `booster.predict(..., pred_contribs=True)` (TreeSHAP, exact for trees). The bias column is
    `baseValue`; the pipeline asserts `sum(shap) + baseValue == prediction`. `globalImportance`
