@@ -138,7 +138,8 @@ def test_at_moments_interpolates_in_time():
     assert out["vapour_kpa"] == pytest.approx(1.228, abs=3e-3)  # e_s(10 °C), FAO-56 Annex 2: 1.228 kPa
 
 
-def test_build_with_mocked_downloads(monkeypatch, tmp_path):
+def _mock_city(monkeypatch, tmp_path):
+    """A six-cell Tashkent JSON in tmp_path and every download of inputs.build replaced by a constant."""
     n = 6
     lon = 69.2797 + 0.004 * np.arange(n)
     lat = np.full(n, 41.3111)
@@ -172,7 +173,10 @@ def test_build_with_mocked_downloads(monkeypatch, tmp_path):
     monkeypatch.setattr(inputs, "fetch_ah4guc", lambda window: np.full((window[1] - window[0] + 1,
                                                                         window[3] - window[2] + 1), 30.0))
 
-    seb, force, lst_k, inside = inputs.build("tashkent", tmp_path, tmp_path / "cache")
+
+def test_build_with_mocked_downloads(monkeypatch, tmp_path):
+    _mock_city(monkeypatch, tmp_path)
+    seb, force, lst_k, inside = inputs.build("tashkent", tmp_path, tmp_path / "cache", moisture=False)
     assert isinstance(seb, SebInputs) and isinstance(force, Forcing)
     np.testing.assert_allclose(seb.fraction.sum(axis=1), 1.0)
     np.testing.assert_allclose(lst_k[0], 318.15)
@@ -183,3 +187,55 @@ def test_build_with_mocked_downloads(monkeypatch, tmp_path):
     assert force.diffuse_fraction[0] == pytest.approx(140 / 850)
     assert 20 < math.degrees(force.zenith) < 40 and force.dk_dt > 0
     assert (tmp_path / "cache" / "seb" / "tashkent_summary.json").exists()
+
+
+def test_build_takes_soil_moisture_and_irrigation_from_the_sentinel_2_wetness(monkeypatch, tmp_path):
+    _mock_city(monkeypatch, tmp_path)
+
+    def surface_moisture(bbox, grid):
+        wetness = np.full(grid.shape, 0.1, dtype=np.float32)
+        wetness[:, ::2] = np.nan  # every other column without clear land pixels
+        return {"ndmi": np.zeros(grid.shape), "wetness": wetness, "ndvi": np.zeros(grid.shape), "edges": {},
+                "scenes": 3}
+
+    monkeypatch.setattr(inputs, "fetch_surface_moisture", surface_moisture)
+    seb, _, _, inside = inputs.build("tashkent", tmp_path, tmp_path / "cache", moisture=True)
+    measured = ~np.isclose(seb.soil_moisture, 0.17)
+    assert inside.all() and measured.any() and not measured.all()
+    np.testing.assert_allclose(seb.soil_moisture[measured], inputs.THETA_AIR_DRY + 0.1 * (0.439 - 0.03), rtol=1e-6)
+    assert not seb.irrigated[measured].any()  # dry by SWIR: watering is no longer assumed from the outline
+    assert seb.irrigated[~measured].all()  # no W: the outline rule stays
+    assert any((tmp_path / "cache" / "seb").glob("*/sentinel2_moisture.pkl"))
+
+
+def test_wetness_maps_to_theta_between_air_dry_and_saturation():
+    theta = inputs.wetness_to_theta([0.0, 0.5, 1.0, 1.7, -0.2, np.nan])
+    np.testing.assert_allclose(theta[:5], [0.03, 0.2345, 0.439, 0.439, 0.03])
+    assert np.isnan(theta[5])
+
+
+def test_layer_wetness_from_ndmi_normalises_within_ndvi():
+    rng = np.random.default_rng(1)
+    vi = rng.uniform(0.1, 0.7, (60, 60))
+    ndmi = -0.2 + 0.6 * vi + rng.uniform(0.0, 0.3, vi.shape)  # wetter with greenness, plus a moisture spread
+    layer = {"wetness": np.full(vi.shape, 0.5), "ndmi": ndmi, "ndvi": vi}
+    w = inputs.layer_wetness(layer, "ndmi")
+    assert np.nanmin(w) >= 0.0 and np.nanmax(w) <= 1.0
+    spread = ndmi - (-0.2 + 0.6 * vi)
+    assert np.corrcoef(w.ravel(), spread.ravel())[0, 1] > 0.95  # W follows the moisture, not the greenness
+    np.testing.assert_allclose(inputs.layer_wetness(layer, "optram"), 0.5)
+    with pytest.raises(ValueError):
+        inputs.layer_wetness(layer, "lst")
+
+
+def test_cell_moisture_keeps_era5_where_wetness_is_missing_and_can_anchor_to_it():
+    wetness = np.array([0.0, 1.0, np.nan, 0.9])
+    base = np.array([True, False, True, False])
+    theta, irrigated = inputs.cell_moisture(wetness, 0.18, base)
+    assert theta[2] == pytest.approx(0.18) and irrigated[2]
+    assert irrigated.tolist() == [False, True, True, True]  # θ(0.9) = 0.398 ≥ field capacity 0.347
+    assert ((theta >= inputs.THETA_AIR_DRY) & (theta <= inputs.THETA_WET)).all()
+    _, flags = inputs.cell_moisture(wetness, 0.18, base, vegetation=False)
+    assert flags.tolist() == base.tolist()
+    anchored, _ = inputs.cell_moisture(np.array([0.2, 0.4, np.nan]), 0.18, np.ones(3, bool), anchor=True)
+    assert anchored[:2].mean() == pytest.approx(0.18) and anchored[1] > anchored[0]
