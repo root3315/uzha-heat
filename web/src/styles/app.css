@@ -183,12 +183,16 @@ select {
   display: flex;
   align-items: center;
   gap: 4px;
+  /* Pinned at 50%, it would shrink to half the screen; max-content lets it use the width it is allowed. */
+  width: max-content;
   max-width: calc(100vw - 20px);
   padding: 0 4px 0 16px;
-  border-radius: 999px;
+  /* The map hint's shape: a pill on one line, still rounded when a phone wraps it. */
+  border-radius: 22px;
   background: var(--ink);
   color: var(--paper);
   font-size: 0.85rem;
+  line-height: 1.35;
   transform: translateX(-50%);
 }
 .notice__close,
