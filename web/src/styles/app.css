@@ -912,6 +912,10 @@ select {
   gap: 10px;
   margin-bottom: 28px;
 }
+/* On a phone the city view has nothing for the header (its controls are on the map): no empty band above the figure. */
+.panel__header:has(> .panel__links:only-child:empty) {
+  display: none;
+}
 .panel__links {
   display: flex;
   flex-wrap: wrap;
