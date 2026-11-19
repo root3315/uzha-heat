@@ -58,7 +58,10 @@ def test_cv_check_runs_every_check_on_a_published_city_file(tmp_path):
             "cells": {"lon": lon.tolist(), "lat": lat.tolist(), "lst": lst.tolist(),
                       "values": {"ndvi": ndvi.tolist(), "built": built.tolist()}}}
     (tmp_path / "tashkent.json").write_text(json.dumps(city), encoding="utf-8")
-    rows = check("tashkent", tmp_path)
-    assert len(rows) == 7 and all(-1 < row["r2"] <= 1 for row in rows)
+    rows = check("tashkent", tmp_path, inside=lon < 69.25)
+    assert len(rows) == 9 and all(-1 < row["r2"] <= 1 for row in rows)
+    names = [row["check"] for row in rows]
+    assert "XGBoost, 2 km blocks, cells inside the city outline" in names
+    assert "XGBoost, 2 km blocks, cells in the ring around it" in names
     linear = next(row for row in rows if row["check"].startswith("Linear, all"))
     assert linear["r2"] > 0.9

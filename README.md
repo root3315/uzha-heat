@@ -66,14 +66,20 @@ Command: `PYTHONUTF8=1 python -m pipeline.validate --all --web`.
 
 | Check | R² |
 |---|---|
-| XGBoost, held-out blocks of 1 / 2 / 4 km | 0.80 / 0.79 / 0.77 · 0.80 / 0.77 / 0.75 · 0.71 / 0.69 / 0.67 |
+| XGBoost, held-out 2 km blocks (the published score) | 0.79 / 0.77 / 0.69 |
+| the same, cells inside the city outline only | 0.80 / 0.78 / 0.68, MAE 1.3 / 1.0 / 1.4 °C |
+| the same, cells in the 1.5 km ring only | 0.74 / 0.74 / 0.51 |
+| XGBoost, held-out 1 km blocks | 0.80 / 0.80 / 0.71 |
+| XGBoost, held-out 4 km blocks (the conservative figure) | 0.77 / 0.75 / 0.67 |
 | XGBoost, 2 km blocks, no training cell within 400 m of a held-out one | 0.78 / 0.73 / 0.66 |
 | XGBoost, random cells (not spatial, for contrast: optimistic) | 0.82 / 0.83 / 0.76 |
 | Linear model, all factors, 2 km blocks | 0.67 / 0.55 / 0.60 |
 | Linear model, NDVI only, 2 km blocks | 0.65 / 0.35 / 0.50 |
 
 The published score (2 km blocks) loses 0.01–0.04 with a buffer and a little more with larger blocks, so neighbouring
-cells do not carry it; the model adds 0.09–0.22 over a linear one. Command: `python -m pipeline.cv_check --all`
+cells do not carry it; the model adds 0.09–0.22 over a linear one. It is no weaker inside the city than in the
+countryside around it, where the reader acts; its typical error there, 1.0–1.4 °C, is the size of many single changes
+"what if" shows, so read those as a direction and an order of size. Command: `python -m pipeline.cv_check --all`
 (published data only, under a minute).
 
 **People in the heat.** About 313 thousand people in Tashkent, 55 thousand in Bukhara and about 7 thousand in Samarkand live
