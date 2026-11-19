@@ -95,6 +95,12 @@ cooling × residents, not how hot the cell is today. The first place, in Bektemi
 no tree cover, NDVI 0.24) at 45.5 °C, 1.6 °C above the mean inside the outline (43.9 °C), with about 780 residents. There: crowns only −1.3 °C,
 NDVI only −3.7 °C, both −4.7 °C (surface 45.5 → 40.8 °C).
 
+How much these figures rest on the one model that was fit: refit it 50 times on resamples of whole 2 km blocks of cells
+and read the same planting at the same places. For Tashkent's five, 90 % of the refits give −3.0…−5.1, −2.2…−3.3,
+−2.3…−3.4, −1.9…−3.0 and −2.0…−2.8 °C. The top place's −4.7 °C lies near the upper end (median −4.0 °C): it was picked
+for being large, so read it as "about −4 °C". The site shows this range under each place. Command:
+`python -m pipeline.plan_check --all` (published data only, about a minute).
+
 On the surface most of it shows up as greenery (NDVI), not crowns. A survey of 30 green squares in Tashkent (Mukhamedjanov et al.,
 2024) found crown area cools most and lawns barely; that study measured air at 1.5 m, between 12:00 and 15:00. We map the
 surface at about 11:00: watered grass cools the surface by evaporation, crowns cool the air by shade. And ESA WorldCover
@@ -199,7 +205,7 @@ pip install -r pipeline/requirements-lock.txt         # the exact versions we ra
 PYTHONUTF8=1 python -m pipeline.run --all              # map, model and model-<city>.json; or --city tashkent
 PYTHONUTF8=1 python -m pipeline.validate --all --web   # MODIS check, night, rings
 PYTHONUTF8=1 python -m pipeline.buildings              # buildings for 3D (downloads OSM and Microsoft footprints)
-python -m pytest pipeline/tests -q                     # 121 tests, under a minute
+python -m pytest pipeline/tests -q                     # 125 tests, under a minute
 ```
 
 The pipeline reads Landsat and Sentinel-2 from Microsoft Planetary Computer and caches every layer in `pipeline/cache/`.

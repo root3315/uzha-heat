@@ -1645,3 +1645,9 @@ summary.rest__summary:hover,
   color: var(--ink-2);
   font-size: 0.85rem;
 }
+.plan__range {
+  grid-column: 2 / -1;
+  margin-top: -6px;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+}
