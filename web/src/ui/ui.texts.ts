@@ -349,7 +349,8 @@ export const PLAN_TEXTS = texts(
 
 export const MISC_TEXTS = texts(
   {
-    hint: (touch: boolean) => `Tap a cell to see its cause · drag A and B to draw a section${touch ? '' : ' · or drag across the map with Shift held'}`,
+    hint: (touch: boolean) =>
+      `${touch ? 'Tap' : 'Click'} a cell to see its cause · drag A and B to draw a section${touch ? '' : ' · or drag across the map with Shift held'}`,
     hideHint: 'Hide the hint',
     city: 'City',
     photo: (credit: string) => `Photo: ${credit}`,
