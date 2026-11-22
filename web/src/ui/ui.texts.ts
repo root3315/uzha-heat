@@ -122,12 +122,12 @@ export const PANEL_TEXTS = texts(
 
 export const ENERGY_UI_TEXTS = texts(
   {
-    intake: { before: 'Sunlight absorbed, in watts per square metre: ', middle: "; after the surface's own thermal radiation, ", after: ' is left. Where it goes:' },
+    intake: { before: 'Sunlight absorbed: ', middle: "; after the surface's own thermal radiation, ", after: ' is left. Where it goes:' },
     rows: { hot: 'Hottest 10% of the city', mean: 'Whole city', green: 'Greenest 10% of the city' },
     split: (air: string, evaporation: string) => `to the air ${air} · to evaporation ${evaporation}`,
   },
   {
-    intake: { before: 'Поглощено солнца, ватт на квадратный метр: ', middle: ', после теплового излучения остаётся ', after: '. Куда оно уходит:' },
+    intake: { before: 'Поглощено солнца ', middle: ', после теплового излучения остаётся ', after: '. Куда оно уходит:' },
     rows: { hot: 'Самые горячие 10 % города', mean: 'Весь город', green: 'Самые зелёные 10 % города' },
     split: (air, evaporation) => `в воздух ${air} · на испарение ${evaporation}`,
   },
