@@ -485,6 +485,14 @@
   text-decoration: none;
   font-weight: 600;
 }
+/* A 44 px target for a finger, without moving the line. */
+@media (pointer: coarse) {
+  .rp-foot a {
+    display: inline-block;
+    padding: 12px 0;
+    margin: -12px 0;
+  }
+}
 
 /* ---------- Phone: the same sheet, full width ---------- */
 @media (max-width: 640px) {

@@ -34,6 +34,12 @@ dl,
 dd {
   margin: 0;
 }
+/* A long word in a display heading wraps rather than running off a 320 px screen. */
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
+}
 ul,
 ol {
   padding: 0;
@@ -206,6 +212,13 @@ select {
   font-size: 1.2rem;
   cursor: pointer;
 }
+/* The pill around them is ink: an ink ring would vanish, so the ring is paper and sits inside the button. */
+.notice__close:focus-visible,
+.map-hint__close:focus-visible {
+  outline-color: var(--paper);
+  outline-offset: -6px;
+  border-radius: 999px;
+}
 
 /* ---------- Bar ---------- */
 /* Solid, so text never shows through it; only a short fade below. */
@@ -264,6 +277,11 @@ select {
 }
 .bar__nav a:hover {
   background: var(--card);
+}
+@media (pointer: coarse) {
+  .bar__nav a {
+    min-height: 44px;
+  }
 }
 .bar__open-short {
   display: none;
@@ -345,7 +363,8 @@ select {
 /* On the heat colours an ink ring alone can vanish: a card halo on both sides of it. */
 .map-bar .pill:focus-visible,
 .map-bar select:focus-visible,
-.map-layers .pill:focus-visible {
+.map-layers .pill:focus-visible,
+.map-3d:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 0;
   box-shadow:
@@ -1727,8 +1746,14 @@ summary.rest__summary:hover,
   .bar__open {
     padding: 0 14px;
   }
+  /* Out of sight, not out of the tree: the short label is aria-hidden, so this one still names the link. */
   .bar__open-long {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .bar__open-short {
     display: inline;
@@ -1883,7 +1908,7 @@ summary.rest__summary:hover,
 }
 .plan__place {
   display: grid;
-  grid-template-columns: 2ch 6ch 1fr;
+  grid-template-columns: 2ch 6ch minmax(0, 1fr);
   align-items: baseline;
   gap: 12px;
   width: 100%;
