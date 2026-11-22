@@ -18,7 +18,7 @@ export const LANDING_TEXTS = texts(
       region: (city: string) => `Surface temperature map: ${city}`,
       foundBefore: 'hot cells found ',
       foundOf: (total: string) => ` of${NBSP}${total}`,
-      prompt: (threshold: string) => `Try it: tap the map and find a spot at ${threshold} or hotter (the hottest 10%)`,
+      prompt: (threshold: string) => `Try it: pick cells on the map until you find one at ${threshold} or hotter (the hottest 10%)`,
       gaugeLabel: 'surface temperature, share of the city',
       gaugeHint: `Colour means degrees only; lines every 2°, like contour lines on${NBSP}a mountain map. Hover or tap: the map gives the degrees and${NBSP}the cause.`,
       openFull: 'Open the full map',
@@ -42,7 +42,7 @@ export const LANDING_TEXTS = texts(
       isotherms: (city: string) => `Surface isotherms: ${city}`,
       noData: 'No data',
       computingShort: 'Computing isotherms',
-      meanSurface: 'mean surface',
+      meanSurface: 'surface, mean',
       hotTenth: 'hottest 10% of the city',
       from: (t: string) => `from ${t}`,
       livingHot: 'live on the hottest cells inside the city line',
@@ -69,13 +69,13 @@ export const LANDING_TEXTS = texts(
         `and${NBSP}9 satellites: the median of cloud-free scenes for${NBSP}${period}. Alongside are ${factors} factors: greenery and${NBSP}albedo from${NBSP}Sentinel-2, built-up area ` +
         `and${NBSP}ground from${NBSP}ESA WorldCover, roads and${NBSP}water from${NBSP}OpenStreetMap, building height and${NBSP}volume from${NBSP}OpenStreetMap and${NBSP}GHSL, terrain from${NBSP}Copernicus DEM.`,
       model: (type: string) =>
-        `An ${type} model predicts the temperature from${NBSP}the factors; we test it on${NBSP}parts of the city it has not${NBSP}seen. SHAP gives each factor's contribution ` +
+        `An ${type} model (gradient boosting, a common machine-learning method) predicts the temperature from${NBSP}the factors; we test it on${NBSP}parts of the city it has not${NBSP}seen. SHAP, a standard way to split a prediction among its inputs, gives each factor's contribution ` +
         `in${NBSP}degrees: an${NBSP}association in${NBSP}the data, not${NBSP}an${NBSP}experiment. The heat island is the median of cells inside the city line minus the median of the ring around it.`,
       people: (year: number) =>
         `Residents per cell come from${NBSP}WorldPop ${year}: a model that spreads the census over the buildings seen on${NBSP}imagery, not${NBSP}a${NBSP}count ` +
         `of people. Schools, kindergartens and${NBSP}clinics come from${NBSP}OpenStreetMap.`,
       figures: (lst: number, s2: number, cells: string, explained: string, error: string) =>
-        `${lst} Landsat scenes · ${s2} Sentinel-2 scenes · ${cells} cells · the model explains ${explained} of the differences, typical error ±${error}`,
+        `${lst} Landsat ${pluralEn(lst, ['scene', 'scenes'])} · ${s2} Sentinel-2 ${pluralEn(s2, ['scene', 'scenes'])} · ${cells} cells · the model explains ${explained} of the differences, typical error ±${error}`,
       method: `Full method and${NBSP}factors`,
       team: 'Team',
       names: ['Amira', 'Oliya', 'Maxim', 'Shakhina', 'Stepan'],
@@ -99,7 +99,7 @@ export const LANDING_TEXTS = texts(
       region: (city) => `Карта температуры поверхности: ${city}`,
       foundBefore: 'найдено горячих участков ',
       foundOf: (total) => ` из${NBSP}${total}`,
-      prompt: (threshold) => `Попробуйте: нажмите на карту и найдите место от ${threshold} и горячее (самые горячие 10 %)`,
+      prompt: (threshold) => `Попробуйте: выбирайте участки на карте, пока не найдёте участок от ${threshold} и горячее (самые горячие 10 %)`,
       gaugeLabel: 'температура поверхности, доля города',
       gaugeHint: `Цвет значит только градусы, линии через каждые 2°, как горизонтали на${NBSP}карте гор. Наведите или коснитесь: карта скажет градусы и${NBSP}причину.`,
       openFull: 'Открыть карту целиком',
@@ -123,7 +123,7 @@ export const LANDING_TEXTS = texts(
       isotherms: (city) => `Изотермы поверхности: ${city}`,
       noData: 'Нет данных',
       computingShort: 'Считаю изотермы',
-      meanSurface: 'средняя поверхность',
+      meanSurface: 'поверхность, в среднем',
       hotTenth: 'самые горячие 10 % города',
       from: (t) => `от ${t}`,
       livingHot: 'живут на самых горячих участках в черте',
@@ -150,13 +150,13 @@ export const LANDING_TEXTS = texts(
         `и${NBSP}9: медиана безоблачных снимков за${NBSP}${period}. Рядом ${factors} факторов: зелень и${NBSP}альбедо по${NBSP}Sentinel-2, застройка ` +
         `и${NBSP}грунт по${NBSP}ESA WorldCover, дороги и${NBSP}вода по${NBSP}OpenStreetMap, высота и${NBSP}объём зданий по${NBSP}OpenStreetMap и${NBSP}GHSL, рельеф по${NBSP}Copernicus DEM.`,
       model: (type) =>
-        `Модель ${type} предсказывает температуру по${NBSP}факторам, проверяем её на${NBSP}кусках города, которых она не${NBSP}видела. Вклад фактора в${NBSP}градусах ` +
-        `считает SHAP: это связь в${NBSP}данных, а${NBSP}не${NBSP}эксперимент. Остров тепла: медиана участков внутри черты города минус медиана кольца вокруг.`,
+        `Модель ${type} (градиентный бустинг, распространённый метод машинного обучения) предсказывает температуру по${NBSP}факторам, проверяем её на${NBSP}кусках города, которых она не${NBSP}видела. Вклад фактора в${NBSP}градусах ` +
+        `считает SHAP, стандартный способ разложить прогноз по${NBSP}факторам: это связь в${NBSP}данных, а${NBSP}не${NBSP}эксперимент. Остров тепла: медиана участков внутри черты города минус медиана кольца вокруг.`,
       people: (year) =>
         `Жителей участка берём из${NBSP}WorldPop ${year}: это модель, которая раскладывает перепись по${NBSP}застройке на${NBSP}снимках, а${NBSP}не${NBSP}подсчёт ` +
         `людей. Школы, детские сады и${NBSP}поликлиники взяты из${NBSP}OpenStreetMap.`,
       figures: (lst, s2, cells, explained, error) =>
-        `${lst} сцен Landsat · ${s2} сцен Sentinel-2 · ${cells} участков · модель объясняет ${explained} различий, типичная ошибка ±${error}`,
+        `${lst} ${pluralRu(lst, ['снимок', 'снимка', 'снимков'])} Landsat · ${s2} ${pluralRu(s2, ['снимок', 'снимка', 'снимков'])} Sentinel-2 · ${cells} участков · модель объясняет ${explained} различий, типичная ошибка ±${error}`,
       method: `Весь метод и${NBSP}факторы`,
       team: 'Команда',
       names: ['Амира', 'Олия', 'Максим', 'Шахина', 'Степан'],

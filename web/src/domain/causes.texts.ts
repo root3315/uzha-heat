@@ -41,7 +41,7 @@ export const CAUSE_WORDS = texts<Record<FactorKey, CauseWords>>(
       coolsShort: 'greenery',
       there: 'little greenery',
       better: 'up',
-      measure: (v) => `NDVI ${en.formatNumber(v, 2)}`,
+      measure: (v) => `greenery index NDVI ${en.formatNumber(v, 2)}`,
     },
     tree: {
       heats: 'lack of trees',
@@ -147,7 +147,7 @@ export const CAUSE_WORDS = texts<Record<FactorKey, CauseWords>>(
       coolsShort: 'зелень',
       there: 'мало зелени',
       better: 'up',
-      measure: (v) => `NDVI ${ru.formatNumber(v, 2)}`,
+      measure: (v) => `индекс зелени NDVI ${ru.formatNumber(v, 2)}`,
     },
     tree: {
       heats: 'нехватка деревьев',
