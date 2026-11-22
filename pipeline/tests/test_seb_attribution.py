@@ -167,7 +167,7 @@ def test_symmetric_factors_get_equal_shares():
     def symmetric(state, forcing, params):
         x, y = state.qf / 100.0, (1.0 - state.sky_view) / 0.5
         zeros = np.zeros((len(x), T))
-        return TileState(zeros, zeros, zeros, zeros, zeros, zeros, zeros, zeros, t_cell=300 + x + y + 2 * x * y)
+        return TileState(zeros, zeros, zeros, zeros, zeros, zeros, zeros, np.ones((len(x), T), bool), t_cell=300 + x + y + 2 * x * y)
 
     phi = attribution.shapley(inputs, forcing, params, reference, symmetric)
     k_qf, k_geo = GROUPS.index("anthropogenic"), GROUPS.index("geometry")
