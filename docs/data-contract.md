@@ -76,10 +76,12 @@ The web app (Vite + TypeScript + MapLibre) only reads these files. No backend at
   except coordinates (`cells.lon`/`lat`, district geometry: 5 decimals, ~1 m) and
   `grid.halfSizeDeg` (6 decimals) — 3 decimals of a degree (~100 m) is too coarse for 200 m cells.
 - `lst` is mean summer land-surface temperature, °C (median of clear-sky Landsat 8/9 scenes).
+- `period.sceneTimes` is optional: the UTC times (ISO, `Z`) of the Landsat scenes in the LST median, sorted;
+  `lstScenes` is their count. Weather at the overpass and the physics forcing use these times when present.
 - `shap[key][i]` is in °C: contribution of factor `key` to the cell's temperature relative to
   `model.baseValue`. Positive = this factor heats the cell, negative = cools it.
 - `globalImportance` is sorted by `meanAbsShap` desc. `correlation` = Pearson(feature, lst).
-- `height` is metres (not rounded to 10 m like distances); `volume` is m³ of buildings per hectare.
+- `height` and distances (`water_dist`) are metres, 3 decimals like other floats; `volume` is m³ of buildings per hectare.
 - Area-share factors (`tree`, `built`, `bare`) are percent of the cell area, 0–100 (not 0–1 fractions).
 - `districts` is optional (may be absent or empty).
 - `cells.pop` is optional: people living in the cell, whole numbers, from the WorldPop 100 m

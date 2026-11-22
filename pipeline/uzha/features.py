@@ -48,6 +48,7 @@ class FeatureTable:
     s2_scenes: int
     period_label: str
     dropped: list = field(default_factory=list)
+    lst_times: tuple = ()  # UTC times of the Landsat scenes in the LST median
 
 
 def build(city: City, grid: Grid, cache: Cache, area=None) -> FeatureTable:
@@ -109,7 +110,8 @@ def build(city: City, grid: Grid, cache: Cache, area=None) -> FeatureTable:
     table = _to_table(grid, layers, valid, water_fraction, area)
     factors = [key for key in FACTORS if key in layers]
     log.info("%s: %d of %d cells kept; factors: %s", city.id, len(table), grid.rows * grid.cols, factors)
-    return FeatureTable(table, factors, lst.scenes, surface.scenes if surface else 0, lst.period.label, dropped)
+    return FeatureTable(table, factors, lst.scenes, surface.scenes if surface else 0, lst.period.label, dropped,
+                        tuple(getattr(lst, "times", ())))  # a result cached before `times` existed has none
 
 
 def building_form(ghsl_height: np.ndarray, ghsl_share: np.ndarray, counts: np.ndarray, tagged: np.ndarray,

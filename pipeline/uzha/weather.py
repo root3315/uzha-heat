@@ -106,6 +106,12 @@ def landsat_moments(bbox: tuple, period_label: str) -> list:
     return [item.datetime for item in landsat.find_scenes(bbox, period)]
 
 
+def document_moments(document: dict) -> list:
+    """The UTC times of the scenes in the document's LST median (`period.sceneTimes`), or [] for a document written
+    before they were recorded."""
+    return [datetime.fromisoformat(t.replace("Z", "+00:00")) for t in document["period"].get("sceneTimes", [])]
+
+
 def fetch_series(lon: float, lat: float) -> dict:
     return era5.hourly(lon, lat, f"{YEARS[0]}-{MONTHS[0]:02d}-01", f"{YEARS[-1]}-{MONTHS[-1]:02d}-31")
 
@@ -141,8 +147,8 @@ def enrich(document: dict, cache_root: Path) -> dict:
     try:
         # The scene times depend on the period and the extent: a run with another of either must not reuse them.
         key = hashlib.sha1(repr((tuple(city["bbox"]), document["period"]["label"])).encode()).hexdigest()[:8]
-        moments = cache.get_or_compute(f"{city['id']}_landsat_times_{key}",
-                                       lambda: landsat_moments(tuple(city["bbox"]), document["period"]["label"]))
+        moments = document_moments(document) or cache.get_or_compute(
+            f"{city['id']}_landsat_times_{key}", lambda: landsat_moments(tuple(city["bbox"]), document["period"]["label"]))
     except Exception:
         log.exception("%s: Landsat scene times unavailable, summer means only", city["id"])
         moments = []

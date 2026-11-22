@@ -138,6 +138,28 @@ def test_at_moments_interpolates_in_time():
     assert out["vapour_kpa"] == pytest.approx(1.228, abs=3e-3)  # e_s(10 °C), FAO-56 Annex 2: 1.228 kPa
 
 
+def test_one_overpass_counts_once():
+    series = {"time": ["2024-07-03T05:00", "2024-07-03T06:00", "2024-07-04T05:00", "2024-07-04T06:00"],
+              "a": [100.0, 200.0, 300.0, 400.0], "dew_point_2m": [10.0] * 4}
+    pass_one = [datetime(2024, 7, 3, 5, 45, 0, tzinfo=timezone.utc), datetime(2024, 7, 3, 5, 45, 24, tzinfo=timezone.utc)]
+    out = inputs.at_moments(series, pass_one + [datetime(2024, 7, 4, 5, 45, tzinfo=timezone.utc)], ("a", "dew_point_2m"))
+    assert out["count"] == 2
+    assert out["a"] == pytest.approx((175.0 + 375.0) / 2, abs=0.1)
+
+
+def test_road_area_falls_back_when_the_extract_has_no_roads(monkeypatch, tmp_path):
+    from pipeline.uzha.grid import Grid
+
+    grid = Grid.from_bbox((69.20, 41.25, 69.23, 41.27), 100)
+    way = {"id": 1, "tags": {"highway": "residential"},
+           "geometry": [{"lon": 69.21, "lat": 41.26}, {"lon": 69.22, "lat": 41.26}]}
+    monkeypatch.setattr(inputs.osmpbf, "download", lambda cache_dir: cache_dir / "x.pbf")
+    monkeypatch.setattr(inputs.osmpbf, "roads", lambda path, bbox, types: [])
+    monkeypatch.setattr(inputs.osm, "overpass", lambda query: [way])
+    area = inputs.fetch_road_area(grid.bbox_lonlat(), grid, tmp_path)
+    assert area.sum() > 0
+
+
 def _mock_city(monkeypatch, tmp_path):
     """A six-cell Tashkent JSON in tmp_path and every download of inputs.build replaced by a constant."""
     n = 6

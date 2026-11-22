@@ -91,3 +91,13 @@ def test_city_entry_uses_analysed_bbox():
     entry = export.city_entry(city, None, 44.0, 0.7, bbox=(69.1039123456, 41.1, 69.54, 41.44))
     assert entry["bbox"] == [69.10391, 41.1, 69.54, 41.44]
     assert export.city_entry(city, None, 44.0, 0.7)["bbox"] == list(city.bbox)
+
+
+def test_period_lists_the_scene_times_in_utc_only_when_known():
+    from datetime import datetime, timedelta, timezone
+
+    tashkent = timezone(timedelta(hours=5))
+    times = (datetime(2024, 7, 2, 10, 50, tzinfo=tashkent), datetime(2023, 6, 1, 5, 51, 7, tzinfo=timezone.utc))
+    block = export.period("summer", 2, 1, times)
+    assert block["sceneTimes"] == ["2023-06-01T05:51:07Z", "2024-07-02T05:50:00Z"]
+    assert "sceneTimes" not in export.period("summer", 2, 1)

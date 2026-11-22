@@ -128,7 +128,11 @@ def shapley_budget(inputs, forcing, params, observed, inside, per_side: int = SH
     table = attribution.coalition_temperatures(part, forced, params, reference)
     phi = attribution.shapley_from_table(table, len(attribution.GROUPS))
     # Efficiency (Eq. 59): per cell the contributions add up to T(all observed) − T(all at reference).
-    efficiency = float(np.max(np.abs(phi.sum(axis=1) - (table[-1] - table[0]))))
+    gap = np.abs(phi.sum(axis=1) - (table[-1] - table[0]))
+    solved = np.isfinite(gap)  # cells with an unconverged coalition are NaN and left out of the budget
+    if not solved.any():
+        raise AssertionError("no sampled cell converged in every coalition")
+    efficiency = float(gap[solved].max())
     if efficiency > EFFICIENCY_TOLERANCE_K:
         raise AssertionError(f"Shapley efficiency off by {efficiency:.2e} K")
     result = attribution.budget(phi, observed[cells], inside[cells], table[-1], cell_area=weight)

@@ -48,7 +48,7 @@ def process_city(city: City, out_dir: Path) -> dict:
     entry = export.city_entry(city, photo, stats["lstMean"], fitted.r2_cv, bbox)
     document = export.city_document(
         entry=entry,
-        period={"label": table.period_label, "lstScenes": table.lst_scenes, "s2Scenes": table.s2_scenes},
+        period=export.period(table.period_label, table.lst_scenes, table.s2_scenes, table.lst_times),
         grid={"cellSizeM": int(CELL_SIZE_M), "halfSizeDeg": [round(v, 6) for v in half_size_deg(CELL_SIZE_M, city.center[1])],
               "count": len(cells)},
         features=export.feature_descriptions(table.factors, features.FACTORS),

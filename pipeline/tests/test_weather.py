@@ -98,3 +98,9 @@ def test_city_weather_leaves_out_an_incomplete_overpass():
     series["cloud_cover"] = [None if stamp == "2024-07-01T11:00" else c for stamp, c in zip(series["time"], series["cloud_cover"])]
     assert "overpass" in weather.city_weather(_series(), [moment])
     assert "overpass" not in weather.city_weather(series, [moment])
+
+
+def test_document_moments_read_the_recorded_scene_times():
+    document = {"period": {"label": "x", "sceneTimes": ["2024-07-02T05:50:00Z"]}}
+    assert weather.document_moments(document) == [datetime(2024, 7, 2, 5, 50, tzinfo=timezone.utc)]
+    assert weather.document_moments({"period": {"label": "x"}}) == []
