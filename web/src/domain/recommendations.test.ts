@@ -31,7 +31,7 @@ describe('recommend', () => {
   it('turns low vegetation into a tree recommendation explained by the actual numbers', () => {
     const trees = recommend(input(), 'ru').find((r) => r.id === 'shade-trees');
     expect(trees).toBeDefined();
-    expect(trees?.reasons.map((r) => plain(r.text))).toContain('индекс зелени NDVI 0,08, в 3 раза ниже среднего по городу (0,24)');
+    expect(trees?.reasons.map((r) => plain(r.text))).toContain('NDVI 0,08, в 3 раза ниже среднего по городу (0,24)');
     expect(trees?.reasons.map((r) => r.key)).toEqual(['ndvi', 'tree']);
   });
 
