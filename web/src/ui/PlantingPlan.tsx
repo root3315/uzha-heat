@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { CityDetail, LonLat, TreeModel } from '../data/contract';
 import type { MapMark } from '../map/CityMap';
-import { formatPeople } from '../domain/people';
+import { peopleFigure, peopleNoun } from '../domain/people';
+import type { Locale } from '../i18n/locale';
+
+/** "for 780 people" / "для 21 человека": Russian puts the noun after «для» in the genitive. */
+const PEOPLE_AFTER_FOR = { en: ['person', 'people'], ru: ['человека', 'человек', 'человек'] } as const;
+const peopleFor = (n: number, locale: Locale) => `${peopleFigure(n, locale)} ${peopleNoun(n, PEOPLE_AFTER_FOR, locale)}`;
 import type { PlantingPlace } from '../domain/plantingPlan';
 import { loadPlanUncertainty } from '../data/load';
 import { spreadFor } from '../data/planUncertainty';
@@ -98,7 +103,7 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
       plan.map((place, i) => ({
         point: place.point,
         label: String(i + 1),
-        name: t.mark(i + 1, formatDegSigned(-place.cooling), t.forPeople(formatPeople(place.people, locale))),
+        name: t.mark(i + 1, formatDegSigned(-place.cooling), t.forPeople(peopleFor(place.people, locale))),
       })),
     );
   }, [plan, onPlan, t, formatDegSigned, locale]);
@@ -121,7 +126,7 @@ function PlanBody({ detail, inside, onPick, onPlan }: PlantingPlanProps) {
             <button type="button" className="plan__place" onClick={() => onPick(place.point)}>
               <span className="plan__rank num">{i + 1}</span>
               <span className="plan__cooling num num--cool">{formatDegSigned(-place.cooling)}</span>
-              <span className="plan__people">{t.forPeople(formatPeople(place.people, locale))}</span>
+              <span className="plan__people">{t.forPeople(peopleFor(place.people, locale))}</span>
               {spreads[i] && (
                 <span className="plan__range num">{t.range(formatDegSigned(-(spreads[i]?.low ?? 0)), formatDegSigned(-(spreads[i]?.high ?? 0)))}</span>
               )}

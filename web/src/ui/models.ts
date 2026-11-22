@@ -48,8 +48,20 @@ function surfaceWorker(): Worker | null {
   return worker;
 }
 
+/**
+ * One request at a time: the worker answers in order, so a request posted behind others would spend its timeout
+ * waiting, and a timeout terminates the worker under the requests still in it. Each one is posted when the last is done.
+ */
+let surfaceQueue: Promise<unknown> = Promise.resolve();
+
 /** The surface computed in the worker from its own copy of the file; null when there is no worker to ask. */
 function surfaceInWorker(bytes: Uint8Array, outline: Outline | null): Promise<CitySurface | null> {
+  const run = surfaceQueue.then(() => askSurfaceWorker(bytes, outline));
+  surfaceQueue = run.catch(() => null);
+  return run;
+}
+
+function askSurfaceWorker(bytes: Uint8Array, outline: Outline | null): Promise<CitySurface | null> {
   const target = surfaceWorker();
   if (!target) return Promise.resolve(null);
   const id = ++nextRequest;

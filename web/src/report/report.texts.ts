@@ -160,7 +160,7 @@ export const REPORT_TEXTS = texts(
       `не${NBSP}видела.`,
     weather: 'Погода летом',
     method: (city, count, size, scenes, model, factors) =>
-      `${city} разбит на${NBSP}${count} участков ${size}${NBSP}×${NBSP}${size}${NBSP}м. Температура ` +
+      `Территория ${genitive(city)} разбита на${NBSP}${count} участков ${size}${NBSP}×${NBSP}${size}${NBSP}м. Температура ` +
       `поверхности: медиана ${scenes} ${pluralRu(scenes, ['снимка', 'снимков', 'снимков'])} Landsat 8/9 без облаков. Модель ` +
       `${model} предсказывает её по${NBSP}${factors} факторам, вклад каждого в${NBSP}градусах считает SHAP.`,
     limits: [

@@ -215,9 +215,13 @@ export function Report({ model, cities, transect: current, place, onClose }: Rep
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onCloseRef.current();
     window.addEventListener('keydown', onKey);
     document.body.classList.add('is-reporting');
+    // A modal dialog: the page under it takes no focus and is hidden from screen readers until the report closes.
+    const page = document.getElementById('root');
+    if (page) page.inert = true;
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.classList.remove('is-reporting');
+      if (page) page.inert = false;
     };
   }, []);
 

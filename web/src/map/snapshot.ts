@@ -135,7 +135,14 @@ export async function renderReportMap(
       canvasContextAttributes: { preserveDrawingBuffer: true },
     });
     map = created;
-    await new Promise<void>((resolve) => created.once('load', () => resolve()));
+    // A style that never loads (the basemap offline) must not hold the report or this hidden map forever.
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => reject(new Error('the map did not load')), IDLE_TIMEOUT_MS);
+      created.once('load', () => {
+        window.clearTimeout(timer);
+        resolve();
+      });
+    });
     created.setLayoutProperty(LAYER.isolines, 'visibility', 'visible');
     await whenIdle(created);
 

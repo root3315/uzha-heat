@@ -61,12 +61,14 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   // since a 3D camera kept from the last city would land on a close-up of the new one.
   const [threeD, setThreeD] = useState(() => readSharedView(window.location.search).threeD);
   const [picked, setPicked] = useState<PickedPlace | null>(null);
+  // Counts the reader's picks, so a second tap on the same place still brings its panel into view.
+  const [pickCount, setPickCount] = useState(0);
   // The planting places stay on the map while the reader opens them one by one from the list.
   const [planMarks, setPlanMarks] = useState<MapMark[] | null>(null);
   // On a wide screen the list starts open, so the answer is on the map at once; a reader who closes it keeps it closed.
   const [planClosed, setPlanClosed] = useState(false);
   const { width } = useViewport();
-  const narrow = width < NARROW_PX;
+  const narrow = width <= NARROW_PX; // the same edge as the CSS `max-width: 860px`
   // A plan the reader opens is framed, so its five marks stand apart instead of piling up at the city's zoom; the one a
   // wide screen opens by itself leaves the whole city in view.
   const planFrame = useRef({ shown: false, readerOpened: narrow });
@@ -106,6 +108,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       const found = mapRef.current?.nameAt(center, districtAt(detail, center)) ?? null;
       const site = mapRef.current?.siteAt(point) ?? null;
       setPicked({ cell, point: center, at: point, title: found?.name ?? t.unnamed, precision: found?.precision ?? PRECISION.none, site, siteSettled: false });
+      setPickCount((count) => count + 1);
     },
     [cellUnder, detail, t.unnamed],
   );
@@ -155,7 +158,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
       // A screen reader goes where the eye went: to the new place's name.
       panelRef.current?.querySelector<HTMLElement>('.panel__title')?.focus({ preventScroll: true });
     } else panelRef.current?.scrollTo({ top: 0, behavior });
-  }, [picked?.cell]);
+  }, [picked?.cell, pickCount]);
 
   /** After zooming in, the basemap may know a closer name, or a site it had not drawn yet at the first look. */
   const refineName = useCallback(() => {
