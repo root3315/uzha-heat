@@ -71,7 +71,7 @@ export const REPORT_TEXTS = texts(
     mapCaption: (step: string, a: string, b: string, length: string) =>
       `Surface isotherms every ${step}°, colour: temperature class. Line ${a}–${b}: a section ${length} long.`,
     sectionNote: `Band under the curve: what changes the temperature most on${NBSP}each stretch.`,
-    table: { city: 'City', island: 'Heat island', mean: 'Mean', hot: 'Hottest 1/10', from: (t: string) => `from ${t}` },
+    table: { city: 'City', island: 'Heat island', mean: 'Mean', hot: 'Hottest 10%', from: (t: string) => `from ${t}` },
     tableNote:
       `Heat island: the surface inside the city line against the ring around it. R²: the share of temperature differences the model ` +
       `explains on parts of the city it has${NBSP}not seen.`,
@@ -79,7 +79,7 @@ export const REPORT_TEXTS = texts(
     method: (city: string, count: string, size: number, scenes: number, model: string, factors: number) =>
       `${city} is divided into${NBSP}${count} cells of ${size}${NBSP}×${NBSP}${size}${NBSP}m. Surface temperature: the median of ${scenes} ` +
       `cloud-free Landsat 8/9 ${pluralEn(scenes, ['scene', 'scenes'])}. The ${model} model predicts it from${NBSP}${factors} factors; ` +
-      `SHAP gives each factor's contribution in${NBSP}degrees.`,
+      `SHAP, a standard way to split a model's prediction among its inputs, gives each factor's contribution in${NBSP}degrees.`,
     limits: [
       `This is surface temperature, not${NBSP}air. By day it is higher and changes more${NBSP}sharply.`,
       `Landsat passes over at about 11 a.m. Evening and night overheating does not${NBSP}show here.`,
@@ -115,7 +115,7 @@ export const REPORT_TEXTS = texts(
       physics: 'Физика: куда уходит солнце',
       measures: 'Что делать',
       map: 'Карта и разрез',
-      cities: 'Города рядом',
+      cities: 'Другие города',
       method: 'Как посчитано и чего карта не знает',
     },
     island: (inside, insideT, outside, outsideT) =>
@@ -154,7 +154,7 @@ export const REPORT_TEXTS = texts(
     mapDrawing: 'Рисую карту…',
     mapCaption: (step, a, b, length) => `Изотермы поверхности через ${step}°, цвет: класс температуры. Линия ${a}–${b}: разрез длиной ${length}.`,
     sectionNote: `Полоса под кривой: что сильнее всего меняет температуру на${NBSP}каждом отрезке.`,
-    table: { city: 'Город', island: 'Остров тепла', mean: 'Среднее', hot: 'Горячая 1/10', from: (t) => `от ${t}` },
+    table: { city: 'Город', island: 'Остров тепла', mean: 'Среднее', hot: 'Горячие 10 %', from: (t) => `от ${t}` },
     tableNote:
       `Остров тепла: поверхность в${NBSP}черте города против кольца вокруг. R²: какую долю разницы температур модель объясняет на${NBSP}кусках города, которых ` +
       `не${NBSP}видела.`,
@@ -162,7 +162,7 @@ export const REPORT_TEXTS = texts(
     method: (city, count, size, scenes, model, factors) =>
       `Территория ${genitive(city)} разбита на${NBSP}${count} участков ${size}${NBSP}×${NBSP}${size}${NBSP}м. Температура ` +
       `поверхности: медиана ${scenes} ${pluralRu(scenes, ['снимка', 'снимков', 'снимков'])} Landsat 8/9 без облаков. Модель ` +
-      `${model} предсказывает её по${NBSP}${factors} факторам, вклад каждого в${NBSP}градусах считает SHAP.`,
+      `${model} предсказывает её по${NBSP}${factors} факторам, вклад каждого в${NBSP}градусах считает SHAP, стандартный способ разложить прогноз модели по${NBSP}факторам.`,
     limits: [
       `Это температура поверхности, а${NBSP}не${NBSP}воздуха. Днём она выше и${NBSP}меняется резче.`,
       `Landsat снимает около 11 утра. Вечерний и${NBSP}ночной перегрев здесь не${NBSP}виден.`,

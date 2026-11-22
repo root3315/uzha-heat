@@ -37,7 +37,7 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
         'run new streets north–south or diagonally, not east–west',
       ],
       finding:
-        'modelling for a hot dry climate: daytime heat stress depends on building height to street width and on street orientation; open streets and east–west streets are the hottest, deep shaded ones the coolest',
+        'modelling for a hot dry climate: daytime heat stress depends on the ratio of building height to street width and on street orientation; open streets and east–west streets are the hottest, deep shaded ones the coolest',
       cite: 'Ali-Toudert and Mayer, 2006, Building and Environment',
     },
     'cool-pavements': {
@@ -70,7 +70,7 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
       cite: 'Knight и др., 2021, Environmental Evidence',
     },
     'cool-roofs': {
-      title: 'Холодные и зелёные крыши',
+      title: 'Светлые и зелёные крыши',
       actions: ['светлые отражающие покрытия кровли при плановом ремонте', 'зелёные крыши на общественных и торговых зданиях с плоской кровлей'],
       finding: 'Это воздух, не поверхность: по обзору моделей городов, зелёные крыши снижают температуру воздуха на 0,3–3 °C',
       cite: 'Santamouris, 2014, Solar Energy',
@@ -82,7 +82,7 @@ export const INTERVENTION_TEXTS = texts<Record<InterventionId, InterventionWords
         'новые улицы вести по оси север–юг или наискось, а не с востока на запад',
       ],
       finding:
-        'по моделированию для жаркого сухого климата, тепловой стресс днём зависит от высоты домов к ширине улицы и её направления: открытые улицы и улицы с востока на запад жарче всего, глубокие и затенённые прохладнее',
+        'по моделированию для жаркого сухого климата, тепловой стресс днём зависит от отношения высоты домов к ширине улицы и от её направления: открытые улицы и улицы с востока на запад жарче всего, глубокие и затенённые прохладнее',
       cite: 'Ali-Toudert и Mayer, 2006, Building and Environment',
     },
     'cool-pavements': {

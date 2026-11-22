@@ -224,7 +224,7 @@ describe('advise', () => {
     expect(advice.kind).toBe('act');
     if (advice.kind !== 'act') return;
     expect(advice.title).toBe('Деревья вдоль улиц и теневые навесы');
-    expect(say(advice.reason)).toBe('Здесь NDVI 0,05, по модели это даёт +3,0°.');
+    expect(say(advice.reason)).toBe('Здесь индекс зелени NDVI 0,05, по модели это даёт +3,0°.');
     expect(advice.evidence.url).toMatch(/^https:/);
   });
 

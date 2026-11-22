@@ -23,7 +23,7 @@ export const ENERGY_TEXTS = texts(
         `Moist soil soaks up the most heat, about ${times} times more than dry soil, but by day the sunlight goes into evaporation, and by evening there is little to store.`,
     },
     caveat: (hour: number, solar: string) =>
-      `An estimate from one model for a clear day around ${hour}:00. Sunlight, ${solar}, and air from ERA5 are the same for the whole city; ` +
+      `An estimate from one model for a clear day around ${hour}:00. Sunlight, ${solar}, and air from the ERA5 weather reanalysis are the same for the whole city; ` +
       `the share going into evaporation comes from each cell's temperature between the city's hottest and coolest places.`,
     cityLine: (city: string, hot: string, green: string, hotShare: string, greenShare: string) =>
       `The hottest cells of ${city} give ${hot} to the air, the greenest ${green}: ` +
@@ -48,7 +48,7 @@ export const ENERGY_TEXTS = texts(
         `Влажная почва набирает больше всех тепла, примерно в ${times} раза больше сухого грунта, но днём солнце уходит на испарение, и к вечеру запасать почти нечего.`,
     },
     caveat: (hour, solar) =>
-      `Оценка по одной модели для ясного дня около ${hour}:00. Солнце, ${solar}, и воздух по ERA5 одни на весь город; ` +
+      `Оценка по одной модели для ясного дня около ${hour}:00. Солнце, ${solar}, и воздух по реанализу погоды ERA5 одни на весь город; ` +
       `сколько уходит на испарение, считаем по температуре участка между самым горячим и самым прохладным местом города.`,
     cityLine: (city, hot, green, hotShare, greenShare) =>
       `Самые горячие участки ${genitive(city)} отдают воздуху ${hot}, самые зелёные ${green}: ` +

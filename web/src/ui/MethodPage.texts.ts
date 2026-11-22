@@ -33,7 +33,7 @@ export const METHOD_TEXTS = texts(
       `${scenes} cloud-free Landsat 8/9 ${pluralEn(scenes, ['scene', 'scenes'])}, NASA/USGS imagery) and the ${factors} ` +
       `${pluralEn(factors, ['factor', 'factors'])} listed below.`,
     model: (type: string, share: string, r2: string, error: string) =>
-      `A ${type} model learns to predict a cell's temperature from its factors. The check is spatial: the city is cut into blocks, and the model ` +
+      `An ${type} model (gradient boosting) learns to predict a cell's temperature from its factors. The check is spatial: the city is cut into blocks, and the model ` +
       `is scored on blocks it has not seen. On this check the model explains ${share} of the temperature variation between cells ` +
       `(R² ${r2}), with a mean error of ${error}.`,
     shap: (base: string) =>
@@ -212,7 +212,7 @@ export const METHOD_TEXTS = texts(
       `поверхности летом (${period}, медиана ${scenes} ${pluralRu(scenes, ['снимка', 'снимков', 'снимков'])} Landsat 8/9 без ` +
       `облаков, снимки NASA/USGS) и ${factors} ${pluralRu(factors, ['фактор', 'фактора', 'факторов'])}, перечисленных ниже.`,
     model: (type, share, r2, error) =>
-      `Модель ${type} учится предсказывать температуру участка по его факторам. Проверка пространственная: город режется на блоки, и модель ` +
+      `Модель ${type} (градиентный бустинг) учится предсказывать температуру участка по его факторам. Проверка пространственная: город режется на блоки, и модель ` +
       `оценивают на тех, которых она не видела. На такой проверке модель объясняет ${share} разброса температуры между участками ` +
       `(R² ${r2}), средняя ошибка ${error}.`,
     shap: (base) =>
@@ -266,7 +266,7 @@ export const METHOD_TEXTS = texts(
       title: 'Сверка с MODIS и ночь',
       intro:
         'Замеров температуры поверхности на земле, с которыми можно сравнить всю карту, нет. Поэтому сверяем со вторым спутником NASA, MODIS ' +
-        '(участки около 1 км, то же лето). Наши участки по 200 м усреднены до его пикселей. Совпадение только внутри границы города показывает, что карта находит жару внутри города, а не только разницу города и пригорода.',
+        '(участки около 1 км, те же летние месяцы). Наши участки по 200 м усреднены до его пикселей. Совпадение только внутри границы города показывает, что карта находит жару внутри города, а не только разницу города и пригорода.',
       day: (product, time) => `${product}, днём ${time}`,
       match: (r, warmer, bias, rmse, n) =>
         `совпадение рисунка r = ${r}, наша поверхность ${warmer ? 'теплее' : 'холоднее'} на ${bias}, разброс ±${rmse}°, ${n} пикселей`,

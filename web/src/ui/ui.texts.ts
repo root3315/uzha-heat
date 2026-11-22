@@ -58,7 +58,7 @@ export const BAR_TEXTS = texts(
 
 export const TOOL_TEXTS = texts(
   {
-    unnamed: 'Unnamed place on the map',
+    unnamed: 'Unnamed cell on the map',
     flat: 'Back to the flat map',
     threeD: 'Show the city in 3D',
     flatShort: 'Flat map',
@@ -105,7 +105,7 @@ export const PANEL_TEXTS = texts(
     cityMean: (value: string) => `, city average ${value}`,
     figureHere: (mean: string) => `surface temperature here; city average ${mean}. Air is cooler.`,
     figureCity: (min: string, max: string) => `surface temperature, city average, from ${min} to ${max}. Air is cooler.`,
-    energyPlace: 'Physics of the place',
+    energyPlace: 'Physics of the cell',
     energyHot: 'Physics of the hottest 10% of the city',
     ramp: (value: string) => `City temperature scale, ${value} marked`,
   },
@@ -122,12 +122,12 @@ export const PANEL_TEXTS = texts(
 
 export const ENERGY_UI_TEXTS = texts(
   {
-    intake: { before: 'Sunlight absorbed: ', middle: "; after the surface's own thermal radiation, ", after: ' is left. Where it goes:' },
+    intake: { before: 'Sunlight absorbed, in watts per square metre: ', middle: "; after the surface's own thermal radiation, ", after: ' is left. Where it goes:' },
     rows: { hot: 'Hottest 10% of the city', mean: 'Whole city', green: 'Greenest 10% of the city' },
     split: (air: string, evaporation: string) => `to the air ${air} · to evaporation ${evaporation}`,
   },
   {
-    intake: { before: 'Поглощено солнца ', middle: ', после теплового излучения остаётся ', after: '. Куда оно уходит:' },
+    intake: { before: 'Поглощено солнца, ватт на квадратный метр: ', middle: ', после теплового излучения остаётся ', after: '. Куда оно уходит:' },
     rows: { hot: 'Самые горячие 10 % города', mean: 'Весь город', green: 'Самые зелёные 10 % города' },
     split: (air, evaporation) => `в воздух ${air} · на испарение ${evaporation}`,
   },
@@ -205,7 +205,7 @@ export const WHAT_IF_TEXTS = texts(
   {
     levers: {
       tree: { label: 'Trees', spoken: (v: string) => `trees on ${v} of the area` },
-      ndvi: { label: 'Greenery, NDVI', spoken: (v: string) => `NDVI ${v}` },
+      ndvi: { label: 'Greenery, NDVI', spoken: (v: string) => `greenery index NDVI ${v}` },
       built: { label: 'Built-up', spoken: (v: string) => `${v} of the area built up`, noun: 'of built-up' },
       roads: { label: 'Roads', spoken: (v: string) => `${v} of road`, noun: 'of roads' },
     } as Record<'tree' | 'ndvi' | 'built' | 'roads', LeverWords>,
@@ -230,12 +230,12 @@ export const WHAT_IF_TEXTS = texts(
     caveat: 'From the model: an association in the data, not an experiment; surface, not air.',
     treesNote: ' “Trees” here is only the crown share; grass and leaves under them count in NDVI, so greenery changes more. New crowns take the place of bare ground first, then of built-up.',
     title: 'What if',
-    recalc: 'AI model estimate',
+    recalc: 'statistical model estimate',
   },
   {
     levers: {
       tree: { label: 'Деревья', spoken: (v) => `деревья на ${v} площади` },
-      ndvi: { label: 'Зелень, NDVI', spoken: (v) => `NDVI ${v}` },
+      ndvi: { label: 'Зелень, NDVI', spoken: (v) => `индекс зелени NDVI ${v}` },
       built: { label: 'Застройка', spoken: (v) => `застроено ${v} площади`, noun: 'застройки' },
       roads: { label: 'Дороги', spoken: (v) => `${v} дорог`, noun: 'дорог' },
     },
@@ -260,7 +260,7 @@ export const WHAT_IF_TEXTS = texts(
     caveat: 'По модели: связь в данных, не эксперимент; поверхность, не воздух.',
     treesNote: ' «Деревья» здесь только доля крон; трава и листва под ними идут в NDVI, поэтому зелень меняет больше. Новые кроны занимают место сначала голого грунта, потом застройки.',
     title: 'Что если',
-    recalc: 'оценка ИИ-модели',
+    recalc: 'оценка статистической модели',
   },
 );
 
@@ -282,11 +282,11 @@ export const SURFACES_TEXTS = texts(
     loading: 'Loading the physics of the city…',
     failed: 'The physics did not load. Close the block and open it again.',
     nothing: 'No roofs or roads here to change.',
-    unsettled: 'The energy balance does not close for this place, so the model gives no number here.',
-    treated: (delta: string, share: string) => `on the changed surfaces themselves ${delta}; they cover ${share} of the place`,
+    unsettled: 'The energy balance does not close for this cell, so the model gives no number here.',
+    treated: (delta: string, share: string) => `on the changed surfaces themselves ${delta}; they cover ${share} of the cell`,
     skill: (share: string) => `Physics model: it explains ${share} of the pattern of surface heat in this city. `,
     assumptions:
-      'Assumed: the weather of the Landsat days; only the albedo changes, not the heat stored in roofs and roads; green roofs are watered and behave like the grass here. Surface, not air.',
+      'Assumed: the weather of the Landsat days; only the albedo (the share of sunlight reflected) changes, not the heat stored in roofs and roads; green roofs are watered and behave like the grass here. Surface, not air.',
   },
   {
     title: 'Поверхности (физика)',
@@ -305,10 +305,10 @@ export const SURFACES_TEXTS = texts(
     failed: 'Физика не загрузилась. Закройте и откройте блок ещё раз.',
     nothing: 'Здесь нет крыш и дорог, которые можно поменять.',
     unsettled: 'Баланс энергии здесь не сходится, поэтому модель не даёт числа.',
-    treated: (delta, share) => `на самих изменённых поверхностях ${delta}; это ${share} площади места`,
+    treated: (delta, share) => `на самих изменённых поверхностях ${delta}; это ${share} площади участка`,
     skill: (share) => `Физическая модель: объясняет ${share} картины нагрева поверхности в этом городе. `,
     assumptions:
-      'Допущения: погода дней съёмки Landsat; меняется только альбедо, а не тепло, запасённое крышами и дорогами; зелёные крыши поливаются и ведут себя как здешняя трава. Поверхность, не воздух.',
+      'Допущения: погода дней съёмки Landsat; меняется только альбедо (доля отражённого солнца), а не тепло, запасённое крышами и дорогами; зелёные крыши поливаются и ведут себя как здешняя трава. Поверхность, не воздух.',
   },
 );
 
@@ -318,32 +318,32 @@ export const PLAN_TEXTS = texts(
     computing: 'Calculating over every cell of the city…',
     none: 'There are no cells in the city where trees would noticeably cool housing.',
     forPeople: (people: string) => `for ${people}`,
-    onMap: (count: number) => (count > 1 ? `Numbers 1–${count} on the map mark these places.` : 'Number 1 on the map marks this place.'),
+    onMap: (count: number) => (count > 1 ? `Numbers 1–${count} on the map mark these cells.` : 'Number 1 on the map marks this cell.'),
     caveat:
-      'Planting on each cell: +20 points of tree crowns (in place of bare ground, then built-up) and +0.1 NDVI, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
+      'Planting on each cell: tree crown cover +20 percentage points (in place of bare ground, then built-up) and greenery index NDVI +0.1, no further than the greenest 5% of the city. Order: degrees of cooling × residents. ' +
       'From the model: surface, not air.',
     title: 'Where to plant first',
     compute: 'whole city, by the model',
-    mark: (rank: number, cooling: string, people: string) => `Place ${rank} to plant: ${cooling} ${people}`,
-    range: (near: string, far: string) => `refit models: ${near} to ${far}`,
+    mark: (rank: number, cooling: string, people: string) => `Planting cell ${rank}: ${cooling} ${people}`,
+    range: (near: string, far: string) => `model uncertainty: ${near} to ${far}`,
     rangeNote: (replicates: number) =>
-      `The range under each place: 90% of ${replicates} models refit on resampled 2 km blocks of the city. The top place's figure is often near its upper end, since it was picked for being large.`,
+      `The range under each cell: where 90% of ${replicates} retrained models land, each trained on a different random draw of 2 km blocks of the city. The first cell's figure is often near the upper end, since it was picked for being large.`,
   },
   {
     failed: 'Модель не загрузилась. Закройте и откройте блок ещё раз.',
     computing: 'Считаю по всем участкам города…',
     none: 'В городе нет участков, где деревья заметно охладили бы жильё.',
     forPeople: (people) => `для ${people}`,
-    onMap: (count) => (count > 1 ? `Цифры 1–${count} на карте отмечают эти места.` : 'Цифра 1 на карте отмечает это место.'),
+    onMap: (count) => (count > 1 ? `Цифры 1–${count} на карте отмечают эти участки.` : 'Цифра 1 на карте отмечает этот участок.'),
     caveat:
-      'Посадка на каждом участке: +20 пунктов крон (на месте голого грунта, потом застройки) и +0,1 NDVI, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
+      'Посадка на каждом участке: доля крон +20 процентных пунктов (на месте голого грунта, потом застройки) и индекс зелени NDVI +0,1, не дальше самых зелёных 5 % города. Порядок: градусы охлаждения × число жителей. ' +
       'По модели: поверхность, не воздух.',
     title: 'Где сажать первым',
     compute: 'весь город, по модели',
-    mark: (rank, cooling, people) => `Место для посадки ${rank}: ${cooling} ${people}`,
-    range: (near, far) => `при переобучении: от ${near} до ${far}`,
+    mark: (rank, cooling, people) => `Участок для посадки ${rank}: ${cooling} ${people}`,
+    range: (near, far) => `разброс модели: от ${near} до ${far}`,
     rangeNote: (replicates) =>
-      `Диапазон под каждым местом: 90 % из ${replicates} моделей, обученных заново на перевыбранных блоках города по 2 км. Цифра первого места часто у верхнего края: его и выбрали за то, что она большая.`,
+      `Диапазон под каждым участком: куда попадают 90 % из ${replicates} моделей, обученных заново, каждая на своей случайной выборке блоков города по 2 км. Цифра первого участка часто у верхнего края: его и выбрали за то, что она большая.`,
   },
 );
 

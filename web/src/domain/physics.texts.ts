@@ -69,7 +69,7 @@ export const PHYSICS_TEXTS = texts(
         water: (s) => (s.flag('irrigated') ? 'Green roofs are watered.' : 'Green roofs are not watered.'),
         soil_moisture: (s, _, d) =>
           s.num('soil_moisture') === null ? "Substrate moisture is the cell's soil moisture." : `Substrate moisture ${d(s.num('soil_moisture') ?? 0)} m³/m³.`,
-        sky_view: () => 'The roof grass sees the open sky of the street, which understates its cooling to the sky.',
+        sky_view: () => "The roof grass is given the street's view of the sky, which understates its cooling to the sky.",
         structure: () => 'Whether a roof can carry it is not checked.',
       },
       permeable: {
