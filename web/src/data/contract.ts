@@ -57,6 +57,8 @@ export interface FeatureMeta {
 export interface Period {
   label: string;
   lstScenes: number;
+  /** UTC times of the scenes in the LST median (optional, newer pipeline runs). */
+  sceneTimes?: string[];
   s2Scenes: number;
 }
 

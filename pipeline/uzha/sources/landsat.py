@@ -47,6 +47,7 @@ class LstResult:
     lst: np.ndarray  # °C on the input raster, NaN where unknown
     scenes: int
     period: Period
+    times: tuple = ()  # acquisition times (UTC) of the scenes in the median
 
 
 def dn_to_celsius(dn: np.ndarray) -> np.ndarray:
@@ -71,11 +72,12 @@ def period_ranges(period: Period) -> list:
 def summer_lst(bbox: tuple, raster: Raster) -> LstResult:
     for period in PERIODS:
         items = find_scenes(bbox, period)
-        scenes = [lst for lst in parallel_map(lambda item: _scene_lst(item, raster), items)
-                  if np.isfinite(lst).mean() >= MIN_SCENE_CLEAR_FRACTION]
-        log.info("Landsat %s: %d items, %d usable", period.label, len(items), len(scenes))
-        if len(scenes) >= MIN_SCENES:
-            return LstResult(_robust_median(np.stack(scenes)), len(scenes), period)
+        used = [(item, lst) for item, lst in zip(items, parallel_map(lambda item: _scene_lst(item, raster), items))
+                if np.isfinite(lst).mean() >= MIN_SCENE_CLEAR_FRACTION]
+        log.info("Landsat %s: %d items, %d usable", period.label, len(items), len(used))
+        if len(used) >= MIN_SCENES:
+            return LstResult(_robust_median(np.stack([lst for _, lst in used])), len(used), period,
+                             tuple(item.datetime for item, _ in used))
     raise RuntimeError(f"Fewer than {MIN_SCENES} clear Landsat scenes for {bbox}")
 
 

@@ -215,10 +215,16 @@ def _default_solve():
 
 
 def _cell_temperature(solve, inputs, forcing, params) -> np.ndarray:
+    """Cell temperature, NaN where any tile did not converge (its value is a bracket end, not a solution), so the
+    cell drops out of every contrast instead of entering it with T_air − 15 K or + 45 K."""
     state = solve(inputs, forcing, params)
     if state.t_cell is None:
         raise ValueError("the solver returned no t_cell")
-    return np.asarray(state.t_cell, float)
+    t_cell = np.asarray(state.t_cell, float)
+    converged = getattr(state, "converged", None)
+    if converged is None:
+        return t_cell
+    return np.where(np.asarray(converged).reshape(len(t_cell), -1).all(axis=1), t_cell, np.nan)
 
 
 def coalition_temperatures(inputs, forcing, params, reference, solve=None, groups=GROUPS) -> np.ndarray:

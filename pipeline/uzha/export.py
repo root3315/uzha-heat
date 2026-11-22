@@ -1,5 +1,6 @@
 """Write the web data contract (docs/data-contract.md) as JSON."""
 import json
+from datetime import timezone
 from pathlib import Path
 
 import numpy as np
@@ -47,6 +48,14 @@ def lst_stats(lst: np.ndarray) -> dict:
         "lstP10": r3(np.percentile(lst, 10)),
         "lstP90": r3(np.percentile(lst, 90)),
     }
+
+
+def period(label: str, lst_scenes: int, s2_scenes: int, lst_times=()) -> dict:
+    """The `period` block; `sceneTimes` (UTC, ISO) when the times of the scenes in the LST median are known."""
+    block = {"label": label, "lstScenes": lst_scenes, "s2Scenes": s2_scenes}
+    if lst_times:
+        block["sceneTimes"] = sorted(t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") for t in lst_times)
+    return block
 
 
 def feature_descriptions(keys: list, catalog: dict) -> list:

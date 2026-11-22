@@ -61,14 +61,17 @@ def cool_roofs(inputs: SebInputs, where=None, albedo: float = 0.55, emissivity: 
     """
     eligible = _region(inputs, where) & (inputs.fraction[:, TILE["roof"]] > 0)
     new_albedo = inputs.albedo.copy()
-    new_albedo[eligible, TILE["roof"]] = albedo
+    roof = TILE["roof"]
+    # A coating never darkens a roof that is already brighter.
+    new_albedo[eligible, roof] = np.maximum(albedo, inputs.albedo[eligible, roof])
     changes = {"albedo": new_albedo}
     if emissivity is not None:
         new_emissivity = inputs.emissivity.copy()
         new_emissivity[eligible, TILE["roof"]] = emissivity
         changes["emissivity"] = new_emissivity
     assumptions = [
-        _assumption("albedo", f"Every treated roof reaches albedo {albedo:.2f} (aged coating, not fresh)."),
+        _assumption("albedo", f"Every treated roof reaches albedo {albedo:.2f} (aged coating, not fresh); "
+                              "roofs already brighter keep theirs."),
         _assumption("emissivity", "Roof emissivity unchanged." if emissivity is None
                     else f"Roof emissivity set to {emissivity:.2f}."),
         _assumption("all_roofs", "All roof area in the drawn cells is treated; roof slope and access are ignored."),
@@ -94,12 +97,13 @@ def cool_pavements(inputs: SebInputs, where=None, albedo: float = 0.30, emissivi
     for tile in tiles:
         k = TILE[tile]
         treated = eligible & (inputs.fraction[:, k] > 0)
-        new_albedo[treated, k] = albedo
+        new_albedo[treated, k] = np.maximum(albedo, inputs.albedo[treated, k])  # never darker than it was
         if emissivity is not None:
             new_emissivity[treated, k] = emissivity
         patches.append((inputs.fraction[:, k] * treated, tile, tile))
     assumptions = [
-        _assumption("albedo", f"Treated {', '.join(tiles)} surfaces reach albedo {albedo:.2f}."),
+        _assumption("albedo", f"Treated {', '.join(tiles)} surfaces reach albedo {albedo:.2f}; "
+                              "surfaces already brighter keep theirs."),
         _assumption("emissivity", "Pavement emissivity unchanged." if emissivity is None
                     else f"Pavement emissivity set to {emissivity:.2f}."),
         _assumption("reflection", "Light reflected onto walls and pedestrians is not modelled."),

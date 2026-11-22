@@ -12,6 +12,7 @@ under `pipeline/cache/seb/<id>_<grid>/`:
 Every assumption below carries its source; pipeline/README.md ("Physics model inputs") has the same list.
 """
 import argparse
+import hashlib
 import json
 import logging
 import math
@@ -246,13 +247,16 @@ def road_area_share(elements: list, grid: Grid) -> np.ndarray:
     return area / grid.cell_size ** 2
 
 
-def fetch_road_area(bbox: tuple, grid: Grid):
+def fetch_road_area(bbox: tuple, grid: Grid, cache_root: Path = CACHE_ROOT):
     """Road area share on the grid, from the Geofabrik country extract read locally (the public Overpass servers
-    time out on whole-city `out geom` queries for days at a time), else from Overpass. None if both fail."""
+    time out on whole-city `out geom` queries for days at a time), else from Overpass. None if both fail.
+    An extract with no roads in the city reads as a failure, not as a city without roads."""
     try:
-        ways = osmpbf.roads(osmpbf.download(CACHE_ROOT / "osm"), bbox, osm.ROAD_TYPES)
-    except Exception as error:  # a failed download falls back to Overpass
-        log.warning("OSM extract unavailable (%s), roads from Overpass", error)
+        ways = osmpbf.roads(osmpbf.download(Path(cache_root) / "osm"), bbox, osm.ROAD_TYPES)
+        if not ways:
+            raise ValueError("no roads in the extract for this extent")
+    except Exception as error:  # a failed download or an empty read falls back to Overpass
+        log.warning("OSM extract unusable (%s), roads from Overpass", error)
         return fetch_road_area_overpass(bbox, grid)
     return road_area_share(ways, grid)
 
@@ -483,6 +487,18 @@ def _utc_naive(moment: datetime) -> datetime:
     return moment.astimezone(timezone.utc).replace(tzinfo=None) if moment.tzinfo else moment
 
 
+def overpasses(moments: list) -> list:
+    """One moment per overpass: scenes of neighbouring Landsat rows are taken seconds apart on one pass and would
+    otherwise count that day twice. The first of each UTC hour is kept."""
+    seen, kept = set(), []
+    for moment in sorted(moments, key=_utc_naive):
+        hour = _utc_naive(moment).replace(minute=0, second=0, microsecond=0)
+        if hour not in seen:
+            seen.add(hour)
+            kept.append(moment)
+    return kept
+
+
 def at_moments(series: dict, moments: list, keys: tuple) -> dict:
     """Each variable linearly interpolated in time to each UTC moment (series in UTC), then averaged; also the
     number of moments used. Moments outside the series or next to a gap are skipped."""
@@ -490,7 +506,7 @@ def at_moments(series: dict, moments: list, keys: tuple) -> dict:
                        (t + ":00+00:00" if len(t) == 16 else t for t in series["time"])])
     values = {key: np.array([np.nan if v is None else v for v in series[key]], float) for key in keys}
     picked = {key: [] for key in keys}
-    for moment in moments:
+    for moment in overpasses(moments):
         t = _utc_naive(moment).replace(tzinfo=timezone.utc).timestamp()
         i = np.searchsorted(stamps, t) - 1
         if i < 0 or i + 1 >= len(stamps):
@@ -646,7 +662,8 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
     if water is None:
         log.warning("%s: WorldCover water unavailable, water share from the mean water distance", city_id)
         water = water_share_from_distance(cells["water_dist"])
-    roads = _cached_layer(cache, "osm_road_area", lambda: fetch_road_area(query_bbox, grid), row, col)
+    # v2: from the OSM extract (#144); the name changes with the method so an older layer is not reused.
+    roads = _cached_layer(cache, "osm_road_area_v2", lambda: fetch_road_area(query_bbox, grid, cache_root), row, col)
     if roads is None:
         log.warning("%s: OSM roads unavailable, road area = density × %.0f m", city_id, FALLBACK_ROAD_WIDTH_M)
         roads = cells["roads"] * 1000.0 * FALLBACK_ROAD_WIDTH_M / 1e6
@@ -654,13 +671,17 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
     fraction = tile_fractions(cells["tree"], cells["built"], cells["bare"], water,
                               roof_share(cells["volume"], cells["height"]), roads, ndvi=cells.get("ndvi"))
 
-    moments = cache.get_or_compute(
-        "landsat_times", lambda: weather.landsat_moments(tuple(document["city"]["bbox"]), document["period"]["label"]))
+    # The scene times the LST median used; older documents lack them, so the period's candidates stand in, cached
+    # under the period so a run with another period does not reuse them.
+    period_key = hashlib.sha1(document["period"]["label"].encode()).hexdigest()[:8]
+    moments = weather.document_moments(document) or cache.get_or_compute(
+        f"landsat_times_{period_key}",
+        lambda: weather.landsat_moments(tuple(document["city"]["bbox"]), document["period"]["label"]))
     lon_c, lat_c = document["city"]["center"]
     start, end = (m.strftime("%Y-%m-%d") for m in (min(map(_utc_naive, moments)), max(map(_utc_naive, moments))))
-    series = cache.get_or_compute("era5", lambda: era5.hourly(lon_c, lat_c, start, end, variables=ERA5_VARIABLES,
-                                                              model="era5", timezone="GMT"))
-    land = cache.get_or_compute("era5_land", lambda: era5.hourly(lon_c, lat_c, start, end,
+    series = cache.get_or_compute(f"era5_{start}_{end}", lambda: era5.hourly(
+        lon_c, lat_c, start, end, variables=ERA5_VARIABLES, model="era5", timezone="GMT"))
+    land = cache.get_or_compute(f"era5_land_{start}_{end}", lambda: era5.hourly(lon_c, lat_c, start, end,
                                                                  variables=ERA5_LAND_VARIABLES, model="era5_land",
                                                                  timezone="GMT"))
     era = at_moments(series, moments, ERA5_VARIABLES)

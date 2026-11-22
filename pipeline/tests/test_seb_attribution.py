@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -267,3 +269,24 @@ def test_waste_heat_scales_qf():
     inputs, _, _ = _city()
     scenario = scenarios.waste_heat(inputs, reduction=0.25)
     np.testing.assert_allclose(scenario.inputs.qf, inputs.qf * np.where(inputs.qf > 0, 0.75, 1.0))
+
+
+def test_cool_coatings_never_darken_a_surface_already_brighter():
+    inputs, _, _ = _city()
+    bright = inputs.albedo.copy()
+    bright[:, TILE["roof"]] = 0.70
+    bright[:, TILE["road"]] = 0.40
+    brighter = replace(inputs, albedo=bright)
+    roofs = scenarios.cool_roofs(brighter)
+    np.testing.assert_allclose(roofs.inputs.albedo[roofs.eligible, TILE["roof"]], 0.70)
+    roads = scenarios.cool_pavements(brighter)
+    np.testing.assert_allclose(roads.inputs.albedo[roads.eligible, TILE["road"]], 0.40)
+
+
+def test_unconverged_cells_leave_the_coalition_table():
+    class State:
+        t_cell = np.array([300.0, 310.0])
+        converged = np.array([[True, True], [True, False]])
+
+    t = attribution._cell_temperature(lambda *args: State(), None, None, None)
+    assert t[0] == 300.0 and np.isnan(t[1])
