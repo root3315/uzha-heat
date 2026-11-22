@@ -1,3 +1,4 @@
+import { genitive } from '../i18n/russian';
 import { texts } from '../i18n/locale';
 import { pluralEn, pluralRu } from '../i18n/plural';
 
@@ -207,7 +208,7 @@ export const METHOD_TEXTS = texts(
       elevation: 'Copernicus DEM GLO-30',
     },
     cells: (city, size, count, period, scenes, factors) =>
-      `${city} разбит на участки ${size} × ${size} м, их ${count}. Для каждого есть температура ` +
+      `Территория ${genitive(city)} разбита на участки ${size} × ${size} м, их ${count}. Для каждого есть температура ` +
       `поверхности летом (${period}, медиана ${scenes} ${pluralRu(scenes, ['снимка', 'снимков', 'снимков'])} Landsat 8/9 без ` +
       `облаков, снимки NASA/USGS) и ${factors} ${pluralRu(factors, ['фактор', 'фактора', 'факторов'])}, перечисленных ниже.`,
     model: (type, share, r2, error) =>

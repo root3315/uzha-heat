@@ -72,6 +72,11 @@ function overlayOf(model: CityModel, layer: MapLayer, night: NightGrid | null): 
         ? contoursInWorker(model, values, layer).then((overlay) => overlay ?? fluxContours(model.grid, values, layer))
         : Promise.resolve(null);
     } else pending = Promise.resolve(null);
+    // A layer that fails to draw shows the temperature instead, and is tried again next time rather than kept failed.
+    pending = pending.catch(() => {
+      byLayer.delete(layer);
+      return null;
+    });
     byLayer.set(layer, pending);
   }
   return pending;

@@ -1746,6 +1746,15 @@ summary.rest__summary:hover,
     flex-shrink: 0;
   }
 }
+/* A wide but short screen (a large phone on its side, a laptop window cut low): one screen cannot hold the map and
+   the section, so the map keeps most of the height and the page scrolls on to the section and the panel. */
+@media (min-width: 861px) and (max-height: 560px) {
+  .tool {
+    height: auto;
+    grid-template-rows: 78vh auto;
+    grid-template-rows: 78svh auto;
+  }
+}
 /* A phone on its side: 62% of a short screen is a strip; the map takes most of it and the page scrolls on. */
 @media (max-width: 860px) and (max-height: 420px) and (orientation: landscape) {
   .tool__map {

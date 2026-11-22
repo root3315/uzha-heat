@@ -262,8 +262,17 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     map.addControl(new ScaleControl({ maxWidth: 96, unit: 'metric' }), 'bottom-left');
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
     mapRef.current = map;
-    // A failed basemap tile is not worth an error screen: the isotherms are local data and stay.
-    map.on('error', () => noticeRef.current?.classList.add('is-on'));
+    // A failed basemap tile is not worth an error screen: the isotherms are local data and stay. The note shows while
+    // tiles keep failing and goes once the map settles without a new error (one lost tile at one zoom is not an outage).
+    let failedSinceIdle = false;
+    map.on('error', () => {
+      failedSinceIdle = true;
+      noticeRef.current?.classList.add('is-on');
+    });
+    map.on('idle', () => {
+      if (!failedSinceIdle) noticeRef.current?.classList.remove('is-on');
+      failedSinceIdle = false;
+    });
 
     const addPatterns = () => {
       for (const { properties } of model.causeAreas.features) {
