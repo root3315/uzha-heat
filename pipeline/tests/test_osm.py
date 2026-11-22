@@ -53,7 +53,7 @@ def test_overpass_cycles_mirrors_with_backoff(monkeypatch):
 
     monkeypatch.setattr(osm.requests, "post", fake_post)
     assert osm.overpass("node(1);out;", sleep=waits.append) == [{"id": 1}]
-    assert [url for url, _ in calls] == list(osm.OVERPASS_URLS)
+    assert [url for url, _ in calls] == list(osm.OVERPASS_URLS[:3])
     assert all(agent == "uzha-heat-pipeline/0.1" for _, agent in calls)
     assert waits == [osm.retry_delay(1), osm.retry_delay(2)] and waits[1] > waits[0]
 
