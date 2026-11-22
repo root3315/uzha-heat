@@ -50,3 +50,18 @@ def footprints(path: Path, bbox: tuple) -> tuple:
 def _height(hstore) -> float:
     metres = tagged_height(other_tags(hstore))
     return np.nan if metres is None else metres
+
+
+def roads(path: Path, bbox: tuple, types: str) -> list:
+    """Ways tagged `highway=<type>` or `<type>_link` (types `a|b|…`) crossing `bbox`, in the Overpass `out geom` shape
+    ({"tags", "geometry": [{"lon", "lat"}, …]}), so the same road code reads either source."""
+    kinds = [kind for base in types.split("|") for kind in (base, f"{base}_link")]
+    where = "highway IN ({})".format(",".join(f"'{kind}'" for kind in kinds))
+    _, _, geometry, fields = pyogrio.raw.read(path, layer="lines", bbox=bbox, columns=["highway", "other_tags"],
+                                              where=where)
+    elements = []
+    for line, highway, hstore in zip(shapely.from_wkb(geometry), fields[0], fields[1]):
+        coords = shapely.get_coordinates(line)
+        elements.append({"tags": {**other_tags(hstore), "highway": highway},
+                         "geometry": [{"lon": lon, "lat": lat} for lon, lat in coords]})
+    return elements

@@ -27,7 +27,7 @@ from .. import boundary, energy, weather
 from ..cache import Cache
 from ..cities import get_city
 from ..grid import WGS84, Grid, aggregate
-from ..sources import era5, osm, sentinel, worldcover
+from ..sources import era5, osm, osmpbf, sentinel, worldcover
 from . import physics
 from .types import IMPERVIOUS, KELVIN, TILE, TILES, VON_KARMAN, CANYON_FLOOR, RD, Forcing, SebInputs
 
@@ -247,6 +247,17 @@ def road_area_share(elements: list, grid: Grid) -> np.ndarray:
 
 
 def fetch_road_area(bbox: tuple, grid: Grid):
+    """Road area share on the grid, from the Geofabrik country extract read locally (the public Overpass servers
+    time out on whole-city `out geom` queries for days at a time), else from Overpass. None if both fail."""
+    try:
+        ways = osmpbf.roads(osmpbf.download(CACHE_ROOT / "osm"), bbox, osm.ROAD_TYPES)
+    except Exception as error:  # a failed download falls back to Overpass
+        log.warning("OSM extract unavailable (%s), roads from Overpass", error)
+        return fetch_road_area_overpass(bbox, grid)
+    return road_area_share(ways, grid)
+
+
+def fetch_road_area_overpass(bbox: tuple, grid: Grid):
     """Road area share on the grid, fetched in tiles and reduced tile by tile (the raw ways are never all in memory);
     ways crossing tiles are counted once. None if Overpass fails."""
     seen, area = set(), np.zeros(grid.shape)

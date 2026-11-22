@@ -239,3 +239,19 @@ def test_cell_moisture_keeps_era5_where_wetness_is_missing_and_can_anchor_to_it(
     assert flags.tolist() == base.tolist()
     anchored, _ = inputs.cell_moisture(np.array([0.2, 0.4, np.nan]), 0.18, np.ones(3, bool), anchor=True)
     assert anchored[:2].mean() == pytest.approx(0.18) and anchored[1] > anchored[0]
+
+
+def test_road_area_falls_back_to_overpass_without_the_extract(monkeypatch):
+    from pipeline.uzha.grid import Grid
+
+    grid = Grid.from_bbox((69.20, 41.25, 69.23, 41.27), 100)
+    way = {"id": 1, "tags": {"highway": "residential"},
+           "geometry": [{"lon": 69.21, "lat": 41.26}, {"lon": 69.22, "lat": 41.26}]}
+
+    def no_extract(cache_dir):
+        raise OSError("offline")
+
+    monkeypatch.setattr(inputs.osmpbf, "download", no_extract)
+    monkeypatch.setattr(inputs.osm, "overpass", lambda query: [way])
+    area = inputs.fetch_road_area(grid.bbox_lonlat(), grid)
+    assert area.sum() * grid.cell_size ** 2 == pytest.approx(inputs.road_width(way["tags"]) * 840, rel=0.05)

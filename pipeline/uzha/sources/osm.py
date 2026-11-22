@@ -19,6 +19,7 @@ OVERPASS_URLS = (
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
 )
 USER_AGENT = "uzha-heat-pipeline/0.1"
 TIMEOUT_S = 180  # hard cap per request: Overpass server timeout and client wall clock
