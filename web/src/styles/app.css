@@ -1221,7 +1221,8 @@ summary.rest__summary:hover,
   align-items: center;
   gap: 6px;
   color: var(--ink-2);
-  font: 400 0.7rem/1 var(--font-mono);
+  font: 400 0.7rem/1.35 var(--font-mono);
+  text-align: right;
   transition: color var(--fast) var(--ease-out);
 }
 .whatif__summary:hover .whatif__hint {
