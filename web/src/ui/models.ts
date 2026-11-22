@@ -40,12 +40,26 @@ let nextRequest = 0;
 function surfaceWorker(): Worker | null {
   if (worker === undefined) {
     try {
-      worker = typeof Worker === 'undefined' ? null : new Worker(new URL('./surface.worker.ts', import.meta.url), { type: 'module' });
+      worker = typeof Worker === 'undefined' ? null : startWorker();
     } catch {
       worker = null;
     }
   }
   return worker;
+}
+
+/**
+ * The worker is started before it is asked anything, so a script that fails to load (old browser, strict CSP) may
+ * say so while nobody listens: it is dropped then, and the next request computes on the page instead of timing out.
+ */
+function startWorker(): Worker {
+  const started = new Worker(new URL('./surface.worker.ts', import.meta.url), { type: 'module' });
+  started.addEventListener('error', () => {
+    if (worker !== started) return;
+    started.terminate();
+    worker = null;
+  });
+  return started;
 }
 
 /**
@@ -102,6 +116,8 @@ const nextTask = () => new Promise((resolve) => window.setTimeout(resolve, 0));
 
 async function build(id: string): Promise<CityModel | null> {
   report(id, { outline: null, download: null, building: false });
+  // Start the worker while the file downloads: its script loads and compiles now, not after the last byte arrives.
+  surfaceWorker();
   const outlined = loadBoundary(id).then((outline) => {
     report(id, { outline });
     return outline;

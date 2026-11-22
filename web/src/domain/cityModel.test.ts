@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { boundaryGeometry } from '../data/boundary';
 import { parseCityDetail } from '../data/parse';
 import { assembleCityModel, buildCityModel, builtHotCenter, citySurface } from './cityModel';
+import { fineToSlot } from './field';
+import { cellAt, slotToLonLat } from './grid';
+import { pointInGeometry, quantile } from './stats';
+import { hottestPatch, type LonLat } from './transect';
 
 const read = (path: string): unknown => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 
@@ -19,6 +23,26 @@ describe('citySurface', () => {
     expect(viaWorker.island).toEqual(direct.island);
     expect(viaWorker.facts).toEqual(direct.facts);
     expect(viaWorker.defaultTransect).toEqual(direct.defaultTransect);
+  });
+
+  it('lays the opening section where the search without remembered pixels does', () => {
+    const detail = parseCityDetail(read('../../public/data/bukhara.json'));
+    const outline = boundaryGeometry(read('../../public/boundaries/bukhara.geojson'));
+    const surface = citySurface(detail, outline);
+    const { field, grid, inside } = surface;
+    const pop = detail.cells.pop;
+    const median = pop ? quantile(pop.filter((_, i) => inside[i]), 0.5) : 0;
+    const lived = (cell: number) => !pop || (cell >= 0 && (pop[cell] ?? 0) >= median);
+    const toLonLat = (u: number, v: number): LonLat => slotToLonLat(field.grid, fineToSlot(field.factor, u), fineToSlot(field.factor, v));
+    const livedAt = (u: number, v: number) => lived(cellAt(grid, ...toLonLat(u, v)));
+    const allowed = (u: number, v: number) =>
+      (field.coverage[v * field.fx + u] ?? 0) >= 0.99 && (!outline || pointInGeometry(toLonLat(u, v), outline)) && livedAt(u, v);
+    const radius = Math.round((1000 / field.grid.cellSizeM) * field.factor);
+    const hottest = hottestPatch(field.values, field.fx, field.fy, allowed, radius, { counted: livedAt, minShare: 0.5 });
+
+    expect(hottest).not.toBeNull();
+    const [u = 0, v = 0] = hottest ?? [];
+    expect(surface.hotCenter).toEqual(toLonLat(u, v));
   });
 });
 

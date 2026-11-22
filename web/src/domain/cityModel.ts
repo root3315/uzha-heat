@@ -90,9 +90,18 @@ function livedIn(detail: CityDetail, inside: readonly boolean[]): (cell: number)
 function hotCenter(field: Field, outline: Outline | null, grid: CellGrid, lived: (cell: number) => boolean): LonLat {
   const toLonLat = (u: number, v: number): LonLat => slotToLonLat(field.grid, fineToSlot(field.factor, u), fineToSlot(field.factor, v));
   const radius = Math.round((HOT_PATCH_RADIUS_M / field.grid.cellSizeM) * field.factor);
+  // A pixel lies in up to (2 · radius / step + 1)² neighbourhoods, and each look costs two UTM projections:
+  // decide once per pixel whether people live there (0 not yet asked, 1 yes, −1 no).
+  const livedKnown = new Int8Array(field.fx * field.fy);
   const livedAt = (u: number, v: number): boolean => {
-    const [lon, lat] = toLonLat(u, v);
-    return lived(cellAt(grid, lon, lat));
+    const pixel = v * field.fx + u;
+    let known = livedKnown[pixel] ?? 0;
+    if (known === 0) {
+      const [lon, lat] = toLonLat(u, v);
+      known = lived(cellAt(grid, lon, lat)) ? 1 : -1;
+      livedKnown[pixel] = known;
+    }
+    return known > 0;
   };
   const allowed = (u: number, v: number): boolean =>
     (field.coverage[v * field.fx + u] ?? 0) >= COVERED && (!outline || pointInGeometry(toLonLat(u, v), outline)) && livedAt(u, v);
