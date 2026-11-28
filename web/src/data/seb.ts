@@ -31,7 +31,7 @@ export interface SebCity {
   check: { cells: number[]; tCell: number[] } | null;
 }
 
-const PARAM_KEYS = ['kbInv', 'rsMinTree', 'rsMinGrass', 'rsMinCrop', 'soilResistanceScale', 'ohmA1Scale', 'dTAir'] as const;
+const PARAM_KEYS = ['kbInv', 'rsMinTree', 'rsMinGrass', 'rsMinCrop', 'soilResistanceScale', 'ohmA1Scale', 'dTAir', 'dTAirUrban'] as const;
 const UNIFORM_FORCING = ['kDown', 'diffuseFraction', 'eAir', 'wind', 'zRef', 'zenith', 'dkDt'] as const;
 const CELL_COLUMNS = ['imperviousAlbedo', 'canyonShade', 'skyView', 'z0m', 'zd', 'soilMoisture', 'qf', 'irrigated', 'rural'] as const;
 

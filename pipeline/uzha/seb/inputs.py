@@ -134,6 +134,11 @@ THETA_AIR_DRY = 0.03
 THETA_WET = physics.THETA_SAT
 # Off by default: see the out-of-fold scores in pipeline/README.md ("Physics model inputs", surface moisture).
 USE_SURFACE_MOISTURE = False
+# Building form from the site's own footprints (OSM plus Microsoft, heights tagged or modelled, pipeline.buildings)
+# instead of GHSL Built-S/Built-H and the OSM building count: roof share, area-weighted height and buildings per
+# hectare per cell. Falls back to GHSL when the city's .fgb is missing.
+USE_FOOTPRINT_GEOMETRY = True
+BUILDINGS_DIR = DATA_DIR / "buildings"
 # Where W is known it also sets the vegetation's water: θ(W) feeds the Jarvis f2 of grass and trees, and a cell counts
 # as irrigated (f2 = 1) when θ(W) reaches field capacity, instead of the "every cell inside the outline" rule.
 MOISTURE_DRIVES_VEGETATION = True
@@ -626,6 +631,33 @@ def redistribute_by_volume(pixel_qf: np.ndarray, pixel_id: np.ndarray, volume) -
 # Assembly
 # ===================================================================================================================
 
+def footprint_form(path: Path, grid: Grid) -> dict:
+    """Per grid cell, from a buildings .fgb: roof share of the cell, area-weighted mean height (m) and buildings per
+    hectare. Each building counts whole in the cell holding its centroid (footprints are mostly far smaller than a
+    cell). Arrays shaped like the grid; height NaN where a cell has no building."""
+    import pyogrio
+    import shapely
+
+    meta, _, wkb, fields = pyogrio.raw.read(path, columns=["h"])
+    height = np.asarray(fields[0], float)
+    metric = shapely.transform(shapely.from_wkb(wkb), Transformer.from_crs(WGS84, grid.crs, always_xy=True).transform,
+                               interleaved=False)
+    area = shapely.area(metric)
+    centre = shapely.centroid(metric)
+    r, c, ok = grid.cell_index(shapely.get_x(centre), shapely.get_y(centre))
+    r, c, area, height = r[ok], c[ok], area[ok], height[ok]
+    roof = np.zeros(grid.shape)
+    weighted = np.zeros(grid.shape)
+    count = np.zeros(grid.shape)
+    np.add.at(roof, (r, c), area)
+    np.add.at(weighted, (r, c), area * height)
+    np.add.at(count, (r, c), 1.0)
+    cell_area = grid.cell_size ** 2
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean_height = np.where(roof > 0, weighted / roof, np.nan)
+    return {"roof": np.minimum(roof / cell_area, 1.0), "height": mean_height, "per_ha": count / (cell_area / M2_PER_HA)}
+
+
 def load_cells(data_dir: Path, city_id: str) -> tuple:
     document = json.loads((Path(data_dir) / f"{city_id}.json").read_text(encoding="utf-8"))
     cells = document["cells"]
@@ -668,8 +700,16 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
         log.warning("%s: OSM roads unavailable, road area = density × %.0f m", city_id, FALLBACK_ROAD_WIDTH_M)
         roads = cells["roads"] * 1000.0 * FALLBACK_ROAD_WIDTH_M / 1e6
 
-    fraction = tile_fractions(cells["tree"], cells["built"], cells["bare"], water,
-                              roof_share(cells["volume"], cells["height"]), roads, ndvi=cells.get("ndvi"))
+    roofs, height, per_ha = roof_share(cells["volume"], cells["height"]), cells["height"], cells["buildings"]
+    fgb = BUILDINGS_DIR / f"{city_id}.fgb"
+    if USE_FOOTPRINT_GEOMETRY and fgb.exists():
+        form = cache.get_or_compute(f"footprint_form_{int(fgb.stat().st_mtime)}", lambda: footprint_form(fgb, grid))
+        roofs, per_ha = form["roof"][row, col], form["per_ha"][row, col]
+        # A cell without footprints keeps the GHSL height for its (empty) canyon; it has no roofs either way.
+        height = np.where(np.isfinite(form["height"][row, col]), form["height"][row, col], height)
+    elif USE_FOOTPRINT_GEOMETRY:
+        log.warning("%s: no %s, building form from GHSL", city_id, fgb.name)
+    fraction = tile_fractions(cells["tree"], cells["built"], cells["bare"], water, roofs, roads, ndvi=cells.get("ndvi"))
 
     # The scene times the LST median used; older documents lack them, so the period's candidates stand in, cached
     # under the period so a run with another period does not reuse them.
@@ -688,10 +728,10 @@ def build(city_id: str, data_dir: Path = DATA_DIR, cache_root: Path = CACHE_ROOT
     soil = at_moments(land, moments, ERA5_LAND_VARIABLES)["soil_moisture_0_to_7cm"]
     force = forcing(era, series["elevation"], cells["elevation"], (lon_c, lat_c), moments)
 
-    side = building_side(fraction[:, TILE["roof"]], cells["buildings"])
+    side = building_side(fraction[:, TILE["roof"]], per_ha)
     _, lambda_p = urban_patch(fraction)
-    aspect = canyon_aspect(cells["height"], lambda_p, side)
-    z0m, zd = roughness(fraction, cells["height"], side)
+    aspect = canyon_aspect(height, lambda_p, side)
+    z0m, zd = roughness(fraction, height, side)
     capped = zd + z0m > 0.8 * Z_REF_M
     if capped.any():
         log.warning("%s: %d cells with zd + z0 above 0.8·z_ref, capped", city_id, capped.sum())

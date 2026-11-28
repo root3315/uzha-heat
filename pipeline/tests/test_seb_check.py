@@ -111,3 +111,11 @@ def test_analyse_writes_the_contract_and_reuses_its_cache(tmp_path, monkeypatch)
     monkeypatch.setattr(calibrate, "fit", no_refit)
     monkeypatch.setattr(seb_check, "scenario_changes", no_refit)
     assert seb_check.analyse(*city, cache=cache, replicates=2, shapley_sample=15, folds=3) == result
+
+
+def test_publishes_only_cities_whose_physics_explains_enough():
+    def result(r2):
+        return {"skill": {"inside": {"physics": {"r2": r2}}}}
+
+    assert seb_check.publishable(result(0.52))
+    assert not seb_check.publishable(result(0.32))
