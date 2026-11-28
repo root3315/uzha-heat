@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { loadNight } from '../data/load';
+import type { LandCover } from '../data/landcover';
+import { loadLandCover, loadNight } from '../data/load';
 import type { NightGrid } from '../data/night';
 import type { CityModel } from '../domain/cityModel';
 import { fluxContours, isFluxLayer, nightPixels, type FluxLayer, type MapLayer, type MapOverlay } from '../domain/layers';
@@ -93,6 +94,19 @@ export function useNight(cityId: string): NightGrid | null {
     };
   }, [cityId]);
   return night?.id === cityId ? night.grid : null;
+}
+
+/** The city's land cover once its file is in; null before, and for a city without one. */
+export function useLandCover(cityId: string): LandCover | null {
+  const [cover, setCover] = useState<{ id: string; cover: LandCover | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void loadLandCover(cityId).then((found) => !cancelled && setCover({ id: cityId, cover: found }));
+    return () => {
+      cancelled = true;
+    };
+  }, [cityId]);
+  return cover?.id === cityId ? cover.cover : null;
 }
 
 /** What the map draws for the chosen layer: null for the surface temperature, and while another layer is being drawn. */

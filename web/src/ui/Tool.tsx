@@ -10,6 +10,7 @@ import { PRECISION } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
 import { sampleTransect, type LonLat, type Sample, type Transect } from '../domain/transect';
 import { CityMap, type CityMapHandle, type MapMark, type MapMode } from '../map/CityMap';
+import type { Ground } from '../map/style';
 import { Report } from '../report/Report';
 import { CitySwitcher } from './CitySwitcher';
 import { downloadText } from './download';
@@ -19,7 +20,8 @@ import { LayerKey, LayerSwitch } from './LayerSwitch';
 import { Link } from './Link';
 import { useLocale } from './locale';
 import { MapHint } from './MapHint';
-import { useNight, useOverlay } from './mapLayers';
+import { CoverKey, GroundSwitch } from './GroundSwitch';
+import { useLandCover, useNight, useOverlay } from './mapLayers';
 import { Panel } from './panel/Panel';
 import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
@@ -57,6 +59,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
+  const [ground, setGround] = useState<Ground>('map');
   // 3D lives in the address: a reload, a shared link or the language switch keeps it; another city opens framed and flat,
   // since a 3D camera kept from the last city would land on a close-up of the new one.
   const [threeD, setThreeD] = useState(() => readSharedView(window.location.search).threeD);
@@ -89,6 +92,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   // What the map colours. The temperature unless the reader picks a flux or the night; the night shows once its file is in.
   const [chosenLayer, setLayer] = useState<MapLayer>('lst');
   const night = useNight(detail.city.id);
+  const cover = useLandCover(detail.city.id);
+  // A city without a land cover file falls back to the drawn map rather than to an empty ground.
+  const shownGround: Ground = ground === 'cover' && !cover ? 'map' : ground;
   const layers = useMemo(() => availableLayers(detail, night), [detail, night]);
   const layer = layers.includes(chosenLayer) ? chosenLayer : 'lst';
   const overlay = useOverlay(model, layer, night);
@@ -289,6 +295,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           mode={mode}
           people={people}
           threeD={threeD}
+          ground={shownGround}
+          cover={cover}
           marks={planMarks ?? undefined}
           overlay={overlay}
           describe={describe}
@@ -310,20 +318,23 @@ export function Tool({ model, cities, onCity }: ToolProps) {
                 </button>
               )}
               {threeDButton}
+              <GroundSwitch ground={shownGround} onChange={setGround} hasCover={cover !== null} compact />
               {shareButton}
               {reportButton}
             </div>
           )}
           {!narrow && threeDButton}
+          {!narrow && <GroundSwitch ground={shownGround} onChange={setGround} hasCover={cover !== null} compact={false} />}
           {!narrow && <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact={false} />}
           {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. On a phone
               only the layer's key does: the others go under the section. */}
-          {(overlay || planMarks || (!narrow && (mode === 'causes' || people))) && (
+          {(overlay || planMarks || (shownGround === 'cover' && cover) || (!narrow && (mode === 'causes' || people))) && (
             <div className="map-legend">
               <MarksKey plan={planMarks?.length ?? 0} words={t.marksKey} />
               {overlay && <LayerKey overlay={overlay} hour={detail.energy?.localHour ?? 11} night={night} />}
               {!narrow && mode === 'causes' && <CauseKey model={model} />}
               {!narrow && people && <PeopleKey model={model} />}
+              {shownGround === 'cover' && cover && <CoverKey cover={cover} />}
             </div>
           )}
           <MapHint touch={narrow || isTouch()} />

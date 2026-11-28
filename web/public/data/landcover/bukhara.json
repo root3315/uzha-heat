@@ -1,0 +1,63 @@
+{
+ "source": "ESA WorldCover 2021 (10 m)",
+ "corners": [
+  [
+   64.3724249,
+   39.847083999999995
+  ],
+  [
+   64.52485170622995,
+   39.847083999999995
+  ],
+  [
+   64.52485170622995,
+   39.7137740703942
+  ],
+  [
+   64.3724249,
+   39.7137740703942
+  ]
+ ],
+ "classes": [
+  {
+   "key": "trees",
+   "color": "#3f7d4e",
+   "share": 0.0033
+  },
+  {
+   "key": "shrubs",
+   "color": "#9bb36a",
+   "share": 0.0213
+  },
+  {
+   "key": "grass",
+   "color": "#c4d88a",
+   "share": 0.0087
+  },
+  {
+   "key": "cropland",
+   "color": "#e3d9a0",
+   "share": 0.369
+  },
+  {
+   "key": "built",
+   "color": "#8a8f99",
+   "share": 0.5717
+  },
+  {
+   "key": "bare",
+   "color": "#d8cbb8",
+   "share": 0.0244
+  },
+  {
+   "key": "water",
+   "color": "#6fa4c8",
+   "share": 0.0016
+  },
+  {
+   "key": "wetland",
+   "color": "#5f9c97",
+   "share": 0.0001
+  }
+ ]
+}

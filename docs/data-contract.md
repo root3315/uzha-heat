@@ -226,6 +226,28 @@ The summer night surface temperature around the city from NASA MODIS Aqua (MYD11
 - `bounds` is [west, south, east, north] of the whole grid in degrees; `stats` are over the non-null values.
 - `period` is the Landsat period of `<id>.json` (Russian, as there); `composites` the 8-day periods found in it.
 
+## `web/public/data/landcover/<id>.png` and `<id>.json`
+
+What covers the ground, for the map's land cover view: ESA WorldCover 2021 at 10 m, reprojected to Web Mercator
+(pixels about 10 m on the ground at the city's latitude) and painted in the site's colours. Optional: without the
+files the view is not offered. Written by `python -m pipeline.landcover` (all cities, or `--city <id>`).
+
+The PNG is a palette picture: index 0 is transparent (outside the city outline, or no data), the others one class
+each. The JSON places it on the map and gives the legend:
+
+```json
+{
+  "source": "ESA WorldCover 2021 (10 m)",
+  "corners": [[69.13, 41.43], [69.47, 41.43], [69.47, 41.17], [69.13, 41.17]],
+  "classes": [{ "key": "built", "color": "#8a8f99", "share": 0.5512 }]
+}
+```
+
+- `corners`: north-west, north-east, south-east, south-west, [lon, lat], as MapLibre's image source takes them.
+- `classes`: only those present in the city. `key` is one of `trees`, `shrubs`, `grass`, `cropland`, `built`,
+  `bare`, `water`, `wetland` (WorldCover's snow folds into bare, moss into grass, mangroves into wetland); `color`
+  is how the PNG paints it; `share` is its part of the pixels inside the city, 0–1.
+
 ## `web/public/data/seb-<id>.json`
 
 Optional. The physics model's inputs for every cell, so the place panel can solve the picked cell's energy balance in

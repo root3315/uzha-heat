@@ -171,7 +171,7 @@ Measure effects come from published studies, linked in the cards.
 |---|---|---|
 | Land surface temperature | [Landsat 8/9 Collection 2 Level-2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2), NASA/USGS | target |
 | NDVI, albedo | [Sentinel-2 L2A](https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a), ESA Copernicus | factors |
-| Land cover | [ESA WorldCover 10 m](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | trees, built-up, bare soil |
+| Land cover | [ESA WorldCover 10 m](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | trees, built-up, bare soil; the map's Cover view |
 | Elevation | [Copernicus DEM GLO-30](https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30) | factor |
 | Roads, buildings, water, outlines, facilities | [OpenStreetMap](https://www.openstreetmap.org) | factors, map |
 | Building footprints | [Microsoft ML Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) | 3D |
@@ -180,6 +180,7 @@ Measure effects come from published studies, linked in the cards.
 | Validation | NASA MODIS [MOD11A2](https://lpdaac.usgs.gov/products/mod11a2v061/) (Terra) and [MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/) (Aqua), day and night | check |
 | Weather context | ERA5 (Copernicus) via [Open-Meteo](https://open-meteo.com) | wind, humidity, sun |
 | Basemap | [OpenFreeMap](https://openfreemap.org) | map tiles |
+| Satellite photo | [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) | photo under the heat, on demand |
 
 All sources are open; no API keys are needed.
 

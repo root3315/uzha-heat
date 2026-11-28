@@ -168,7 +168,7 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 |---|---|---|
 | Температура поверхности | [Landsat 8/9 Collection 2 Level-2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2), NASA/USGS | целевая переменная |
 | NDVI, альбедо | [Sentinel-2 L2A](https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a), ESA Copernicus | факторы |
-| Покрытие земли | [ESA WorldCover 10 м](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | деревья, застройка, голый грунт |
+| Покрытие земли | [ESA WorldCover 10 м](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | деревья, застройка, голый грунт; вид «Покрытие» на карте |
 | Рельеф | [Copernicus DEM GLO-30](https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30) | фактор |
 | Дороги, здания, вода, границы, учреждения | [OpenStreetMap](https://www.openstreetmap.org) | факторы, карта |
 | Контуры зданий | [Microsoft ML Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) | 3D |
@@ -177,6 +177,7 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 | Проверка | NASA MODIS [MOD11A2](https://lpdaac.usgs.gov/products/mod11a2v061/) (Terra) и [MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/) (Aqua), день и ночь | сверка |
 | Погода | ERA5 (Copernicus) через [Open-Meteo](https://open-meteo.com) | ветер, влажность, солнце |
 | Подложка | [OpenFreeMap](https://openfreemap.org) | тайлы карты |
+| Снимок со спутника | [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) | фото под жарой, по кнопке |
 
 Все источники открытые; ключи API не нужны.
 

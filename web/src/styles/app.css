@@ -625,6 +625,23 @@ select {
   color: var(--ink);
   box-shadow: inset 0 0 0 2px var(--ink);
 }
+/* The photo and the land cover, stacked under 3D in the same dress. */
+.map-ground {
+  display: grid;
+  place-items: center;
+}
+.map-ground--0 {
+  top: 158px;
+}
+.map-ground--1 {
+  top: 210px;
+}
+.cover-key__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
 .map.is-3d .map__labels {
   display: none;
 }
@@ -763,6 +780,16 @@ select {
   .layer-key {
     max-width: none;
   }
+  /* On a phone the colours alone are the key: the map is short and the note would push them out of view. */
+  .cover-key .people-key__note {
+    display: none;
+  }
+  .cover-key .cause-key {
+    gap: 4px 12px;
+  }
+}
+.map-legend .layer-key + .cover-key {
+  margin-top: 10px;
 }
 .map-legend .cause-key + .people-key {
   margin-top: 10px;

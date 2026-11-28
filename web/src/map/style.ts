@@ -23,6 +23,8 @@ export const SOURCE = {
   overlayBands: 'overlay-bands',
   overlayLines: 'overlay-lines',
   night: 'night',
+  satellite: 'satellite',
+  cover: 'cover',
 } as const;
 
 export const LAYER = {
@@ -38,7 +40,32 @@ export const LAYER = {
   overlayBands: 'overlay-bands',
   overlayLines: 'overlay-lines',
   night: 'night',
+  satellite: 'satellite',
+  cover: 'cover',
 } as const;
+
+/** What lies under the temperature: the drawn map, the satellite photo, or the land cover. */
+export type Ground = 'map' | 'satellite' | 'cover';
+
+/** The drawn map's water, roads and rails: off over a photo or the land cover, which show them themselves. */
+export const MAP_LINES = ['water', 'waterway', 'roads-minor', 'roads-major', 'roads-motorway', 'rail'];
+
+/** How strongly the temperature is laid over each ground: over the photo it must let the roofs and trees through;
+ * over the land cover it steps aside to the isotherms, or two palettes would mix. */
+export const GROUND_HEAT: Record<Ground, number> = { map: 1, satellite: 0.4, cover: 0 };
+
+const majorOr = (major: number, minor: number): ExpressionSpecification => ['case', ['get', 'major'], major, minor];
+
+/** Isotherms: hairlines on the drawn map; over a photo or the land cover they carry the temperature, so they firm up. */
+export function isolinePaint(ground: Ground): { opacity: ExpressionSpecification; width: ExpressionSpecification } {
+  return ground === 'map'
+    ? { opacity: majorOr(0.42, 0.28), width: majorOr(1, 0.6) }
+    : { opacity: majorOr(0.85, 0.6), width: majorOr(1.6, 1) };
+}
+
+/** Esri World Imagery: sub-metre aerial and satellite photos, so single roofs, trees and lawns can be told apart. */
+const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const SATELLITE_ATTRIBUTION = 'Imagery © Esri, Maxar, Earthstar Geographics';
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';
@@ -92,8 +119,8 @@ function stepColor(tokens: MapTokens): ExpressionSpecification {
   return ['match', ['get', 'c'], ...tokens.classes.flatMap((color, c) => [c, color]), tokens.ground] as unknown as ExpressionSpecification;
 }
 
-function stepOpacity(tokens: MapTokens): ExpressionSpecification {
-  return ['match', ['get', 'c'], ...tokens.classOpacity.flatMap((o, c) => [c, o]), 1] as unknown as ExpressionSpecification;
+export function stepOpacity(tokens: MapTokens, scale = 1): ExpressionSpecification {
+  return ['match', ['get', 'c'], ...tokens.classOpacity.flatMap((o, c) => [c, o * scale]), scale] as unknown as ExpressionSpecification;
 }
 
 function classOpacity(tokens: MapTokens, scale: number): ExpressionSpecification {
@@ -101,8 +128,8 @@ function classOpacity(tokens: MapTokens, scale: number): ExpressionSpecification
 }
 
 /** Ground colour strength. In 3D it fades only where buildings are drawn, so zooming out never leaves a washed-out map. */
-export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes', threeD = false): ExpressionSpecification {
-  const scale = mode === 'causes' ? CAUSES_DIM : 1;
+export function bandOpacity(tokens: MapTokens, mode: 'temperature' | 'causes', threeD = false, ground: Ground = 'map'): ExpressionSpecification {
+  const scale = (mode === 'causes' ? CAUSES_DIM : 1) * GROUND_HEAT[ground];
   if (!threeD) return classOpacity(tokens, scale);
   return [
     'interpolate',
@@ -134,7 +161,6 @@ function roadLayer(id: string, classes: string[], width: number, color: string):
 
 export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecification {
   const classColor: ExpressionSpecification = ['match', ['get', 'k'], ...tokens.classes.flatMap((color, k) => [k, color]), tokens.ground] as unknown as ExpressionSpecification;
-  const majorOr = (major: number, minor: number): ExpressionSpecification => ['case', ['get', 'major'], major, minor];
   const outline = model.outline;
 
   return {
@@ -143,6 +169,7 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
     light: { anchor: 'map', position: [1.4, 210, 35], intensity: 0.45, color: '#ffffff' },
     sources: {
       [SOURCE.basemap]: { type: 'vector', url: BASEMAP_TILES, attribution: '© OpenStreetMap, OpenFreeMap' },
+      [SOURCE.satellite]: { type: 'raster', tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 18, attribution: SATELLITE_ATTRIBUTION },
       [SOURCE.bands]: { type: 'geojson', data: model.isotherms.bands },
       [SOURCE.isolines]: { type: 'geojson', data: model.isotherms.lines },
       [SOURCE.causes]: { type: 'geojson', data: model.causeAreas },
@@ -162,6 +189,8 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
     },
     layers: [
       { id: 'ground', type: 'background', paint: { 'background-color': tokens.ground } },
+      // Hidden until chosen, so its tiles are never fetched for a reader who stays on the drawn map.
+      { id: LAYER.satellite, type: 'raster', source: SOURCE.satellite, layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 150 } },
       {
         id: LAYER.bands,
         type: 'fill',
@@ -188,14 +217,14 @@ export function buildStyle(model: CityModel, tokens: MapTokens): StyleSpecificat
         type: 'line',
         layout: { 'line-join': 'round', visibility: 'none' },
         source: SOURCE.isolines,
-        paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
+        paint: { 'line-color': tokens.ink, 'line-opacity': isolinePaint('map').opacity, 'line-width': isolinePaint('map').width },
       },
       {
         id: LAYER.overlayLines,
         type: 'line',
         layout: { 'line-join': 'round', visibility: 'none' },
         source: SOURCE.overlayLines,
-        paint: { 'line-color': tokens.ink, 'line-opacity': majorOr(0.42, 0.28), 'line-width': majorOr(1, 0.6) },
+        paint: { 'line-color': tokens.ink, 'line-opacity': isolinePaint('map').opacity, 'line-width': isolinePaint('map').width },
       },
       // People as quiet ink dots, never as colour: colour stays temperature.
       {

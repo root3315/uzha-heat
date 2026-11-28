@@ -22,6 +22,7 @@ import type { LonLat, Transect } from '../domain/transect';
 import { useLocale } from '../ui/locale';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
+import type { LandCover } from '../data/landcover';
 import { classOf, type LabelAnchor } from '../domain/isotherms';
 import type { MapOverlay } from '../domain/layers';
 import { facilityImage, facilityImageId } from './facilityImages';
@@ -31,7 +32,7 @@ import { buildingClass } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
 import { MAP_TEXTS, type MapTexts } from './map.texts';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
-import { BUILDINGS_MIN_ZOOM, LAYER, SOURCE, bandOpacity, buildStyle } from './style';
+import { BUILDINGS_MIN_ZOOM, GROUND_HEAT, LAYER, MAP_LINES, SOURCE, bandOpacity, buildStyle, isolinePaint, stepOpacity, type Ground } from './style';
 import { readTokens, type MapTokens } from './tokens';
 
 export type MapMode = 'temperature' | 'causes';
@@ -82,6 +83,10 @@ interface CityMapProps {
   people?: boolean;
   /** Tilt the camera and raise the buildings over the temperature map. */
   threeD?: boolean;
+  /** What lies under the temperature: the drawn map, the satellite photo or the land cover. */
+  ground?: Ground;
+  /** The city's land cover picture, once loaded; the cover ground shows nothing without it. */
+  cover?: LandCover | null;
   /** Numbered places over the map (the planting list); a click opens the place, as the list does. */
   marks?: readonly MapMark[];
   /** Another quantity drawn instead of the surface temperature: a flux of the energy balance, or the night. */
@@ -194,7 +199,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, marks = NO_MARKS, overlay = null } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, ground = 'map', cover = null, marks = NO_MARKS, overlay = null } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -517,13 +522,46 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (!map) return;
     const apply = () => {
       map.setLayoutProperty(LAYER.causes, 'visibility', mode === 'causes' ? 'visible' : 'none');
-      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode, threeD));
+      if (tokensRef.current) map.setPaintProperty(LAYER.bands, 'fill-opacity', bandOpacity(tokensRef.current, mode, threeD, ground));
       // Under the buildings the hatching only has to say which cause; at full strength it fights the walls.
       map.setPaintProperty(LAYER.causes, 'fill-opacity', threeD ? THREE_D_HATCH_OPACITY : 1);
     };
     if (map.getLayer(LAYER.causes)) apply();
     else map.once('load', apply);
-  }, [mode, model, threeD]);
+  }, [mode, model, threeD, ground]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+      // The picture is 10 m pixels of classes: drawn crisp, never blurred into colours no class has.
+      if (cover && !map.getSource(SOURCE.cover)) {
+        map.addSource(SOURCE.cover, { type: 'image', url: cover.url, coordinates: cover.corners });
+        map.addLayer({ id: LAYER.cover, type: 'raster', source: SOURCE.cover, layout: { visibility: 'none' }, paint: { 'raster-resampling': 'nearest', 'raster-fade-duration': 0 } }, LAYER.bands);
+      }
+      show(LAYER.satellite, ground === 'satellite');
+      show(LAYER.cover, ground === 'cover');
+      MAP_LINES.forEach((id) => show(id, ground === 'map'));
+      const lines = isolinePaint(ground);
+      for (const id of [LAYER.isolines, LAYER.overlayLines]) {
+        map.setPaintProperty(id, 'line-opacity', lines.opacity);
+        map.setPaintProperty(id, 'line-width', lines.width);
+      }
+      // Another layer than the temperature has no isotherms to fall back on: over the land cover it stays as over the photo.
+      const tokens = tokensRef.current;
+      if (tokens) {
+        const overlayScale = ground === 'map' ? 1 : GROUND_HEAT.satellite;
+        map.setPaintProperty(LAYER.overlayBands, 'fill-opacity', stepOpacity(tokens, overlayScale));
+        map.setPaintProperty(LAYER.night, 'fill-opacity', stepOpacity(tokens, overlayScale));
+      }
+    };
+    if (map.getLayer(LAYER.bands)) apply();
+    else map.once('load', apply);
+    return () => {
+      map.off('load', apply);
+    };
+  }, [ground, cover, model]);
 
   useEffect(() => {
     const map = mapRef.current;

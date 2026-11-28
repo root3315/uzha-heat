@@ -40,6 +40,15 @@ PYTHONUTF8=1 python -m pipeline.run --all --only energy
 
 A full run does all three steps too, at the end.
 
+Land cover for the map's "Cover" view is a small separate step (WorldCover from Planetary Computer, a few MB):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.landcover          # all cities, or --city tashkent
+```
+
+It writes `web/public/data/landcover/<id>.png` (10 m classes, transparent outside the city) and `<id>.json`
+(corners and each class's share), see `docs/data-contract.md`. The files are under a megabyte and are committed.
+
 Buildings for the 3D view are a separate step with its own downloads (Geofabrik extract of Uzbekistan,
 ~130 MB; Microsoft ML footprints, ~45 MB per level-9 quadkey; the GHSL Built-H tile):
 
