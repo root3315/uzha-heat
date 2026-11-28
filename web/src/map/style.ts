@@ -1,5 +1,6 @@
 import type { ExpressionSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl';
 import type { CityModel } from '../domain/cityModel';
+import type { Ground } from '../domain/shareLink';
 import { outsideOf } from '../domain/isotherms';
 import { hotFacilities } from '../domain/people';
 import { facilityImageId } from './facilityImages';
@@ -46,8 +47,7 @@ export const LAYER = {
   cover: 'cover',
 } as const;
 
-/** What lies under the temperature: the drawn map, the satellite photo, or the land cover. */
-export type Ground = 'map' | 'satellite' | 'cover';
+export type { Ground } from '../domain/shareLink';
 
 /** The drawn map's water, roads and rails: off over a photo or the land cover, which show them themselves. */
 export const MAP_LINES = ['water', 'waterway', 'roads-minor', 'roads-major', 'roads-motorway', 'rail'];

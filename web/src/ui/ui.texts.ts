@@ -372,7 +372,7 @@ export const GROUND_TEXTS = texts(
     coverShort: 'Cover',
     backToMap: 'Back to the drawn map',
     coverKey: 'Land cover',
-    coverNote: 'ESA WorldCover 2021, 10 m. Lines are the isotherms of the surface temperature.',
+    coverNote: 'ESA WorldCover 2021, 10 m',
     classes: {
       trees: 'Trees',
       shrubs: 'Shrubs',
@@ -391,7 +391,7 @@ export const GROUND_TEXTS = texts(
     coverShort: 'Покрытие',
     backToMap: 'Вернуть обычную карту',
     coverKey: 'Покрытие земли',
-    coverNote: 'ESA WorldCover 2021, 10 м. Линии — изотермы температуры поверхности.',
+    coverNote: 'ESA WorldCover 2021, 10 м',
     classes: {
       trees: 'Деревья',
       shrubs: 'Кустарник',

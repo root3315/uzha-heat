@@ -557,10 +557,10 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
         map.setPaintProperty(id, 'line-opacity', lines.opacity);
         map.setPaintProperty(id, 'line-width', lines.width);
       }
-      // Another layer than the temperature has no isotherms to fall back on: over the land cover it stays as over the photo.
+      // Another layer's colours over the photo are let through as the temperature's are (the land cover never meets them).
       const tokens = tokensRef.current;
       if (tokens) {
-        const overlayScale = ground === 'map' ? 1 : GROUND_HEAT.satellite;
+        const overlayScale = ground === 'satellite' ? GROUND_HEAT.satellite : 1;
         map.setPaintProperty(LAYER.overlayBands, 'fill-opacity', stepOpacity(tokens, overlayScale));
         map.setPaintProperty(LAYER.night, 'fill-opacity', stepOpacity(tokens, overlayScale));
       }
