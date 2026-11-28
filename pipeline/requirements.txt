@@ -12,3 +12,4 @@ requests>=2.31
 pytest>=7.4
 pyogrio>=0.7
 pyarrow>=14
+pillow>=10

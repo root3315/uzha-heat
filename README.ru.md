@@ -128,6 +128,9 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 - Линия А–Б строит разрез: профиль температуры и полосу причин под ним (штриховкой).
 - «Люди» показывает жителей точками, а школы, детские сады и поликлиники — на самых горячих участках. Цвет остаётся температурой.
 - «3D» наклоняет карту и поднимает дома, каждый в цвете температуры поверхности под ним.
+- Кнопка спутника кладёт жару на снимок: сразу показывается наш безоблачный летний снимок Sentinel-2 (10 м), поверх
+  догружается более резкий снимок Esri. Кнопка покрытия показывает, чем покрыта земля (ESA WorldCover, 10 м: деревья,
+  трава, поля, здания и дороги, вода), с изотермами поверх и долей каждого класса в городе.
 - «Что если» у места: больше крон и зелени (NDVI), а там, где это место греют застройка или дороги, — меньше их.
   Модель города пересчитывает температуру поверхности этого места. Ползунки не выходят за то, что в городе уже есть
   (5–95 % участков); застройку можно уменьшить не больше чем на 25 п.п.
@@ -137,6 +140,10 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 Скриншоты интерфейса на английском — в [README.md](README.md#how-to-use-it). На телефоне:
 
 <img src="docs/screenshots/05-mobile-ru.png" width="300" alt="Карта на телефоне">
+
+| Жара на снимке со спутника | Покрытие земли под изотермами |
+|---|---|
+| ![Жара поверх снимка: горячие пятна — крыши, железнодорожные станции и аэродром](docs/screenshots/06-satellite.jpg) | ![Покрытие: здания и дороги серые, деревья тёмно-зелёные, трава светло-зелёная, вода синяя, поверх изотермы](docs/screenshots/07-cover.jpg) |
 
 ## Как посчитано
 
@@ -168,7 +175,7 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 |---|---|---|
 | Температура поверхности | [Landsat 8/9 Collection 2 Level-2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2), NASA/USGS | целевая переменная |
 | NDVI, альбедо | [Sentinel-2 L2A](https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a), ESA Copernicus | факторы |
-| Покрытие земли | [ESA WorldCover 10 м](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | деревья, застройка, голый грунт |
+| Покрытие земли | [ESA WorldCover 10 м](https://planetarycomputer.microsoft.com/dataset/esa-worldcover) | деревья, застройка, голый грунт; вид «Покрытие» на карте |
 | Рельеф | [Copernicus DEM GLO-30](https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30) | фактор |
 | Дороги, здания, вода, границы, учреждения | [OpenStreetMap](https://www.openstreetmap.org) | факторы, карта |
 | Контуры зданий | [Microsoft ML Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) | 3D |
@@ -177,6 +184,7 @@ MODIS с шагом 1 км тоже ставит город выше кольц�
 | Проверка | NASA MODIS [MOD11A2](https://lpdaac.usgs.gov/products/mod11a2v061/) (Terra) и [MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/) (Aqua), день и ночь | сверка |
 | Погода | ERA5 (Copernicus) через [Open-Meteo](https://open-meteo.com) | ветер, влажность, солнце |
 | Подложка | [OpenFreeMap](https://openfreemap.org) | тайлы карты |
+| Снимок со спутника | свой летний медианный Sentinel-2 L2A (`pipeline.photo`) и поверх [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) | фото под жарой, по кнопке |
 
 Все источники открытые; ключи API не нужны.
 

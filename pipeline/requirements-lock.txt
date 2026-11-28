@@ -16,3 +16,4 @@ pyogrio==0.13.0
 pyarrow==18.1.0
 affine==3.0.0
 pydantic==2.13.4
+pillow==12.3.0

@@ -10,6 +10,7 @@ import { PRECISION } from '../domain/placeName';
 import { cellProfile, districtAt } from '../domain/places';
 import { sampleTransect, type LonLat, type Sample, type Transect } from '../domain/transect';
 import { CityMap, type CityMapHandle, type MapMark, type MapMode } from '../map/CityMap';
+import type { Ground } from '../map/style';
 import { Report } from '../report/Report';
 import { CitySwitcher } from './CitySwitcher';
 import { downloadText } from './download';
@@ -19,7 +20,8 @@ import { LayerKey, LayerSwitch } from './LayerSwitch';
 import { Link } from './Link';
 import { useLocale } from './locale';
 import { MapHint } from './MapHint';
-import { useNight, useOverlay } from './mapLayers';
+import { CoverKey, GroundSwitch } from './GroundSwitch';
+import { useLandCover, useNight, useOverlay, usePhoto } from './mapLayers';
 import { Panel } from './panel/Panel';
 import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
@@ -31,7 +33,8 @@ import { TOOL_TEXTS } from './ui.texts';
 interface ToolProps {
   model: CityModel;
   cities: CitySummary[];
-  onCity(id: string): void;
+  /** Another city, with the query that keeps this view's 3D, ground and language (a place belongs to its city). */
+  onCity(id: string, query: string): void;
 }
 
 const VIEW = { isolines: true, transect: true, interactive: true };
@@ -57,6 +60,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [drawing, setDrawing] = useState(false);
   const [mode, setMode] = useState<MapMode>('temperature');
   const [people, setPeople] = useState(false);
+  const [ground, setGround] = useState<Ground>(() => readSharedView(window.location.search).ground);
   // 3D lives in the address: a reload, a shared link or the language switch keeps it; another city opens framed and flat,
   // since a 3D camera kept from the last city would land on a close-up of the new one.
   const [threeD, setThreeD] = useState(() => readSharedView(window.location.search).threeD);
@@ -89,8 +93,21 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   // What the map colours. The temperature unless the reader picks a flux or the night; the night shows once its file is in.
   const [chosenLayer, setLayer] = useState<MapLayer>('lst');
   const night = useNight(detail.city.id);
+  const cover = useLandCover(detail.city.id);
+  const photo = usePhoto(detail.city.id);
+  // A city without a land cover file falls back to the drawn map rather than to an empty ground.
+  const shownGround: Ground = ground === 'cover' && !cover ? 'map' : ground;
   const layers = useMemo(() => availableLayers(detail, night), [detail, night]);
   const layer = layers.includes(chosenLayer) ? chosenLayer : 'lst';
+  // The land cover has its own palette: it goes with the temperature's isotherms only, never under another layer's colours.
+  const chooseGround = (next: Ground) => {
+    setGround(next);
+    if (next === 'cover') setLayer('lst');
+  };
+  const chooseLayer = (next: MapLayer) => {
+    setLayer(next);
+    if (next !== 'lst' && ground === 'cover') setGround('map');
+  };
   const overlay = useOverlay(model, layer, night);
   const { cellUnder, describe } = useReadout(model, layer, night);
   const hasPeople = detail.cells.pop !== undefined;
@@ -126,10 +143,10 @@ export function Tool({ model, cities, onCity }: ToolProps) {
 
   // The address always says what is on screen, so copying it from the bar shares this exact view.
   useEffect(() => {
-    const query = sharedViewQuery({ place: picked?.point ?? null, threeD, locale });
+    const query = sharedViewQuery({ place: picked?.point ?? null, threeD, ground: shownGround, locale });
     const url = `${window.location.pathname}${query}${window.location.hash}`;
     if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) window.history.replaceState(window.history.state, '', url);
-  }, [picked?.point, threeD, locale]);
+  }, [picked?.point, threeD, shownGround, locale]);
 
   const [shared, setShared] = useState(false);
   const share = async () => {
@@ -198,7 +215,8 @@ export function Tool({ model, cities, onCity }: ToolProps) {
     else downloadText(`${name}.geojson`, cellsToGeoJson(detail, model.inside), 'application/geo+json');
   };
 
-  const switcher = <CitySwitcher cities={cities} currentId={detail.city.id} onChange={onCity} />;
+  const switchCity = (id: string) => onCity(id, sharedViewQuery({ place: null, threeD, ground: shownGround, locale }));
+  const switcher = <CitySwitcher cities={cities} currentId={detail.city.id} onChange={switchCity} />;
   // On a phone it sits in the chip row on the map, elsewhere as a third cell under the zoom buttons.
   const threeDButton = (
     <button
@@ -289,6 +307,9 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           mode={mode}
           people={people}
           threeD={threeD}
+          ground={shownGround}
+          cover={cover}
+          photo={photo}
           marks={planMarks ?? undefined}
           overlay={overlay}
           describe={describe}
@@ -297,7 +318,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           {narrow && (
             <div className="map-bar" role="toolbar" aria-label={t.mapToolbar}>
               {switcher}
-              <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact />
+              <LayerSwitch layers={layers} layer={layer} onChange={chooseLayer} compact />
               <button type="button" className="pill pill--small" aria-pressed={drawing} onClick={toggleDrawing}>
                 {drawing ? t.drawing : t.section}
               </button>
@@ -310,20 +331,23 @@ export function Tool({ model, cities, onCity }: ToolProps) {
                 </button>
               )}
               {threeDButton}
+              <GroundSwitch ground={shownGround} onChange={chooseGround} hasCover={cover !== null} compact />
               {shareButton}
               {reportButton}
             </div>
           )}
           {!narrow && threeDButton}
-          {!narrow && <LayerSwitch layers={layers} layer={layer} onChange={setLayer} compact={false} />}
+          {!narrow && <GroundSwitch ground={shownGround} onChange={chooseGround} hasCover={cover !== null} compact={false} />}
+          {!narrow && <LayerSwitch layers={layers} layer={layer} onChange={chooseLayer} compact={false} />}
           {/* On a wide screen the keys sit on the map, next to what they explain, and the map never changes size. On a phone
               only the layer's key does: the others go under the section. */}
-          {(overlay || planMarks || (!narrow && (mode === 'causes' || people))) && (
+          {(overlay || planMarks || (shownGround === 'cover' && cover) || (!narrow && (mode === 'causes' || people))) && (
             <div className="map-legend">
               <MarksKey plan={planMarks?.length ?? 0} words={t.marksKey} />
               {overlay && <LayerKey overlay={overlay} hour={detail.energy?.localHour ?? 11} night={night} />}
               {!narrow && mode === 'causes' && <CauseKey model={model} />}
               {!narrow && people && <PeopleKey model={model} />}
+              {shownGround === 'cover' && cover && <CoverKey cover={cover} />}
             </div>
           )}
           <MapHint touch={narrow || isTouch()} />

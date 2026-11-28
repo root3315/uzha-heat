@@ -1,6 +1,7 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary, TreeModel } from './contract';
+import { parseGroundImage, parseLandCover, type GroundImage, type LandCover } from './landcover';
 import { parseNight, type NightGrid } from './night';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
 import { parsePhysics, type Physics } from './physics';
@@ -123,6 +124,32 @@ export function loadNight(id: string): Promise<NightGrid | null> {
     nights.set(id, night);
   }
   return night;
+}
+
+const covers = new Map<string, Promise<LandCover | null>>();
+
+/** The city's land cover, `landcover/<id>.json` and the picture beside it, fetched once per city; null when missing. */
+export function loadLandCover(id: string): Promise<LandCover | null> {
+  let cover = covers.get(id);
+  if (!cover) {
+    const name = `landcover/${encodeURIComponent(id)}`;
+    cover = fetchJson(`${name}.json`).then((raw) => parseLandCover(raw, dataUrl(`${name}.png`)), () => null);
+    covers.set(id, cover);
+  }
+  return cover;
+}
+
+const photos = new Map<string, Promise<GroundImage | null>>();
+
+/** The city's own satellite photo, `photo/<id>.json` and the picture beside it, fetched once per city; null when missing. */
+export function loadPhoto(id: string): Promise<GroundImage | null> {
+  let photo = photos.get(id);
+  if (!photo) {
+    const name = `photo/${encodeURIComponent(id)}`;
+    photo = fetchJson(`${name}.json`).then((raw) => parseGroundImage(raw, dataUrl(`${name}.webp`)), () => null);
+    photos.set(id, photo);
+  }
+  return photo;
 }
 
 const sebFiles = new Map<string, Promise<SebCity>>();

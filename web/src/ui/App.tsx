@@ -132,7 +132,7 @@ function Page({ cities, route }: { cities: CitySummary[]; route: Route }) {
       {bar}
       {noticeLine}
       {/* A new language remounts the map pages: the map, its labels and the picked place's name are built once per mount. */}
-      {route.view === 'tool' && <Tool key={`${model.detail.city.id}-${locale}`} model={model} cities={cities} onCity={(id) => navigate(toolHref(id))} />}
+      {route.view === 'tool' && <Tool key={`${model.detail.city.id}-${locale}`} model={model} cities={cities} onCity={(id, query) => navigate(`${toolHref(id)}${query}`)} />}
       {route.view === 'method' && <MethodPage model={model} />}
       {route.view === 'story' && target && <Landing key={locale} cities={cities} model={model} hunt={{ target, found }} onHunt={setFound} />}
       {route.view === 'method' && <Footer />}

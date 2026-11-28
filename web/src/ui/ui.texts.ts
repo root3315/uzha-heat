@@ -363,3 +363,44 @@ export const MISC_TEXTS = texts(
     photo: (credit) => `Фото: ${credit}`,
   },
 );
+
+export const GROUND_TEXTS = texts(
+  {
+    satellite: 'Show the satellite photo under the heat',
+    satelliteShort: 'Satellite',
+    cover: 'Show what covers the ground: trees, grass, buildings',
+    coverShort: 'Cover',
+    backToMap: 'Back to the drawn map',
+    coverKey: 'Land cover',
+    coverNote: 'ESA WorldCover 2021, 10 m',
+    classes: {
+      trees: 'Trees',
+      shrubs: 'Shrubs',
+      grass: 'Grass',
+      cropland: 'Fields and gardens',
+      built: 'Buildings and roads',
+      bare: 'Bare ground',
+      water: 'Water',
+      wetland: 'Wetland',
+    } as Record<string, string>,
+  },
+  {
+    satellite: 'Показать снимок со спутника под жарой',
+    satelliteShort: 'Спутник',
+    cover: 'Показать, чем покрыта земля: деревья, трава, застройка',
+    coverShort: 'Покрытие',
+    backToMap: 'Вернуть обычную карту',
+    coverKey: 'Покрытие земли',
+    coverNote: 'ESA WorldCover 2021, 10 м',
+    classes: {
+      trees: 'Деревья',
+      shrubs: 'Кустарник',
+      grass: 'Трава',
+      cropland: 'Поля и сады',
+      built: 'Здания и дороги',
+      bare: 'Голая земля',
+      water: 'Вода',
+      wetland: 'Болото',
+    },
+  },
+);
