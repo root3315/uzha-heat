@@ -144,7 +144,7 @@ Optional. The physics model (a per-tile surface energy balance, `pipeline/uzha/s
       "hybrid": { "r2": 0.7, "mae": 1.3, "bias": 0.0 },
       "inside": { "physics": { "r2": 0.2, "mae": 1.9, "bias": 0.1 }, "hybrid": { "r2": 0.6, "mae": 1.2, "bias": 0.0 } }
     },
-    "params": { "kb_inv": 6.44, "rs_min_tree": 40.0, "d_t_air": 4.61 },
+    "params": { "kb_inv": 2.4, "rs_min_tree": 42.4, "d_t_air": 4.06, "d_t_air_urban": 4.78 },
     "converged": 0.998,
     "fluxes": {
       "inside": { "rn": 520.3, "h": 260.1, "le": 110.4, "dqs": 170.2, "qf": 20.4 },
@@ -269,7 +269,7 @@ for cities in `physics.json`, and the site offers the block only for those. Fetc
   "tiles": ["tree", "grass", "bare", "roof", "road", "paved", "water"],
   "cells": 20446,
   "params": { "kbInv": 6.44, "rsMinTree": 40.0, "rsMinGrass": 34.1, "rsMinCrop": 20.6, "soilResistanceScale": 0.49,
-              "ohmA1Scale": 1.2, "dTAir": 4.61 },
+              "ohmA1Scale": 1.2, "dTAir": 4.06, "dTAirUrban": 4.78 },
   "forcing": { "kDown": 840.5, "diffuseFraction": 0.16, "eAir": 1.45, "wind": 2.13, "zRef": 60.0, "zenith": 0.527,
                "dkDt": 66.7, "tAir": { "offset": 304.27, "step": 0.01, "values": [12, 140] }, "lDown": {}, "pressure": {} },
   "tile": {

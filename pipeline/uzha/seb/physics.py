@@ -13,7 +13,8 @@ Stated assumptions (each is a modelling choice, not a law):
   only z0h differs between tiles.
 - dRn/dt in the OHM hysteresis term is approximated by (1 − α)·s·dK↓/dt, s the tile's sunlit-plus-diffuse
   share of K↓ (longwave changes slowly around the overpass, diffuse fraction held constant).
-- Params.d_t_air shifts the air temperature only; vapour pressure and L↓ are kept as given.
+- Params.d_t_air and Params.d_t_air_urban (× the impervious share) shift the air temperature only; vapour pressure and
+  L↓ are kept as given.
 - Water tiles take Params.kb_inv like the sealed surfaces (smooth surface under the cell's bluff-body roughness);
   only trees and grass take kB⁻¹ = ln 10. Bare soil takes Params.kb_inv_bare when it is set (not NaN).
 - The grass tile of a rural cell is the ring's crop land and takes Params.rs_min_crop.
@@ -71,11 +72,13 @@ KB_INV_VEGETATION = float(np.log(10.0))
 
 # Jarvis (1976)–Stewart (1988) canopy resistance, with the structure of Noilhan & Planton (1989), MWR 117, 536–549,
 # https://doi.org/10.1175/1520-0493(1989)117<0536:ASPOLS>2.0.CO;2, and ECMWF IFS Cy47r1 Part IV Eq. 8.9–8.14:
-# rs = rs_min / f2(θ) / f3(VPD), f2 = (θ − θ_pwp)/(θ_cap − θ_pwp) clipped to 0..1, 1/f3 = exp(g_D·VPD).
+# rs = rs_min / LAI / f2(θ) / f3(VPD), f2 = (θ − θ_pwp)/(θ_cap − θ_pwp) clipped to 0..1, 1/f3 = exp(g_D·VPD).
 # The radiation factor f1 is ≈ 1 at the late-morning overpass (K↓ of several hundred W m⁻²) and is left out;
-# Params.rs_min_* are canopy-level (already per unit leaf area index) and take the LAI term with them.
+# Params.rs_min_* are leaf-level, as their bounds (IFS Table 8.1 values) assume.
 # g_D = 0.03 hPa⁻¹ for trees and 0 for grass and crops (IFS Table 8.1: non-zero for high vegetation only).
 VPD_COEF_TREE = 0.03 * 10.0  # kPa⁻¹
+# Leaf area index per vegetation tile, IFS Cy47r1 Part IV Table 8.1: deciduous broadleaf trees 5, short grass 2, crops 3.
+LAI_TREE, LAI_GRASS, LAI_CROP = 5.0, 2.0, 3.0
 # Soil moisture at saturation, field capacity and permanent wilting point, m³ m⁻³, "medium" texture of
 # IFS Cy47r1 Part IV Table 8.9 (van Genuchten, loam-type soils of the Uzbek plains).
 THETA_SAT = 0.439
@@ -307,8 +310,8 @@ def surface_resistance(inputs: SebInputs, forcing: Forcing, params: Params, t_ai
     rural = np.asarray(inputs.rural, dtype=bool)[:, None]
 
     rs = np.full((n, len(TILES)), np.inf)
-    rs[:, [TILE["tree"]]] = params.rs_min_tree * np.exp(VPD_COEF_TREE * vpd) / f2
-    grass_min = np.where(rural, params.rs_min_crop, params.rs_min_grass)
+    rs[:, [TILE["tree"]]] = params.rs_min_tree / LAI_TREE * np.exp(VPD_COEF_TREE * vpd) / f2
+    grass_min = np.where(rural, params.rs_min_crop / LAI_CROP, params.rs_min_grass / LAI_GRASS)
     rs[:, [TILE["grass"]]] = grass_min / f2
     if BARE_SOIL_SCHEME == "beta":
         rs[:, TILE["bare"]] = 0.0  # the soil's limit is in β (evaporation_efficiency)
@@ -350,7 +353,8 @@ def anthropogenic_heat(inputs: SebInputs) -> np.ndarray:
 def prepare(inputs: SebInputs, forcing: Forcing, params: Params) -> Setup:
     n, n_tiles = inputs.fraction.shape
     ones = np.ones((n, n_tiles))
-    t_air = _cell(forcing.t_air, n) + params.d_t_air
+    sealed = np.sum(inputs.fraction * tile_mask(IMPERVIOUS), axis=1, keepdims=True)
+    t_air = _cell(forcing.t_air, n) + params.d_t_air + params.d_t_air_urban * sealed
     e_air = _cell(forcing.e_air, n)
     pressure = _cell(forcing.pressure, n)
     albedo = np.asarray(inputs.albedo, dtype=float)

@@ -228,24 +228,25 @@ PYTHONUTF8=1 python -m pipeline.uzha.seb.inputs --city tashkent
 |---|---|---|
 | tree, bare | WorldCover shares from the JSON | ESA WorldCover 2021 |
 | water | WorldCover class 80 share, 20 m nearest sample; fallback 1 − √(d̄/100 m) from `water_dist` (water as a strip on one side of the cell) | ESA WorldCover 2021 |
-| roof | `volume / (height · 10 000)` = the GHSL Built-S building share, cut to `built` | GHSL Built-S 2020 |
+| roof | footprint area of the cell's buildings in `buildings/<id>.fgb` (OSM + Microsoft, each counted in the cell of its centroid) / cell area, cut to `built`; without the .fgb `volume / (height · 10 000)`, the GHSL Built-S share | `pipeline.buildings`; GHSL Built-S 2020 |
 | road | OSM drivable ways, length per cell × carriageway width: `width` tag, else `lanes` × 3.5 m, else by class (motorway 22, trunk 18, primary 14, secondary 11, tertiary 8, unclassified/residential/link 6, living street 5, service 4 m); cut to `built − roof`. Fallback: JSON road density × 7 m | lane width 3.5 m (AASHTO); class widths are an assumption |
 | paved | `built − roof − road` (≥ 0) | |
 | grass | `1 − tree − built − bare − water` (WorldCover grass, crops, shrubs, wetland) | |
 | albedo | tree 0.16, grass 0.21, bare 0.25, water 0.08; roof = road = paved = one value per cell inverted so the area-weighted albedo equals the Sentinel-2 cell albedo, clipped to 0.08–0.45 (0.18 where impervious < 5 %) | Oke (1987) *Boundary Layer Climates*, Tables 1.1 and 8.2 |
 | emissivity | tree 0.98, grass 0.95, bare 0.93, roof 0.91, road 0.95, paved 0.90, water 0.96 | Oke (1987), same tables |
 | OHM a1, a2 (h), a3 (W/m²) | tree 0.11/0.11/−12.3 (mixed forest); grass 0.32/0.54/−27.4; bare 0.35/0.43/−36.5 (dry soil); water 0.50/0.21/−39.1; roof = mean of Vancouver, Uppsala, Kyoto roofs 0.48/0.34/−33.9; road = mean of three asphalt sets 0.61/0.41/−27.7; paved = mean of two concrete sets 0.83/0.40/−54.2 | Grimmond & Oke (1999), [doi:10.1175/1520-0450(1999)038<0922:HSIUAL>2.0.CO;2](https://doi.org/10.1175/1520-0450(1999)038%3C0922:HSIUAL%3E2.0.CO;2), Table 4 |
-| canyon H/W | urban patch = roof + road + paved, λp = roof / patch; square buildings of side L = √(roof · 10 000 / OSM buildings per ha) (city median where OSM has none, 6–60 m); street W = L·(1/√λp − 1); H/W ≤ 6 | regular-array assumption |
+| canyon H/W | urban patch = roof + road + paved, λp = roof / patch; square buildings of side L = √(roof · 10 000 / buildings per ha), buildings counted in the .fgb (OSM count without it; city median where none, 6–60 m); H = footprint-area-weighted mean height of the .fgb buildings (tagged or modelled), the JSON `height` where the cell has none; street W = L·(1/√λp − 1); H/W ≤ 6 | regular-array assumption |
 | sky view | SVF = cos(atan(2·H/W)), canyon-floor midpoint (cosine-weighted, not the solid-angle form of Eq. 20); 1 in open land | Oke (1981) [doi:10.1002/joc.3370010304](https://doi.org/10.1002/joc.3370010304), Oke (1987) |
 | shade | road, paved, grass, bare: share of the canyon floor in building shadow at the overpass zenith, averaged over street orientations; trees and their shadows not included | Masson (2000) [doi:10.1023/A:1002463829265](https://doi.org/10.1023/A:1002463829265) |
 | z0m, zd | Macdonald on the patch: zd/H = 1 + 4.43^(−λp)(λp − 1), z0/H = (1 − zd/H)·exp(−[0.5·1.0·(1.2/0.4²)(1 − zd/H)λf]^(−½)), λf = λp·H/L, z0 ≥ 0.01 m; trees 10 m tall: z0 = 1.0, zd = 6.7 m; grass 0.03, bare 0.005, water 0.0002 m; blended by area (zd linear, ln z0); zd + z0 ≤ 0.8·z_ref | Macdonald et al. (1998) [doi:10.1016/S1352-2310(97)00403-2](https://doi.org/10.1016/S1352-2310(97)00403-2); Garratt (1992); Wieringa (1993) [doi:10.1007/BF00705357](https://doi.org/10.1007/BF00705357); Taylor (1987) [doi:10.1007/BF00121863](https://doi.org/10.1007/BF00121863) |
 | soil moisture | ERA5-Land `soil_moisture_0_to_7cm` at the overpasses, one city value. With surface moisture on (below): θ = 0.03 + W·(0.439 − 0.03) per cell from the Sentinel-2 OPTRAM wetness W, ERA5-Land where W is missing | Open-Meteo archive, `models=era5_land`; Sadeghi et al. (2017) |
 | irrigated | every cell inside the outline (city greenery is watered); ring cells with NDVI > 0.45 (watered crops; rain-fed land is brown by July). With surface moisture on: a cell with W is irrigated when θ(W) ≥ field capacity 0.347 | assumption |
 | rural | cell centre outside `boundaries/<id>.geojson` | |
+| canopy resistance | rs = rs_min / LAI · exp(g_D·VPD) / f2(θ), rs_min leaf-level (fitted within 40–400 s/m trees, 30–300 grass, 20–300 crops), LAI trees 5, grass 2, crops 3 | Noilhan & Planton (1989); IFS Cy47r1 Part IV Eq. 8.9–8.14, Table 8.1 |
 | QF | AH4GUC July and August at 06 UTC, mean; each cell takes its 30″ (~1 km) pixel, spread over the pixel's cells in proportion to building volume so the pixel mean is kept. **Estimated** | Varquez et al. (2021) [doi:10.1038/s41597-021-00850-w](https://doi.org/10.1038/s41597-021-00850-w), CC BY 4.0, OPeNDAP at urbanclimate.tse.ens.isct.ac.jp |
 | K↓, diffuse fraction | ERA5 `shortwave_radiation_instant`, `diffuse_radiation_instant`, interpolated to each Landsat acquisition time, averaged | Open-Meteo archive, `models=era5`, UTC |
 | L↓ | clear-sky Brutsaert (1975) per cell from the cell's t_air and e_air (as `energy.py`; no keyless L↓ series) | |
-| t_air | ERA5 2 m temperature (Open-Meteo corrects it to its DEM height at the city centre), lapse-corrected per cell: T = T_ref − 6.5 K/km·(z − z_ref) (Eq. 47); used as the air temperature at z_ref | ICAO standard lapse rate |
+| t_air | ERA5 2 m temperature (Open-Meteo corrects it to its DEM height at the city centre), lapse-corrected per cell: T = T_ref − 6.5 K/km·(z − z_ref) (Eq. 47); used as the air temperature at z_ref, plus the fitted offsets `d_t_air` + `d_t_air_urban` · impervious share (the urban canopy air is warmer than a 25 km ERA5 cell) | ICAO standard lapse rate; Oke et al. (2017) *Urban Climates* ch. 7 |
 | e_air | from the 2 m dew point (Magnus, Alduchov & Eskridge 1996), one city value | |
 | pressure | ERA5 surface pressure, hypsometric per cell elevation, kPa | |
 | wind | 10 m wind to z_ref = 60 m by the neutral log law over z0 = 0.1 m (×1.39) | Wieringa (1993) |
@@ -286,14 +287,34 @@ Tashkent (20 446 cells, 15 780 inside):
 | | R² | MAE | inside R² |
 |---|---|---|---|
 | XGBoost (main model) | 0.79 | 1.27 °C | |
-| physics alone | 0.42 | 2.15 °C | 0.45 |
-| physics + correction | 0.71 | 1.49 °C | 0.72 |
+| physics alone | 0.53 | 1.88 °C | 0.52 |
+| physics + correction | 0.70 | 1.49 °C | 0.70 |
 
-Budget, inside minus ring, °C: observed +1.32 = sealing +2.01, geometry −1.06, transpiration −0.73, anthropogenic
-+0.34, shade −0.10, albedo +0.04, water −0.01, storage 0.00, Other +0.83 (model gap +0.91, reference state −0.08).
-Several parameters sit at their bounds (minimum stomatal resistances at the floor, air offset +4.6 K), so the fit
-leans on the air offset to reach the LST level: read the scenario ranges as parameter spread only, not the whole
-uncertainty.
+Budget, inside minus ring, °C: observed +1.32 = sealing +2.03, geometry −0.84, transpiration −0.27, shade −0.24,
+anthropogenic +0.16, albedo +0.03, water −0.01, storage 0.00, Other +0.47 (model gap +0.55, reference state −0.08).
+The minimum stomatal resistances still sit at their lower bounds and kB⁻¹ at 2, so read the scenario ranges as
+parameter spread only, not the whole uncertainty.
+
+What moved physics alone from 0.42 to 0.53 (out of fold, the same 5 folds of 2 km blocks):
+
+| Change | R² all / inside | MAE, K |
+|---|---|---|
+| before | 0.414 / 0.444 | 2.15 |
+| canopy resistance divided by LAI (IFS Table 8.1) | 0.466 / 0.469 | 2.06 |
+| + air warming over sealed ground (`d_t_air_urban`, fitted 4.8 K per unit impervious share) | 0.508 / 0.504 | 1.96 |
+| + building form from the site's footprints instead of GHSL | 0.534 / 0.522 | 1.88 |
+
+The rs_min bounds are the IFS leaf-level values, but the model used them as canopy values: with LAI 5 a tree's canopy
+resistance is a fifth of its leaf one, and that is where the fit had been pushing (it reached the floor in every
+fold). The urban air term says the air the surface exchanges heat with is warmer over dense building than the 2 m
+ERA5 value of a 25 km cell.
+
+**Samarkand and Bukhara are not published.** With the same model physics alone reaches R² 0.20 / 0.32 inside
+(Samarkand) and −0.08 / 0.22 (Bukhara); the hybrid, 0.61 and 0.45. The fits put the vegetation resistances at their
+upper bounds and the trees scenario warms Bukhara by +4.6 °C, so the budget and scenarios would mislead.
+Watering only the cells with NDVI > 0.45 instead of every cell inside the outline does not help (0.22 and −0.09).
+`seb_check` writes a city to `physics.json` only when physics alone reaches R² ≥ 0.4 inside out of fold
+(`PUBLISH_MIN_R2`); the XGBoost model, which reaches 0.6–0.7 there, stays the site's explanation for those cities.
 
 ### Bare soil and surface moisture
 

@@ -91,7 +91,7 @@ export interface CellInputs {
 export interface Params {
   /** ln(z0m/z0h) for urban surfaces. */
   kbInv: number;
-  /** Minimum stomatal resistance, s m⁻¹. */
+  /** Minimum stomatal resistance of a leaf, s m⁻¹ (divided by the tile's LAI). */
   rsMinTree: number;
   rsMinGrass: number;
   /** Irrigated crops of the ring. */
@@ -102,6 +102,8 @@ export interface Params {
   ohmA1Scale: number;
   /** Global offset of the air temperature, K. */
   dTAir: number;
+  /** Extra air warming over sealed ground, K per unit impervious share. */
+  dTAirUrban: number;
 }
 
 /** The literature priors, as Params() in Python. */
@@ -113,6 +115,7 @@ export const DEFAULT_PARAMS: Readonly<Params> = {
   soilResistanceScale: 1.0,
   ohmA1Scale: 1.0,
   dTAir: 0.0,
+  dTAirUrban: 0.0,
 };
 
 /** The solution for one cell: each tile's equilibrium temperature (K) and its fluxes (W m⁻²). */

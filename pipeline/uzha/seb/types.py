@@ -87,6 +87,9 @@ class Params:
     # and sparse surfaces is large and varies widely (Verhoef, De Bruin & Van den Hurk 1997, J. Appl. Meteorol. 36,
     # 560–572), so it is not tied to the urban value.
     kb_inv_bare: float = float("nan")
+    # Extra air warming over sealed ground, K per unit impervious share: the urban canopy layer is warmer than the
+    # ERA5 2 m air of a ~25 km cell (Oke et al. 2017, Urban Climates, ch. 7). 0 = one offset for the whole city.
+    d_t_air_urban: float = 0.0
 
     # The parameters fitted by default, with their bounds; OPTIONAL_BOUNDS are fitted only when named.
     BOUNDS = {
@@ -97,6 +100,7 @@ class Params:
         "soil_resistance_scale": (0.2, 5.0),
         "ohm_a1_scale": (0.3, 2.0),
         "d_t_air": (-5.0, 5.0),
+        "d_t_air_urban": (0.0, 8.0),
     }
     OPTIONAL_BOUNDS = {"kb_inv_bare": (2.0, 12.0)}
 

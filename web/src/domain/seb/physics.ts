@@ -53,6 +53,10 @@ const KB_INV_VEGETATION = Math.log(10.0);
 
 // Jarvis–Stewart canopy resistance (Noilhan & Planton 1989; IFS Cy47r1 Part IV Eq. 8.9–8.14).
 const VPD_COEF_TREE = 0.03 * 10.0; // kPa⁻¹
+// Leaf area index per vegetation tile (IFS Cy47r1 Part IV Table 8.1): rs = rs_min/LAI·….
+const LAI_TREE = 5.0;
+const LAI_GRASS = 2.0;
+const LAI_CROP = 3.0;
 const THETA_CAP = 0.347;
 const THETA_PWP = 0.151;
 const F2_MIN = 1e-3;
@@ -249,8 +253,8 @@ export function surfaceResistances(inputs: CellInputs, forcing: CellForcing, par
   const theta = inputs.soilMoisture;
   const f2 = inputs.irrigated ? 1.0 : clip((theta - THETA_PWP) / (THETA_CAP - THETA_PWP), F2_MIN, 1.0);
   const rs = TILES.map(() => Infinity);
-  rs[TILE.tree] = (params.rsMinTree * Math.exp(VPD_COEF_TREE * vpd)) / f2;
-  rs[TILE.grass] = (inputs.rural ? params.rsMinCrop : params.rsMinGrass) / f2;
+  rs[TILE.tree] = ((params.rsMinTree / LAI_TREE) * Math.exp(VPD_COEF_TREE * vpd)) / f2;
+  rs[TILE.grass] = (inputs.rural ? params.rsMinCrop / LAI_CROP : params.rsMinGrass / LAI_GRASS) / f2;
   rs[TILE.bare] = bareSoilResistance(theta, params);
   rs[TILE.water] = 0.0;
   return rs;
@@ -268,7 +272,9 @@ export function anthropogenicHeat(inputs: CellInputs): number[] {
 }
 
 export function prepareCell(inputs: CellInputs, forcing: CellForcing, params: Params): TileSetup[] {
-  const tAir = forcing.tAir + params.dTAir;
+  let sealed = 0.0;
+  for (let k = 0; k < TILES.length; k++) if (inTiles(IMPERVIOUS, k)) sealed += inputs.fraction[k] ?? 0;
+  const tAir = forcing.tAir + params.dTAir + params.dTAirUrban * sealed;
   const z0m = Math.max(inputs.z0m, 1e-4);
   // The reference height must clear the roughness: at least 5·z0m above the displacement height.
   const z = Math.max(forcing.zRef - inputs.zd, 5.0 * z0m);

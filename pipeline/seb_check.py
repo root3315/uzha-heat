@@ -51,6 +51,10 @@ REPLICATES = 10  # block-bootstrap refits of the parameters for the scenario ran
 INTERVAL = (5, 95)
 FLUXES = ("rn", "h", "le", "dqs", "qf")
 EFFICIENCY_TOLERANCE_K = 1e-6
+# A city's physics goes on the site only when the balance alone explains this much of the LST inside the outline out of
+# fold: below it the fitted parameters stop meaning anything (in Samarkand and Bukhara they sit at the opposite bounds,
+# vegetation made to heat), and its budget and scenarios would mislead.
+PUBLISH_MIN_R2 = 0.4
 
 # What each scenario changes, for the whole city at once. Shares below 100 % where treating everything is not a plan.
 SCENARIO_SETTINGS = {
@@ -290,6 +294,10 @@ def _print(city_id: str, result: dict) -> None:
               f"city {s['wholeDT'][1]:+.3f} [{s['wholeDT'][0]:+.3f} … {s['wholeDT'][2]:+.3f}]  area {s['areaShare']:.1%}")
 
 
+def publishable(result: dict) -> bool:
+    return result["skill"]["inside"]["physics"]["r2"] >= PUBLISH_MIN_R2
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -305,11 +313,17 @@ def main() -> None:
     result = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     for city_id in (list(CITIES) if args.all else [args.city]):
         try:
-            result[city_id] = check(city_id, cache_root=args.cache_root, replicates=args.replicates)
+            checked = check(city_id, cache_root=args.cache_root, replicates=args.replicates)
         except Exception as error:  # one city without its inputs must not stop the others
             log.error("%s: physics check failed: %s", city_id, error)
             continue
-        _print(city_id, result[city_id])
+        _print(city_id, checked)
+        if publishable(checked):
+            result[city_id] = checked
+        else:
+            log.warning("%s: physics alone R² inside %.2f < %.2f, not published", city_id,
+                        checked["skill"]["inside"]["physics"]["r2"], PUBLISH_MIN_R2)
+            result.pop(city_id, None)
         write_json(path, result)
     print(f"written: {path}")
 

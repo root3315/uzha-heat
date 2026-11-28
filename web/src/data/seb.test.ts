@@ -10,7 +10,7 @@ function smallSeb(): Record<string, unknown> {
     format: 'uzha-seb-1',
     tiles: TILES,
     cells: 2,
-    params: { kbInv: 6.4, rsMinTree: 40, rsMinGrass: 34, rsMinCrop: 20.6, soilResistanceScale: 0.5, ohmA1Scale: 1.2, dTAir: 4.6 },
+    params: { kbInv: 6.4, rsMinTree: 40, rsMinGrass: 34, rsMinCrop: 20.6, soilResistanceScale: 0.5, ohmA1Scale: 1.2, dTAir: 4.6, dTAirUrban: 4.8 },
     forcing: {
       kDown: 840.5,
       diffuseFraction: 0.16,

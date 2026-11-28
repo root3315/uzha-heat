@@ -17,7 +17,7 @@ from pipeline.uzha.seb.types import CANYON_FLOOR, IMPERVIOUS, TILE, TILES, Forci
 CELL_INPUTS_KEYS = {"fraction", "albedo", "emissivity", "shade", "skyView", "z0m", "zd", "soilMoisture", "irrigated",
                     "ohm", "qf", "rural"}
 CELL_FORCING_KEYS = {"kDown", "diffuseFraction", "lDown", "tAir", "eAir", "pressure", "wind", "zRef", "zenith", "dkDt"}
-PARAMS_KEYS = {"kbInv", "rsMinTree", "rsMinGrass", "rsMinCrop", "soilResistanceScale", "ohmA1Scale", "dTAir"}
+PARAMS_KEYS = {"kbInv", "rsMinTree", "rsMinGrass", "rsMinCrop", "soilResistanceScale", "ohmA1Scale", "dTAir", "dTAirUrban"}
 
 OHM = [[0.11, 0.11, -12.3], [0.32, 0.54, -27.4], [0.35, 0.43, -36.5], [0.48, 0.34, -33.9], [0.61, 0.41, -27.7],
        [0.83, 0.40, -54.2], [0.50, 0.21, -39.1]]
