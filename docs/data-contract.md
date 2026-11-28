@@ -248,6 +248,14 @@ each. The JSON places it on the map and gives the legend:
   `bare`, `water`, `wetland` (WorldCover's snow folds into bare, moss into grass, mangroves into wetland); `color`
   is how the PNG paints it; `share` is its part of the pixels inside the city, 0–1.
 
+## `web/public/data/photo/<id>.webp` and `<id>.json`
+
+The city's own satellite photo for the map's satellite view: the per-pixel median of the clearest summer Sentinel-2
+L2A scenes (red, green, blue; clouds and shadows masked by SCL), on the same Web Mercator grid as the land cover,
+10 m, stretched to 8 bits. Optional: without it the view shows only the online Esri photo. Written by
+`python -m pipeline.photo`. The JSON is `{ "source": "...", "corners": [...] }`, corners as for the land cover.
+The site draws it under the Esri tiles, so it shows at once, and stays if the tiles cannot load.
+
 ## `web/public/data/seb-<id>.json`
 
 Optional. The physics model's inputs for every cell, so the place panel can solve the picked cell's energy balance in

@@ -24,6 +24,7 @@ export const SOURCE = {
   overlayLines: 'overlay-lines',
   night: 'night',
   satellite: 'satellite',
+  photo: 'photo',
   cover: 'cover',
 } as const;
 
@@ -41,6 +42,7 @@ export const LAYER = {
   overlayLines: 'overlay-lines',
   night: 'night',
   satellite: 'satellite',
+  photo: 'photo',
   cover: 'cover',
 } as const;
 
@@ -54,18 +56,22 @@ export const MAP_LINES = ['water', 'waterway', 'roads-minor', 'roads-major', 'ro
  * over the land cover it steps aside to the isotherms, or two palettes would mix. */
 export const GROUND_HEAT: Record<Ground, number> = { map: 1, satellite: 0.4, cover: 0 };
 
+/** The no-reading shade: solid on the drawn map; over a photo or the land cover it only veils what lies there. */
+export const GROUND_NO_DATA: Record<Ground, number> = { map: 1, satellite: 0.35, cover: 0.35 };
+
 const majorOr = (major: number, minor: number): ExpressionSpecification => ['case', ['get', 'major'], major, minor];
 
 /** Isotherms: hairlines on the drawn map; over a photo or the land cover they carry the temperature, so they firm up. */
 export function isolinePaint(ground: Ground): { opacity: ExpressionSpecification; width: ExpressionSpecification } {
-  return ground === 'map'
-    ? { opacity: majorOr(0.42, 0.28), width: majorOr(1, 0.6) }
-    : { opacity: majorOr(0.85, 0.6), width: majorOr(1.6, 1) };
+  if (ground === 'satellite') return { opacity: majorOr(0.85, 0.6), width: majorOr(1.6, 1) };
+  if (ground === 'cover') return { opacity: majorOr(0.7, 0.4), width: majorOr(1.2, 0.6) };
+  return { opacity: majorOr(0.42, 0.28), width: majorOr(1, 0.6) };
 }
 
 /** Esri World Imagery: sub-metre aerial and satellite photos, so single roofs, trees and lawns can be told apart. */
 const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const SATELLITE_ATTRIBUTION = 'Imagery © Esri, Maxar, Earthstar Geographics';
+// The city's own Sentinel-2 photo under the tiles has no source of its own to carry a credit (image sources take none).
+const SATELLITE_ATTRIBUTION = 'Imagery © Esri, Maxar, Earthstar Geographics · contains Copernicus Sentinel-2 data 2023–2025';
 
 /** OpenMapTiles vector tiles from OpenFreeMap: no key, no glyphs needed (labels are drawn by the app). */
 const BASEMAP_TILES = 'https://tiles.openfreemap.org/planet';

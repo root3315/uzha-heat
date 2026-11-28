@@ -1,7 +1,7 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { boundaryGeometry } from './boundary';
 import type { CityDetail, CitySummary, TreeModel } from './contract';
-import { parseLandCover, type LandCover } from './landcover';
+import { parseGroundImage, parseLandCover, type GroundImage, type LandCover } from './landcover';
 import { parseNight, type NightGrid } from './night';
 import { parseCities, parseCityDetail, parseTreeModel } from './parse';
 import { parsePhysics, type Physics } from './physics';
@@ -137,6 +137,19 @@ export function loadLandCover(id: string): Promise<LandCover | null> {
     covers.set(id, cover);
   }
   return cover;
+}
+
+const photos = new Map<string, Promise<GroundImage | null>>();
+
+/** The city's own satellite photo, `photo/<id>.json` and the picture beside it, fetched once per city; null when missing. */
+export function loadPhoto(id: string): Promise<GroundImage | null> {
+  let photo = photos.get(id);
+  if (!photo) {
+    const name = `photo/${encodeURIComponent(id)}`;
+    photo = fetchJson(`${name}.json`).then((raw) => parseGroundImage(raw, dataUrl(`${name}.webp`)), () => null);
+    photos.set(id, photo);
+  }
+  return photo;
 }
 
 const sebFiles = new Map<string, Promise<SebCity>>();

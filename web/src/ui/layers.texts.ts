@@ -27,7 +27,13 @@ export const LAYER_TEXTS = texts(
       `NASA's MODIS sensor on the Aqua satellite, at about 01:30, ${period} median. The squares are its 1${NBSP}km pixels, as the satellite sees them. They show where the city does not cool down at night.`,
     perSquareMetre: `W/m²`,
     /** The readout under the pointer. */
-    readout: { h: 'into the air', le: 'evaporation', g: 'into the ground', night: 'at night, MODIS 1 km' },
+    readout: {
+      h: 'into the air',
+      le: 'evaporation',
+      g: 'into the ground',
+      night: 'at night, MODIS 1 km',
+      noData: 'No surface temperature here: water, or no clear Landsat pass',
+    },
     below: (value: string) => `below ${value}`,
     above: (value: string) => `${value} and up`,
   },
@@ -49,7 +55,13 @@ export const LAYER_TEXTS = texts(
     nightExplain: (period) =>
       `Прибор MODIS на спутнике NASA Aqua, около 01:30, медиана за ${period}. Квадраты на карте: пиксели 1${NBSP}км, как их видит спутник. Видно, где город не остывает ночью.`,
     perSquareMetre: `Вт/м²`,
-    readout: { h: 'в воздух', le: 'испарение', g: 'в грунт', night: 'ночью, MODIS 1 км' },
+    readout: {
+      h: 'в воздух',
+      le: 'испарение',
+      g: 'в грунт',
+      night: 'ночью, MODIS 1 км',
+      noData: 'Здесь нет температуры поверхности: вода или ни одного ясного снимка Landsat',
+    },
     below: (value) => `ниже ${value}`,
     above: (value) => `${value} и выше`,
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLandCover } from './landcover';
+import { parseGroundImage, parseLandCover } from './landcover';
 
 const FILE = {
   source: 'ESA WorldCover 2021 (10 m)',
@@ -26,5 +26,12 @@ describe('parseLandCover', () => {
   it('refuses a file without four corners or with a broken colour', () => {
     expect(() => parseLandCover({ ...FILE, corners: FILE.corners.slice(1) }, '')).toThrow(/four corners/);
     expect(() => parseLandCover({ ...FILE, classes: [{ key: 'trees', color: 'green', share: 1 }] }, '')).toThrow(/color/);
+  });
+});
+
+describe('parseGroundImage', () => {
+  it('reads a photo with corners only', () => {
+    const photo = parseGroundImage({ corners: FILE.corners }, '/data/photo/tashkent.webp');
+    expect(photo).toEqual({ url: '/data/photo/tashkent.webp', corners: FILE.corners });
   });
 });

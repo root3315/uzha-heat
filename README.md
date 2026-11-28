@@ -127,6 +127,9 @@ up in NDVI rather than in the tree share.
 - Line A–B draws a cross-section: the temperature profile and a band of causes under it (hatched).
 - "People" shows residents as dots, and schools, kindergartens and clinics on the hottest cells. Colour stays temperature.
 - "3D" tilts the map and raises the buildings, each coloured by the surface temperature under it.
+- The satellite button lays the heat over a photo: our own cloud-free summer Sentinel-2 picture (10 m) shows at once,
+  the sharper Esri photo loads over it. The land cover button shows what covers the ground (ESA WorldCover, 10 m:
+  trees, grass, fields, buildings and roads, water) with the isotherms on top and each class's share of the city.
 - "What if" on a place: more tree crown and greenery (NDVI), and, where built-up land or roads heat that place,
   less of them. The city model recomputes the surface temperature of that place. Sliders stay within what the city already has
   (5–95 % of cells); built-up can drop by at most 25 percentage points.
@@ -140,6 +143,10 @@ up in NDVI rather than in the tree share.
 | 3D buildings | On a phone |
 |---|---|
 | ![3D: buildings coloured by the surface temperature under them](docs/screenshots/04-3d.png) | <img src="docs/screenshots/05-mobile.png" width="300" alt="The map on a phone"> |
+
+| Heat over the satellite photo | Land cover under the isotherms |
+|---|---|
+| ![The heat laid over the satellite photo: hot patches are roofs, rail yards and the airfield](docs/screenshots/06-satellite.jpg) | ![Land cover: buildings and roads grey, trees dark green, grass light green, water blue, with isotherms](docs/screenshots/07-cover.jpg) |
 
 ## Method
 
@@ -180,7 +187,7 @@ Measure effects come from published studies, linked in the cards.
 | Validation | NASA MODIS [MOD11A2](https://lpdaac.usgs.gov/products/mod11a2v061/) (Terra) and [MYD11A2](https://lpdaac.usgs.gov/products/myd11a2v061/) (Aqua), day and night | check |
 | Weather context | ERA5 (Copernicus) via [Open-Meteo](https://open-meteo.com) | wind, humidity, sun |
 | Basemap | [OpenFreeMap](https://openfreemap.org) | map tiles |
-| Satellite photo | [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) | photo under the heat, on demand |
+| Satellite photo | own Sentinel-2 L2A summer median (`pipeline.photo`) and [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) over it | photo under the heat, on demand |
 
 All sources are open; no API keys are needed.
 

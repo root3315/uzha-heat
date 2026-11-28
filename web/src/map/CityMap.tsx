@@ -22,7 +22,7 @@ import type { LonLat, Transect } from '../domain/transect';
 import { useLocale } from '../ui/locale';
 import { patternImage } from '../ui/patterns';
 import type { FacilityType } from '../data/contract';
-import type { LandCover } from '../data/landcover';
+import type { GroundImage, LandCover } from '../data/landcover';
 import { classOf, type LabelAnchor } from '../domain/isotherms';
 import type { MapOverlay } from '../domain/layers';
 import { facilityImage, facilityImageId } from './facilityImages';
@@ -32,7 +32,7 @@ import { buildingClass } from './heatBuildings';
 import { IsothermLabelLayer } from './isothermLabels';
 import { MAP_TEXTS, type MapTexts } from './map.texts';
 import { nameFromBasemap, siteFromBasemap } from './placeNames';
-import { BUILDINGS_MIN_ZOOM, GROUND_HEAT, LAYER, MAP_LINES, SOURCE, bandOpacity, buildStyle, isolinePaint, stepOpacity, type Ground } from './style';
+import { BUILDINGS_MIN_ZOOM, GROUND_HEAT, LAYER, MAP_LINES, SOURCE, bandOpacity, buildStyle, GROUND_NO_DATA, isolinePaint, stepOpacity, type Ground } from './style';
 import { readTokens, type MapTokens } from './tokens';
 
 export type MapMode = 'temperature' | 'causes';
@@ -87,6 +87,8 @@ interface CityMapProps {
   ground?: Ground;
   /** The city's land cover picture, once loaded; the cover ground shows nothing without it. */
   cover?: LandCover | null;
+  /** The city's own satellite photo, shown at once under the sharper online one; without it only the online one. */
+  photo?: GroundImage | null;
   /** Numbered places over the map (the planting list); a click opens the place, as the list does. */
   marks?: readonly MapMark[];
   /** Another quantity drawn instead of the surface temperature: a flux of the energy balance, or the night. */
@@ -199,7 +201,7 @@ function setInteractive(map: MapLibreMap, markers: Marker[], on: boolean): void 
 }
 
 export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(props, ref) {
-  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, ground = 'map', cover = null, marks = NO_MARKS, overlay = null } = props;
+  const { model, view, padding, transect, drawing, place, probe, found, mode, people = false, threeD = false, ground = 'map', cover = null, photo = null, marks = NO_MARKS, overlay = null } = props;
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<SVGSVGElement>(null);
@@ -535,12 +537,19 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     if (!map) return;
     const apply = () => {
       const show = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-      // The picture is 10 m pixels of classes: drawn crisp, never blurred into colours no class has.
+      // Our own photo goes in once asked for, under the online tiles: it shows while they load, and if they fail.
+      if (photo && ground === 'satellite' && !map.getSource(SOURCE.photo)) {
+        map.addSource(SOURCE.photo, { type: 'image', url: photo.url, coordinates: photo.corners });
+        map.addLayer({ id: LAYER.photo, type: 'raster', source: SOURCE.photo, paint: { 'raster-fade-duration': 0 } }, LAYER.satellite);
+      }
+      // Drawn smooth: up close, nearest-neighbour 10 m pixels read as a staircase rather than as ground.
       if (cover && !map.getSource(SOURCE.cover)) {
         map.addSource(SOURCE.cover, { type: 'image', url: cover.url, coordinates: cover.corners });
-        map.addLayer({ id: LAYER.cover, type: 'raster', source: SOURCE.cover, layout: { visibility: 'none' }, paint: { 'raster-resampling': 'nearest', 'raster-fade-duration': 0 } }, LAYER.bands);
+        map.addLayer({ id: LAYER.cover, type: 'raster', source: SOURCE.cover, layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } }, LAYER.bands);
       }
+      map.setPaintProperty('outside-data', 'fill-opacity', GROUND_NO_DATA[ground]);
       show(LAYER.satellite, ground === 'satellite');
+      show(LAYER.photo, ground === 'satellite');
       show(LAYER.cover, ground === 'cover');
       MAP_LINES.forEach((id) => show(id, ground === 'map'));
       const lines = isolinePaint(ground);
@@ -561,7 +570,7 @@ export const CityMap = forwardRef<CityMapHandle, CityMapProps>(function CityMap(
     return () => {
       map.off('load', apply);
     };
-  }, [ground, cover, model]);
+  }, [ground, cover, photo, model]);
 
   useEffect(() => {
     const map = mapRef.current;

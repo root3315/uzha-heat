@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { LandCover } from '../data/landcover';
-import { loadLandCover, loadNight } from '../data/load';
+import type { GroundImage, LandCover } from '../data/landcover';
+import { loadLandCover, loadNight, loadPhoto } from '../data/load';
 import type { NightGrid } from '../data/night';
 import type { CityModel } from '../domain/cityModel';
 import { fluxContours, isFluxLayer, nightPixels, type FluxLayer, type MapLayer, type MapOverlay } from '../domain/layers';
@@ -96,18 +96,21 @@ export function useNight(cityId: string): NightGrid | null {
   return night?.id === cityId ? night.grid : null;
 }
 
-/** The city's land cover once its file is in; null before, and for a city without one. */
-export function useLandCover(cityId: string): LandCover | null {
-  const [cover, setCover] = useState<{ id: string; cover: LandCover | null } | null>(null);
+/** A city's file once it is in; null before, and for a city without one. */
+function useCityFile<T>(cityId: string, load: (id: string) => Promise<T | null>): T | null {
+  const [file, setFile] = useState<{ id: string; value: T | null } | null>(null);
   useEffect(() => {
     let cancelled = false;
-    void loadLandCover(cityId).then((found) => !cancelled && setCover({ id: cityId, cover: found }));
+    void load(cityId).then((value) => !cancelled && setFile({ id: cityId, value }));
     return () => {
       cancelled = true;
     };
-  }, [cityId]);
-  return cover?.id === cityId ? cover.cover : null;
+  }, [cityId, load]);
+  return file?.id === cityId ? file.value : null;
 }
+
+export const useLandCover = (cityId: string): LandCover | null => useCityFile(cityId, loadLandCover);
+export const usePhoto = (cityId: string): GroundImage | null => useCityFile(cityId, loadPhoto);
 
 /** What the map draws for the chosen layer: null for the surface temperature, and while another layer is being drawn. */
 export function useOverlay(model: CityModel, layer: MapLayer, night: NightGrid | null): MapOverlay | null {

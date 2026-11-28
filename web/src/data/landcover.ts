@@ -15,10 +15,14 @@ export interface CoverClass {
   share: number;
 }
 
-export interface LandCover {
+/** A picture laid on the map by its corners. */
+export interface GroundImage {
   url: string;
   /** North-west, north-east, south-east, south-west, as MapLibre's image source wants them. */
   corners: [Corner, Corner, Corner, Corner];
+}
+
+export interface LandCover extends GroundImage {
   classes: CoverClass[];
 }
 
@@ -36,14 +40,20 @@ function coverClass(value: unknown, i: number): CoverClass {
   return { key, color, share };
 }
 
-export function parseLandCover(json: unknown, url: string): LandCover {
-  if (!isObject(json)) throw new DataContractError('land cover must be an object');
-  const { corners, classes } = json;
+/**
+ * A picture with its corners: the land cover, or the city's own satellite photo (`photo/<id>.webp` and `.json`, a
+ * summer Sentinel-2 median from `python -m pipeline.photo`, shown at once under the sharper online photo).
+ */
+export function parseGroundImage(json: unknown, url: string): GroundImage {
+  if (!isObject(json)) throw new DataContractError('a ground picture must be an object');
+  const { corners } = json;
   if (!Array.isArray(corners) || corners.length !== 4) throw new DataContractError('corners must hold four corners');
+  return { url, corners: corners.map(corner) as GroundImage['corners'] };
+}
+
+export function parseLandCover(json: unknown, url: string): LandCover {
+  const image = parseGroundImage(json, url);
+  const { classes } = json as { classes?: unknown };
   if (!Array.isArray(classes)) throw new DataContractError('classes must be an array');
-  return {
-    url,
-    corners: corners.map(corner) as LandCover['corners'],
-    classes: classes.map(coverClass).sort((a, b) => b.share - a.share),
-  };
+  return { ...image, classes: classes.map(coverClass).sort((a, b) => b.share - a.share) };
 }

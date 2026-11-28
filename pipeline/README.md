@@ -49,6 +49,15 @@ PYTHONUTF8=1 python -m pipeline.landcover          # all cities, or --city tashk
 It writes `web/public/data/landcover/<id>.png` (10 m classes, transparent outside the city) and `<id>.json`
 (corners and each class's share), see `docs/data-contract.md`. The files are under a megabyte and are committed.
 
+The satellite view's own photo comes from the same summer Sentinel-2 scenes (the six clearest per tile):
+
+```bash
+PYTHONUTF8=1 python -m pipeline.photo              # all cities, or --city tashkent
+```
+
+It writes `web/public/data/photo/<id>.webp` (true colour, 10 m) and `<id>.json` (corners). A few MB per city;
+committed, so the photo shows without any outside server.
+
 Buildings for the 3D view are a separate step with its own downloads (Geofabrik extract of Uzbekistan,
 ~130 MB; Microsoft ML footprints, ~45 MB per level-9 quadkey; the GHSL Built-H tile):
 

@@ -21,7 +21,7 @@ import { Link } from './Link';
 import { useLocale } from './locale';
 import { MapHint } from './MapHint';
 import { CoverKey, GroundSwitch } from './GroundSwitch';
-import { useLandCover, useNight, useOverlay } from './mapLayers';
+import { useLandCover, useNight, useOverlay, usePhoto } from './mapLayers';
 import { Panel } from './panel/Panel';
 import { WeatherSummary } from './Weather';
 import { panelContent } from './panelContent';
@@ -93,6 +93,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
   const [chosenLayer, setLayer] = useState<MapLayer>('lst');
   const night = useNight(detail.city.id);
   const cover = useLandCover(detail.city.id);
+  const photo = usePhoto(detail.city.id);
   // A city without a land cover file falls back to the drawn map rather than to an empty ground.
   const shownGround: Ground = ground === 'cover' && !cover ? 'map' : ground;
   const layers = useMemo(() => availableLayers(detail, night), [detail, night]);
@@ -297,6 +298,7 @@ export function Tool({ model, cities, onCity }: ToolProps) {
           threeD={threeD}
           ground={shownGround}
           cover={cover}
+          photo={photo}
           marks={planMarks ?? undefined}
           overlay={overlay}
           describe={describe}

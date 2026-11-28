@@ -37,7 +37,8 @@ export function useReadout(model: CityModel, layer: MapLayer = 'lst', night: Nig
         return Number.isFinite(value) ? `${formatWatts(value, locale)} ${said[layer]}` : null;
       }
       const readout = cellReadout(model.detail, cell, locale);
-      if (!readout) return null;
+      // Inside the city with no reading: say why the grey patch is empty, or it reads as something broken.
+      if (!readout) return said.noData;
       return readout.cause ? `${formatTemp(readout.t)} · ${readout.cause}` : formatTemp(readout.t);
     },
     [cellUnder, model, locale, layer, night],
